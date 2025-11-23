@@ -1,19 +1,18 @@
 package net.explorviz.persistence.ogm;
 
+import java.time.ZonedDateTime;
+import java.util.List;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
-import java.time.ZonedDateTime;
-import java.util.List;
-
 @NodeEntity
 public class Commit {
-    String hash;
+  private String hash;
 
-    String author;
+  private String author;
 
-    ZonedDateTime date;
+  private ZonedDateTime date;
 
-    @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-    List<FileRevision> files;
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private List<FileRevision> files;
 }

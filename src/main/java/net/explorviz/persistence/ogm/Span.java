@@ -6,27 +6,29 @@ import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
+@SuppressWarnings("PMD.SingularField")
 public class Span {
 
-    @Id
-    String spanId;
+  @Id
+  public String spanId;
 
-    long startTime;
+  public long startTime;
 
-    long endTime;
+  public long endTime;
 
-    @Relationship(type = "HAS_PARENT", direction = Relationship.Direction.OUTGOING)
-    Span parentSpan;
+  @Relationship(type = "HAS_PARENT", direction = Relationship.Direction.OUTGOING)
+  private Span parentSpan;
 
-    @Relationship(type = "REPRESENTS", direction = Relationship.Direction.OUTGOING)
-    Function function;
+  @Relationship(type = "REPRESENTS", direction = Relationship.Direction.OUTGOING)
+  private Function function;
 
-    public Span() {
-    }
+  public Span() {
+    // Empty constructor required by Neo4j OGM
+  }
 
-    public Span(SpanData spanData) {
-        this.spanId = spanData.getId();
-        this.startTime = spanData.getStartTime();
-        this.endTime = spanData.getEndTime();
-    }
+  public Span(final SpanData spanData) {
+    this.spanId = spanData.getId();
+    this.startTime = spanData.getStartTime();
+    this.endTime = spanData.getEndTime();
+  }
 }

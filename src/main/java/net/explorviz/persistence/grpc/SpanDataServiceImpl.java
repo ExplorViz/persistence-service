@@ -2,7 +2,6 @@ package net.explorviz.persistence.grpc;
 
 import com.google.protobuf.Empty;
 import io.quarkus.grpc.GrpcService;
-
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import net.explorviz.persistence.ogm.Span;
@@ -14,15 +13,15 @@ import org.neo4j.ogm.session.SessionFactory;
 @GrpcService
 public class SpanDataServiceImpl implements SpanDataService {
 
-    @Inject
-    SessionFactory sessionFactory;
+  @Inject
+  private SessionFactory sessionFactory;
 
-    @Override
-    public Uni<Empty> persistSpan(SpanData spanData) {
-        Session session = sessionFactory.openSession();
-        Span span = new Span(spanData);
-        session.save(span);
-        return Uni.createFrom().item(Empty.getDefaultInstance());
-    }
+  @Override
+  public Uni<Empty> persistSpan(final SpanData spanData) {
+    final Session session = sessionFactory.openSession();
+    final Span span = new Span(spanData);
+    session.save(span);
+    return Uni.createFrom().item(Empty.getDefaultInstance());
+  }
 
 }

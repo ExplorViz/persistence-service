@@ -4,5 +4,5 @@ import org.neo4j.ogm.annotation.NodeEntity;
 
 @NodeEntity
 public class Branch {
-    String id;
+  private String id;
 }

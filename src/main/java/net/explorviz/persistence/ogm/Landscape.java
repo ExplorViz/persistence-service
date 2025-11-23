@@ -1,19 +1,18 @@
 package net.explorviz.persistence.ogm;
 
+import java.util.List;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
-import java.util.List;
-
 @NodeEntity
 public class Landscape {
-    String token_id;
+  private String tokenId;
 
-    String token_secret;
+  private String tokenSecret;
 
-    @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-    List<Trace> traces;
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private List<Trace> traces;
 
-    @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-    List<Repository> repositories;
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private List<Repository> repositories;
 }

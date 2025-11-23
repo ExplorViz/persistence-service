@@ -14,13 +14,15 @@ import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 class SpanDataServiceTest {
-    @GrpcClient
-    SpanDataService spanDataService;
+  @GrpcClient
+  SpanDataService spanDataService;
 
-    @Test
-    void testPersistSpan() {
-        Empty reply = spanDataService.persistSpan(SpanData.newBuilder().setId("id1").setStartTime(1).setEndTime(5).build()).await().atMost(Duration.ofSeconds(5));
-        assertNotNull(reply);
-    }
+  @Test
+  void testPersistSpan() {
+    Empty reply = spanDataService.persistSpan(
+            SpanData.newBuilder().setId("id1").setStartTime(1).setEndTime(5).build()).await()
+        .atMost(Duration.ofSeconds(5));
+    assertNotNull(reply);
+  }
 
 }
