@@ -45,3 +45,12 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.compilerArgs.add("-parameters")
 }
+
+tasks.register<Copy>("registerPreCommitHook") {
+    from("code-analysis/pre-commit")
+    into(".git/hooks")
+}
+
+tasks.named("quarkusGenerateCode") {
+    dependsOn("registerPreCommitHook")
+}
