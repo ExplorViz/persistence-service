@@ -1,11 +1,12 @@
 package net.explorviz.persistence.ogm;
 
 import java.time.ZonedDateTime;
-import java.util.List;
+import java.util.Set;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
+@SuppressWarnings("PMD.SingularField")
 public class Commit {
   private String hash;
 
@@ -14,5 +15,5 @@ public class Commit {
   private ZonedDateTime date;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private List<FileRevision> files;
+  private Set<FileRevision> files;
 }

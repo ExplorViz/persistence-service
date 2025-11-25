@@ -1,13 +1,14 @@
 package net.explorviz.persistence.ogm;
 
-import java.util.List;
+import java.util.Set;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
+@SuppressWarnings("PMD.SingularField")
 public class FileRevision {
   private String fqn;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private List<Function> functions;
+  private Set<Function> functions;
 }

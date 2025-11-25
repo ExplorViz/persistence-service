@@ -20,7 +20,7 @@ class SpanDataServiceTest {
   @Test
   void testPersistSpan() {
     Empty reply = spanDataService.persistSpan(
-            SpanData.newBuilder().setId("id1").setStartTime(1).setEndTime(5).build()).await()
+            SpanData.newBuilder().setSpanId("id1").setStartTime(1).setEndTime(5).build()).await()
         .atMost(Duration.ofSeconds(5));
     assertNotNull(reply);
   }

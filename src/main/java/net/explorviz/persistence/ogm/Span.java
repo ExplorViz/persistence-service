@@ -8,7 +8,6 @@ import org.neo4j.ogm.annotation.Relationship;
 @NodeEntity
 @SuppressWarnings("PMD.SingularField")
 public class Span {
-
   @Id
   public String spanId;
 
@@ -22,13 +21,32 @@ public class Span {
   @Relationship(type = "REPRESENTS", direction = Relationship.Direction.OUTGOING)
   private Function function;
 
+  @Relationship(type = "BELONGS_TO", direction = Relationship.Direction.OUTGOING)
+  private Application application;
+
   public Span() {
     // Empty constructor required by Neo4j OGM
   }
 
   public Span(final SpanData spanData) {
-    this.spanId = spanData.getId();
+    this.spanId = spanData.getSpanId();
     this.startTime = spanData.getStartTime();
     this.endTime = spanData.getEndTime();
+  }
+
+  public Span(final String spanId) {
+    this.spanId = spanId;
+  }
+
+  public void setParentSpan(final Span span) {
+    this.parentSpan = span;
+  }
+
+  public void setFunction(final Function function) {
+    this.function = function;
+  }
+
+  public void setApplication(final Application application) {
+    this.application = application;
   }
 }

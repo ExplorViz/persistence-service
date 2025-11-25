@@ -1,18 +1,43 @@
 package net.explorviz.persistence.ogm;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
+@SuppressWarnings("PMD.SingularField")
 public class Landscape {
+  @Id
   private String tokenId;
 
   private String tokenSecret;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private List<Trace> traces;
+  private Set<Trace> traces = new HashSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private List<Repository> repositories;
+  private Set<Repository> repositories;
+
+  public Landscape() {
+    // Empty constructor required by Neo4j OGM
+  }
+
+  public Landscape(final String tokenId, final String tokenSecret, final Set<Trace> traces) {
+    this.tokenId = tokenId;
+    this.tokenSecret = tokenSecret;
+    this.traces = traces;
+  }
+
+  public Landscape(final String tokenId, final Set<Trace> traces) {
+    this.tokenId = tokenId;
+    this.traces = traces;
+  }
+
+  public void addTrace(final Trace trace) {
+    final Set<Trace> newTraces = new HashSet<>(traces);
+    newTraces.add(trace);
+    traces = Set.copyOf(newTraces);
+  }
 }
