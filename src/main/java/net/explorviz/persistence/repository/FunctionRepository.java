@@ -11,7 +11,7 @@ import org.neo4j.ogm.session.SessionFactory;
 public class FunctionRepository {
 
   private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT = """
-      MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Trace)-[:CONTAINS]->
+      MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Trace)-[:CONTAINS]->
             (:Span)-[:REPRESENTS]->(f:Function {fqn: $fqn})
       RETURN f;
       """;
@@ -19,8 +19,9 @@ public class FunctionRepository {
   @Inject
   private SessionFactory sessionFactory;
 
-  public Function findFunctionByFqnAndLandscapeToken(final Session session, final String tokenId,
-                                                     final String functionFqn) {
+  public Function findFunctionByFqnAndLandscapeToken(final Session session,
+                                                     final String functionFqn,
+                                                     final String tokenId) {
     return session.queryForObject(Function.class, FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT,
         Map.of("tokenId", tokenId, "fqn", functionFqn));
   }

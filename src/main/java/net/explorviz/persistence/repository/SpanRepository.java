@@ -77,7 +77,7 @@ public class SpanRepository {
     }
 
     Function function =
-        functionRepository.findFunctionByFqnAndLandscapeToken(spanData.getFunctionFqn(),
+        functionRepository.findFunctionByFqnAndLandscapeToken(session, spanData.getFunctionFqn(),
             spanData.getLandscapeTokenId());
 
     if (function == null) {
@@ -86,7 +86,8 @@ public class SpanRepository {
     span.setFunction(function);
 
     Application application =
-        applicationRepository.findApplicationByNameAndLandscapeToken(spanData.getApplicationName(),
+        applicationRepository.findApplicationByNameAndLandscapeToken(session,
+            spanData.getApplicationName(),
             spanData.getLandscapeTokenId());
 
     if (application == null) {
