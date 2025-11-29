@@ -9,11 +9,11 @@ import org.neo4j.ogm.annotation.Relationship;
 @SuppressWarnings("PMD.SingularField")
 public class Span {
   @Id
-  public String spanId;
+  private String spanId;
 
-  public long startTime;
+  private long startTime;
 
-  public long endTime;
+  private long endTime;
 
   @Relationship(type = "HAS_PARENT", direction = Relationship.Direction.OUTGOING)
   private Span parentSpan;
@@ -48,5 +48,13 @@ public class Span {
 
   public void setApplication(final Application application) {
     this.application = application;
+  }
+
+  public long getStartTime() {
+    return startTime;
+  }
+
+  public long getEndTime() {
+    return endTime;
   }
 }

@@ -30,9 +30,8 @@ public class Landscape {
     this.traces = traces;
   }
 
-  public Landscape(final String tokenId, final Set<Trace> traces) {
+  public Landscape(final String tokenId) {
     this.tokenId = tokenId;
-    this.traces = traces;
   }
 
   public void addTrace(final Trace trace) {

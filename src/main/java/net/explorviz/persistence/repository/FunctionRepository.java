@@ -3,6 +3,7 @@ package net.explorviz.persistence.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Map;
+import java.util.Optional;
 import net.explorviz.persistence.ogm.Function;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -19,16 +20,22 @@ public class FunctionRepository {
   @Inject
   private SessionFactory sessionFactory;
 
-  public Function findFunctionByFqnAndLandscapeToken(final Session session,
-                                                     final String functionFqn,
-                                                     final String tokenId) {
-    return session.queryForObject(Function.class, FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT,
-        Map.of("tokenId", tokenId, "fqn", functionFqn));
+  public Optional<Function> findFunctionByFqnAndLandscapeToken(final Session session,
+      final String functionFqn, final String tokenId) {
+    return Optional.ofNullable(
+        session.queryForObject(Function.class, FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT,
+            Map.of("tokenId", tokenId, "fqn", functionFqn)));
   }
 
-  public Function findFunctionByFqnAndLandscapeToken(final String tokenId,
-                                                     final String functionFqn) {
+  public Optional<Function> findFunctionByFqnAndLandscapeToken(final String tokenId,
+      final String functionFqn) {
     final Session session = sessionFactory.openSession();
     return findFunctionByFqnAndLandscapeToken(session, tokenId, functionFqn);
+  }
+
+  public Function getOrCreateFunction(final Session session, final String functionFqn,
+      final String tokenId) {
+    return findFunctionByFqnAndLandscapeToken(session, functionFqn, tokenId).orElse(
+        new Function(functionFqn));
   }
 }

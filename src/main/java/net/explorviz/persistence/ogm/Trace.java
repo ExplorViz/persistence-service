@@ -23,17 +23,23 @@ public class Trace {
     // Empty constructor required by Neo4j OGM
   }
 
-  public Trace(final String traceId, final long startTime, final long endTime,
-               final Set<Span> spans) {
+  public Trace(final String traceId) {
     this.traceId = traceId;
-    this.startTime = startTime;
-    this.endTime = endTime;
-    this.spans = spans;
   }
 
   public void addChildSpan(final Span span) {
     final Set<Span> newSet = new HashSet<>(spans);
     newSet.add(span);
     spans = Set.copyOf(newSet);
+    startTime = Math.min(startTime, span.getStartTime());
+    endTime = Math.max(endTime, span.getEndTime());
+  }
+
+  public void setStartTime(final long startTime) {
+    this.startTime = startTime;
+  }
+
+  public void setEndTime(final long endTime) {
+    this.endTime = endTime;
   }
 }
