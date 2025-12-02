@@ -18,7 +18,7 @@ public class Landscape {
   private Set<Trace> traces = new HashSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Repository> repositories;
+  private Set<Repository> repositories = new HashSet<>();
 
   public Landscape() {
     // Empty constructor required by Neo4j OGM
@@ -38,5 +38,11 @@ public class Landscape {
     final Set<Trace> newTraces = new HashSet<>(traces);
     newTraces.add(trace);
     traces = Set.copyOf(newTraces);
+  }
+
+  public void addRepository(final Repository repo) {
+    final Set<Repository> newRepositories = new HashSet<>(repositories);
+    newRepositories.add(repo);
+    repositories = Set.copyOf(newRepositories);
   }
 }

@@ -32,15 +32,15 @@ public class SpanRepository {
   @Inject
   private TraceRepository traceRepository;
 
-  public Optional<Span> findSpanById(final String spanId) {
-    final Session session = sessionFactory.openSession();
-    return findSpanById(session, spanId);
-  }
-
   public Optional<Span> findSpanById(final Session session, final String spanId) {
     return Optional.ofNullable(
         session.queryForObject(Span.class, "MATCH (s:Span {spanId: $spanId}) RETURN s;",
             Map.of("spanId", spanId)));
+  }
+
+  public Optional<Span> findSpanById(final String spanId) {
+    final Session session = sessionFactory.openSession();
+    return findSpanById(session, spanId);
   }
 
   public Span getOrCreateSpan(final Session session, final String spanId) {
