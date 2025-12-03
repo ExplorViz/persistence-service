@@ -36,6 +36,8 @@ public class CommitReportServiceImpl implements CommitReportService {
   @Inject
   private SessionFactory sessionFactory;
 
+  private static final String NO_PARENT_ID = "NONE";
+
   @Override
   public Uni<Empty> sendCommitReport(final CommitReportData request) {
     final Session session = sessionFactory.openSession();
@@ -58,7 +60,7 @@ public class CommitReportServiceImpl implements CommitReportService {
     commit.setBranch(branch);
     repo.addCommit(commit);
 
-    if (request.getParentCommitID().isEmpty()) {
+    if (request.getParentCommitID().isEmpty() || NO_PARENT_ID.equals(request.getParentCommitID())) {
       session.save(List.of(landscape, repo, branch, commit));
     } else {
       final Commit parentCommit =
