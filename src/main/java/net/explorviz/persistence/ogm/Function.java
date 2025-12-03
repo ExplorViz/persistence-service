@@ -5,7 +5,6 @@ import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 
 @NodeEntity
-@SuppressWarnings("PMD.SingularField")
 public class Function {
   @Id
   @GeneratedValue

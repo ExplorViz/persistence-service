@@ -86,4 +86,13 @@
     </properties>
   </rule>
 
+  <rule ref="category/java/design.xml/SingularField">
+    <properties>
+      <property name="ignoredAnnotations" value="java.lang.Deprecated|javafx.fxml.FXML
+      |lombok.Getter|lombok.Setter|lombok.experimental.Delegate
+      |org.neo4j.ogm.annotation.NodeEntity|org.neo4j.ogm.annotation.RelationshipEntity" />
+    </properties>
+  </rule>
+
+
 </ruleset>
