@@ -22,51 +22,50 @@ import org.neo4j.ogm.session.SessionFactory;
 public class CommitReportServiceImpl implements CommitReportService {
 
   @Inject
-  BranchRepository branchRepository;
+  private BranchRepository branchRepository;
 
   @Inject
-  CommitRepository commitRepository;
+  private CommitRepository commitRepository;
 
   @Inject
-  LandscapeRepository landscapeRepository;
+  private LandscapeRepository landscapeRepository;
 
   @Inject
-  RepositoryRepository repositoryRepository;
+  private RepositoryRepository repositoryRepository;
 
   @Inject
-  SessionFactory sessionFactory;
+  private SessionFactory sessionFactory;
 
   @Override
   public Uni<Empty> sendCommitReport(final CommitReportData request) {
-    Session session = sessionFactory.openSession();
+    final Session session = sessionFactory.openSession();
 
-    String repoName = Repository.stripRepoNameFromUpstreamName(request.getRepositoryName());
-    Repository repo =
-        repositoryRepository.getOrCreateRepository(session, repoName,
-            request.getLandscapeToken());
+    final String repoName = Repository.stripRepoNameFromUpstreamName(request.getRepositoryName());
+    final Repository repo =
+        repositoryRepository.getOrCreateRepository(session, repoName, request.getLandscapeToken());
 
-    Landscape landscape =
+    final Landscape landscape =
         landscapeRepository.getOrCreateLandscape(session, request.getLandscapeToken());
     landscape.addRepository(repo);
 
-    Branch branch =
-        branchRepository.getOrCreateBranch(session, request.getBranchName(),
-            repoName,
+    final Branch branch =
+        branchRepository.getOrCreateBranch(session, request.getBranchName(), repoName,
             request.getLandscapeToken());
     repo.addBranch(branch);
 
-    Commit commit = commitRepository.getOrCreateCommit(session, request.getCommitID(),
+    final Commit commit = commitRepository.getOrCreateCommit(session, request.getCommitID(),
         request.getLandscapeToken());
     commit.setBranch(branch);
     repo.addCommit(commit);
 
-    if (!request.getParentCommitID().isEmpty()) {
-      Commit parentCommit = commitRepository.getOrCreateCommit(session, request.getParentCommitID(),
-          request.getLandscapeToken());
+    if (request.getParentCommitID().isEmpty()) {
+      session.save(List.of(landscape, repo, branch, commit));
+    } else {
+      final Commit parentCommit =
+          commitRepository.getOrCreateCommit(session, request.getParentCommitID(),
+              request.getLandscapeToken());
       commit.addParent(parentCommit);
       session.save(List.of(landscape, repo, branch, commit, parentCommit));
-    } else {
-      session.save(List.of(landscape, repo, branch, commit));
     }
 
     return Uni.createFrom().item(() -> Empty.newBuilder().build());

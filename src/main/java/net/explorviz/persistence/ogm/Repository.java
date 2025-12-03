@@ -43,7 +43,7 @@ public class Repository {
   }
 
   public static String stripRepoNameFromUpstreamName(final String upstreamName) {
-    String[] partsOfPath = upstreamName.split("/");
+    final String[] partsOfPath = upstreamName.split("/");
     return partsOfPath[partsOfPath.length - 1];
   }
 }

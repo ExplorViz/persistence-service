@@ -1,6 +1,5 @@
 package net.explorviz.persistence.grpc;
 
-import com.google.protobuf.Empty;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
@@ -19,24 +18,24 @@ import org.neo4j.ogm.session.SessionFactory;
 public class StateDataServiceImpl implements StateDataService {
 
   @Inject
-  SessionFactory sessionFactory;
+  private SessionFactory sessionFactory;
 
   @Inject
-  LandscapeRepository landscapeRepository;
+  private LandscapeRepository landscapeRepository;
 
   @Inject
-  RepositoryRepository repositoryRepository;
+  private RepositoryRepository repositoryRepository;
 
   @Override
   public Uni<StateData> requestStateData(final StateDataRequest request) {
-    String repoName = Repository.stripRepoNameFromUpstreamName(request.getUpstreamName());
+    final String repoName = Repository.stripRepoNameFromUpstreamName(request.getUpstreamName());
 
-    Session session = sessionFactory.openSession();
+    final Session session = sessionFactory.openSession();
 
-    Repository repository =
+    final Repository repository =
         repositoryRepository.getOrCreateRepository(session, repoName, request.getLandscapeToken());
 
-    Landscape landscape =
+    final Landscape landscape =
         landscapeRepository.getOrCreateLandscape(session, request.getLandscapeToken());
     landscape.addRepository(repository);
 
