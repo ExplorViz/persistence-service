@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Application;
+import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Span;
@@ -19,6 +20,9 @@ public class SpanRepository {
 
   @Inject
   private ApplicationRepository applicationRepository;
+
+  @Inject
+  private FileRevisionRepository fileRevisionRepository;
 
   @Inject
   private FunctionRepository functionRepository;
@@ -64,16 +68,25 @@ public class SpanRepository {
         landscapeRepository.getOrCreateLandscape(session, spanData.getLandscapeTokenId());
     landscape.addTrace(trace);
 
+    final Application application =
+        applicationRepository.getOrCreateApplication(session, spanData.getApplicationName(),
+            spanData.getLandscapeTokenId());
+
+    if (application.getRootDirectory() == null) {
+      final Directory applicationRoot = new Directory(".");
+      application.setRootDirectory(applicationRoot);
+    }
+    span.setApplication(application);
+
+    session.save(application);
+
     final Function function =
         functionRepository.getOrCreateFunction(session, spanData.getFunctionFqn(),
             spanData.getLandscapeTokenId());
     span.setFunction(function);
 
-    final Application application =
-        applicationRepository.getOrCreateApplication(session, spanData.getApplicationName(),
-            spanData.getLandscapeTokenId());
-    span.setApplication(application);
+    fileRevisionRepository.createFileStructureFromFunction(session, function, application);
 
-    session.save(List.of(span, trace, landscape, function, application));
+    session.save(List.of(span, trace, landscape, function));
   }
 }

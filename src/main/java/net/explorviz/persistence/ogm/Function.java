@@ -19,4 +19,8 @@ public class Function {
   public Function(final String fqn) {
     this.fqn = fqn;
   }
+
+  public String getFqn() {
+    return fqn;
+  }
 }
