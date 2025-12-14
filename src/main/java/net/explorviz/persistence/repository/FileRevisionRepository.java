@@ -3,8 +3,9 @@ package net.explorviz.persistence.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -17,20 +18,17 @@ import org.neo4j.ogm.session.SessionFactory;
 public class FileRevisionRepository {
   private static final String FIND_LONGEST_PATH_MATCH = """
       WITH $pathSegments AS pathSegments, $applicationName as applicationName
-      OPTIONAL CALL (pathSegments, applicationName) {
-          UNWIND range(size(pathSegments)-1, 0, -1) AS i
-          MATCH p = (fqnRoot:Directory|FileRevision)
-                    ((:Directory)-[:CONTAINS]->(:Directory))*
-                    ((:Directory)-[:CONTAINS]->(:FileRevision)){0,1}
-          WHERE
-              (:Application {name: applicationName})-[:HAS_ROOT]->(:Directory)
-                  -[:CONTAINS]->(fqnRoot) AND
-              length(p) = i AND
-              all(j IN range(0, i) WHERE nodes(p)[j].name = pathSegments[j])
-          RETURN p
-          LIMIT 1
-      }
-      RETURN nodes(p)[-1] AS existingNode, pathSegments[length(p)+1..] AS remainingPath;""";
+      OPTIONAL MATCH (:Application {name: applicationName})-[:HAS_ROOT]->(rootDir:Directory)
+      OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)-[:CONTAINS]->*(:Directory|FileRevision)
+      WHERE
+        (rootDir)-[:CONTAINS]->(fqnRoot) AND
+        all(j IN range(0, length(p)) WHERE nodes(p)[j].name = pathSegments[j]) AND
+        (length(p) + 1 < size(pathSegments) XOR "FileRevision" IN labels(last(nodes(p))))
+      RETURN
+        coalesce(last(nodes(p)), rootDir) AS existingNode,
+        pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
+      ORDER BY size(nodes(p)) DESC
+      LIMIT 1;""";
 
   @Inject
   private SessionFactory sessionFactory;
@@ -45,45 +43,47 @@ public class FileRevisionRepository {
       return;
     }
 
-    final Result result =
-        session.query(FIND_LONGEST_PATH_MATCH,
-            Map.of("pathSegments", pathSegments, "applicationName", application.getName()));
+    final Result result = session.query(FIND_LONGEST_PATH_MATCH,
+        Map.of("pathSegments", pathSegments, "applicationName", application.getName()));
 
-    final Map<String, ?> resultObj = result.queryResults().iterator().next();
+    final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
+    if (!resultIterator.hasNext()) {
+      throw new NoSuchElementException();
+    }
 
-    if (resultObj.get("existingNode") instanceof FileRevision) {
+    final Map<String, Object> resultMap = resultIterator.next();
+
+    String[] remainingPath = (String[]) resultMap.get("remainingPath");
+    if (remainingPath == null) {
+      remainingPath = pathSegments;
+    } else if (remainingPath.length == 0) {
       return;
     }
 
-    Directory startingDirectory = (Directory) resultObj.get("existingNode");
+    final Directory startingDirectory =
+        resultMap.get("existingNode") instanceof Directory dir ? dir : null;
     if (startingDirectory == null) {
-      final Directory applicationRoot = application.getRootDirectory();
-      if (pathSegments.length == 1) {
-        applicationRoot.addFileRevision(new FileRevision(pathSegments[0]));
-        session.save(applicationRoot);
-        return;
-      }
-      startingDirectory = new Directory(pathSegments[0]);
-      applicationRoot.addSubdirectory(startingDirectory);
-      session.save(applicationRoot);
+      // Root directory not matched, application does not exist or has no root
+      throw new NoSuchElementException();
     }
 
-    String[] remainingPath = (String[]) resultObj.get("remainingPath");
-    if (remainingPath == null) {
-      remainingPath = Arrays.copyOfRange(pathSegments, 1, pathSegments.length);
-    }
+    final FileRevision file = createFileStructure(startingDirectory, remainingPath);
+    file.addFunction(function);
 
+    session.save(startingDirectory);
+  }
+
+  private FileRevision createFileStructure(final Directory startingDirectory,
+      final String[] remainingPath) {
     Directory currentDirectory = startingDirectory;
     for (int i = 0; i < remainingPath.length - 1; i++) {
       final Directory newDirectory = new Directory(remainingPath[i]);
       currentDirectory.addSubdirectory(newDirectory);
-      session.save(currentDirectory);
       currentDirectory = newDirectory;
     }
 
-    final FileRevision file = new FileRevision(pathSegments[pathSegments.length - 1]);
-    file.addFunction(function);
+    final FileRevision file = new FileRevision(remainingPath[remainingPath.length - 1]);
     currentDirectory.addFileRevision(file);
-    session.save(List.of(currentDirectory, file));
+    return file;
   }
 }
