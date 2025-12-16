@@ -74,6 +74,20 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: build
+    services:
+      neo4j:
+        image: neo4j:5
+        env:
+          NEO4J_AUTH: none
+          NEO4J_PLUGINS: '["apoc"]'
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "cypher-shell 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -89,6 +103,9 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
       - name: Run Unit Tests
         run: ./gradlew test
+        env:
+          QUARKUS_NEO4J_URI: bolt://localhost:7687
+          QUARKUS_NEO4J_AUTHENTICATION_DISABLED: true
 
   docker-image-jvm:
     name: Docker image JVM

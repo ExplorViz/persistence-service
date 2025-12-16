@@ -52,6 +52,15 @@ checkstyle:
 
 unit-test:
   stage: test
+  services:
+    - name: neo4j:5
+      alias: neo4j
+      variables:
+        NEO4J_AUTH: none
+        NEO4J_PLUGINS: '["apoc"]'
+  variables:
+    QUARKUS_NEO4J_URI: bolt://neo4j:7687
+    QUARKUS_NEO4J_AUTHENTICATION_DISABLED: true
   script:
     - ./gradlew test
   artifacts:
@@ -60,6 +69,15 @@ unit-test:
 
 integration-test:
   stage: test
+  services:
+    - name: neo4j:5
+      alias: neo4j
+      variables:
+        NEO4J_AUTH: none
+        NEO4J_PLUGINS: '["apoc"]'
+  variables:
+    QUARKUS_NEO4J_URI: bolt://neo4j:7687
+    QUARKUS_NEO4J_AUTHENTICATION_DISABLED: true
   script:
     - ./gradlew integrationTest
   allow_failure: true
