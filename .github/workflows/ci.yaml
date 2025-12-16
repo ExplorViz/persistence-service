@@ -93,7 +93,7 @@ jobs:
   docker-image-jvm:
     name: Docker image JVM
     if: github.event_name == 'push' && github.ref_name == 'main'
-    needs: [test]
+    needs: [checkstyle, pmd, test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
