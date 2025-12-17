@@ -2,6 +2,7 @@ package net.explorviz.persistence.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,6 +13,7 @@ import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Span;
 import net.explorviz.persistence.ogm.Trace;
 import net.explorviz.persistence.proto.SpanData;
+import org.jboss.logging.Logger;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -36,6 +38,8 @@ public class SpanRepository {
   @Inject
   private TraceRepository traceRepository;
 
+  private static final Logger LOGGER = Logger.getLogger(SpanRepository.class);
+
   public Optional<Span> findSpanById(final Session session, final String spanId) {
     return Optional.ofNullable(
         session.queryForObject(Span.class, "MATCH (s:Span {spanId: $spanId}) RETURN s;",
@@ -56,6 +60,8 @@ public class SpanRepository {
 
     final Span span = new Span(spanData);
 
+
+
     if (!spanData.getParentId().isEmpty()) {
       final Span parentSpan = getOrCreateSpan(session, spanData.getParentId());
       span.setParentSpan(parentSpan);
@@ -73,10 +79,10 @@ public class SpanRepository {
             spanData.getLandscapeTokenId());
 
     if (application.getRootDirectory() == null) {
-      final Directory applicationRoot = new Directory(".");
+      final Directory applicationRoot = new Directory("*");
       application.setRootDirectory(applicationRoot);
     }
-    span.setApplication(application);
+    landscape.addApplication(application);
 
     session.save(application);
 
@@ -85,7 +91,11 @@ public class SpanRepository {
             spanData.getLandscapeTokenId());
     span.setFunction(function);
 
-    fileRevisionRepository.createFileStructureFromFunction(session, function, application);
+    try {
+      fileRevisionRepository.createFileStructureFromFunction(session, function, application);
+    } catch (Exception e) {
+      LOGGER.error("Error while persisting span: " + e);
+    }
 
     session.save(List.of(span, trace, landscape, function));
   }

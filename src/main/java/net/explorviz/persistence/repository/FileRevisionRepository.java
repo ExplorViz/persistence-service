@@ -66,15 +66,14 @@ public class FileRevisionRepository {
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
     if (!resultIterator.hasNext()) {
-      throw new NoSuchElementException(); // TODO: Test error behaviour
+      throw new NoSuchElementException("resultIterator empty");
     }
 
     final Map<String, Object> resultMap = resultIterator.next();
 
-    String[] remainingPath = (String[]) resultMap.get("remainingPath");
-    if (remainingPath == null) {
-      remainingPath = filePath;
-    } else if (remainingPath.length == 0) {
+    String[] remainingPath =
+        resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
+    if (remainingPath.length == 0) {
       return null;
     }
 
@@ -82,7 +81,7 @@ public class FileRevisionRepository {
         resultMap.get("existingNode") instanceof Directory dir ? dir : null;
     if (startingDirectory == null) {
       // Root directory not matched, application does not exist or has no root
-      throw new NoSuchElementException(); // TODO: Test error behaviour
+      throw new NoSuchElementException("startingDirectory is null");
     }
 
     return createFilePath(session, startingDirectory, remainingPath);

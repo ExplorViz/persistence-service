@@ -20,9 +20,6 @@ public class Span {
   @Relationship(type = "REPRESENTS", direction = Relationship.Direction.OUTGOING)
   private Function function;
 
-  @Relationship(type = "BELONGS_TO", direction = Relationship.Direction.OUTGOING)
-  private Application application;
-
   public Span() {
     // Empty constructor required by Neo4j OGM
   }
@@ -43,10 +40,6 @@ public class Span {
 
   public void setFunction(final Function function) {
     this.function = function;
-  }
-
-  public void setApplication(final Application application) {
-    this.application = application;
   }
 
   public long getStartTime() {
