@@ -7,9 +7,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import net.explorviz.persistence.ogm.Application;
+import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
+import net.explorviz.persistence.ogm.Landscape;
 import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -33,47 +35,16 @@ public class FileRevisionRepository {
   @Inject
   private SessionFactory sessionFactory;
 
-  // TODO alles dynamisch
-  // TODO verhalten fehlt wenn statische daten schon vorhanden
-  public void createFileStructureFromFunction(final Session session, final Function function,
-      final Application application) {
-    final String[] splitFqn = function.getFqn().split("\\.");
-    final String[] pathSegments = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
-    if (pathSegments.length < 1) {
-      return;
-    }
+  @Inject
+  private ApplicationRepository applicationRepository;
 
-    final Result result = session.query(FIND_LONGEST_PATH_MATCH,
-        Map.of("pathSegments", pathSegments, "applicationName", application.getName()));
+  @Inject
+  private LandscapeRepository landscapeRepository;
 
-    final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
-    if (!resultIterator.hasNext()) {
-      throw new NoSuchElementException();
-    }
+  @Inject
+  private CommitRepository commitRepository;
 
-    final Map<String, Object> resultMap = resultIterator.next();
-
-    String[] remainingPath = (String[]) resultMap.get("remainingPath");
-    if (remainingPath == null) {
-      remainingPath = pathSegments;
-    } else if (remainingPath.length == 0) {
-      return;
-    }
-
-    final Directory startingDirectory =
-        resultMap.get("existingNode") instanceof Directory dir ? dir : null;
-    if (startingDirectory == null) {
-      // Root directory not matched, application does not exist or has no root
-      throw new NoSuchElementException();
-    }
-
-    final FileRevision file = createFileStructure(startingDirectory, remainingPath);
-    file.addFunction(function);
-
-    session.save(startingDirectory);
-  }
-
-  private FileRevision createFileStructure(final Directory startingDirectory,
+  private FileRevision createFilePath(final Session session, final Directory startingDirectory,
       final String[] remainingPath) {
     Directory currentDirectory = startingDirectory;
     for (int i = 0; i < remainingPath.length - 1; i++) {
@@ -84,6 +55,88 @@ public class FileRevisionRepository {
 
     final FileRevision file = new FileRevision(remainingPath[remainingPath.length - 1]);
     currentDirectory.addFileRevision(file);
+    session.save(startingDirectory);
     return file;
+  }
+
+  private FileRevision createFileStructure(final Session session,
+      final String[] filePath, final String applicationName) {
+    final Result result = session.query(FIND_LONGEST_PATH_MATCH,
+        Map.of("pathSegments", filePath, "applicationName", applicationName));
+
+    final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
+    if (!resultIterator.hasNext()) {
+      throw new NoSuchElementException(); // TODO: Test error behaviour
+    }
+
+    final Map<String, Object> resultMap = resultIterator.next();
+
+    String[] remainingPath = (String[]) resultMap.get("remainingPath");
+    if (remainingPath == null) {
+      remainingPath = filePath;
+    } else if (remainingPath.length == 0) {
+      return null;
+    }
+
+    final Directory startingDirectory =
+        resultMap.get("existingNode") instanceof Directory dir ? dir : null;
+    if (startingDirectory == null) {
+      // Root directory not matched, application does not exist or has no root
+      throw new NoSuchElementException(); // TODO: Test error behaviour
+    }
+
+    return createFilePath(session, startingDirectory, remainingPath);
+  }
+
+  public void createFileStructureFromFunction(final Session session, final Function function,
+      final Application application) {
+    final String[] splitFqn = function.getFqn().split("\\.");
+    final String[] pathSegments = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
+    if (pathSegments.length < 1) {
+      return;
+    }
+
+    final FileRevision file =
+        createFileStructure(session, pathSegments, application.getName());
+    if (file == null) {
+      return;
+    }
+
+    file.addFunction(function);
+    session.save(file);
+  }
+
+  public void createFileStructureFromFileData(final Session session, final String fileName,
+      final String packageName, final String commitId, final String landscapeToken,
+      final String applicationName) {
+
+    //    System.out.println(fileName);
+    //    System.out.println(packageName);
+    //    System.out.println(commitId);
+    //    System.out.println(landscapeToken);
+    //    System.out.println(applicationName);
+    //    System.out.println("");
+
+    final Landscape landscape =
+        landscapeRepository.getOrCreateLandscape(session, landscapeToken);
+
+    final Application application =
+        applicationRepository.getOrCreateApplication(session, applicationName,
+            landscapeToken);
+
+    if (application.getRootDirectory() == null) {
+      final Directory applicationRoot = new Directory("*");
+      application.setRootDirectory(applicationRoot);
+    }
+    landscape.addApplication(application);
+
+    // TODO: What if dynamic data already created a FileRevision with the function but (perhaps) from a different commit?
+    final FileRevision file =
+        createFileStructure(session, packageName.split("\\."), applicationName);
+
+    final Commit commit = commitRepository.getOrCreateCommit(session, commitId, landscapeToken);
+    commit.addFileRevision(file);
+
+    session.save(commit);
   }
 }
