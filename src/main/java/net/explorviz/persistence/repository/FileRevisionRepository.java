@@ -12,6 +12,7 @@ import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
+import net.explorviz.persistence.proto.FileData;
 import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -59,8 +60,8 @@ public class FileRevisionRepository {
     return file;
   }
 
-  private FileRevision createFileStructure(final Session session,
-      final String[] filePath, final String applicationName) {
+  private FileRevision createFileStructure(final Session session, final String[] filePath,
+      final String applicationName) {
     final Result result = session.query(FIND_LONGEST_PATH_MATCH,
         Map.of("pathSegments", filePath, "applicationName", applicationName));
 
@@ -71,7 +72,7 @@ public class FileRevisionRepository {
 
     final Map<String, Object> resultMap = resultIterator.next();
 
-    String[] remainingPath =
+    final String[] remainingPath =
         resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
     if (remainingPath.length == 0) {
       return null;
@@ -95,8 +96,7 @@ public class FileRevisionRepository {
       return;
     }
 
-    final FileRevision file =
-        createFileStructure(session, pathSegments, application.getName());
+    final FileRevision file = createFileStructure(session, pathSegments, application.getName());
     if (file == null) {
       return;
     }
@@ -105,23 +105,20 @@ public class FileRevisionRepository {
     session.save(file);
   }
 
-  public void createFileStructureFromFileData(final Session session, final String fileName,
-      final String packageName, final String commitId, final String landscapeToken,
-      final String applicationName) {
+  public void createFileStructureFromFileData(final Session session, final FileData fileData) {
 
-    //    System.out.println(fileName);
-    //    System.out.println(packageName);
-    //    System.out.println(commitId);
-    //    System.out.println(landscapeToken);
-    //    System.out.println(applicationName);
+    //    System.out.println(fileData.getPackageName());
+    //    System.out.println(fileData.getCommitID());
+    //    System.out.println(fileData.getLandscapeToken());
+    //    System.out.println(fileData.getApplicationName());
     //    System.out.println("");
 
     final Landscape landscape =
-        landscapeRepository.getOrCreateLandscape(session, landscapeToken);
+        landscapeRepository.getOrCreateLandscape(session, fileData.getLandscapeToken());
 
     final Application application =
-        applicationRepository.getOrCreateApplication(session, applicationName,
-            landscapeToken);
+        applicationRepository.getOrCreateApplication(session, fileData.getApplicationName(),
+            fileData.getLandscapeToken());
 
     if (application.getRootDirectory() == null) {
       final Directory applicationRoot = new Directory("*");
@@ -129,11 +126,18 @@ public class FileRevisionRepository {
     }
     landscape.addApplication(application);
 
-    // TODO: What if dynamic data already created a FileRevision with the function but (perhaps) from a different commit?
+    /* TODO: What if dynamic data already created a FileRevision with the function but (perhaps)
+        TODO: from a different commit?
+     If dynamic data created FileRevision with Commit -> create missing Repo/Branch nodes
+     If dynamic data created FileRevision without Commit -> ignore and create new FileRevision
+     If FileRevision with name does not exist -> create new FileRevision
+     */
     final FileRevision file =
-        createFileStructure(session, packageName.split("\\."), applicationName);
+        createFileStructure(session, fileData.getPackageName().split("\\."),
+            fileData.getApplicationName());
 
-    final Commit commit = commitRepository.getOrCreateCommit(session, commitId, landscapeToken);
+    final Commit commit = commitRepository.getOrCreateCommit(session, fileData.getCommitID(),
+        fileData.getLandscapeToken());
     commit.addFileRevision(file);
 
     session.save(commit);

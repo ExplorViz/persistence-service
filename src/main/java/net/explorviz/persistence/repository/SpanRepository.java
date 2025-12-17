@@ -2,9 +2,9 @@ package net.explorviz.persistence.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Directory;
@@ -55,12 +55,18 @@ public class SpanRepository {
     return findSpanById(session, spanId).orElse(new Span(spanId));
   }
 
+  /* TODO: Handle optional commitId
+    If span has not commitId and a FileRevision with same id with no connected Commit exits, then
+    nothing happens, otherwise if no FileRevision exists or if all existing FileRevisions already
+    have a Commit attached create new
+    If span has commitId and no FileRevision with same id -> create FileRevision and
+    connect to Commit
+      -> create Commit if no Commit with commitId exists
+   */
   public void persistSpan(final SpanData spanData) {
     final Session session = sessionFactory.openSession();
 
     final Span span = new Span(spanData);
-
-
 
     if (!spanData.getParentId().isEmpty()) {
       final Span parentSpan = getOrCreateSpan(session, spanData.getParentId());
@@ -93,8 +99,10 @@ public class SpanRepository {
 
     try {
       fileRevisionRepository.createFileStructureFromFunction(session, function, application);
-    } catch (Exception e) {
-      LOGGER.error("Error while persisting span: " + e);
+    } catch (NoSuchElementException e) {
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("Error while persisting span: " + e);
+      }
     }
 
     session.save(List.of(span, trace, landscape, function));
