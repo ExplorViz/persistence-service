@@ -53,4 +53,8 @@ public class Landscape {
     newApplications.add(application);
     applications = Set.copyOf(newApplications);
   }
+
+  public String getTokenId() {
+    return this.tokenId;
+  }
 }

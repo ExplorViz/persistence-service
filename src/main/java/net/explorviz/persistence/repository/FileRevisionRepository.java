@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
@@ -13,6 +14,7 @@ import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.proto.FileData;
+import org.jboss.logging.Logger;
 import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -33,6 +35,13 @@ public class FileRevisionRepository {
       ORDER BY size(nodes(p)) DESC
       LIMIT 1;""";
 
+  private static final String FIND_BY_NAME_AND_APPLICATION_NAME_AND_LANDSCAPE_TOKEN_STATEMENT = """
+      MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application {name: $applicationName})
+      -[:HAS_ROOT]->(:Directory)
+      -[:CONTAINS*0..]->(f:FileRevision {name: $fileName})
+      RETURN f;
+      """;
+
   @Inject
   private SessionFactory sessionFactory;
 
@@ -44,6 +53,17 @@ public class FileRevisionRepository {
 
   @Inject
   private CommitRepository commitRepository;
+
+  private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
+
+  public Optional<FileRevision> findFileRevisionByNameAndApplicationNameAndLandscapeToken(
+      final Session session, final String fileName, final String applicationName,
+      final String tokenId) {
+    return Optional.ofNullable(session.queryForObject(FileRevision.class,
+        FIND_BY_NAME_AND_APPLICATION_NAME_AND_LANDSCAPE_TOKEN_STATEMENT,
+        Map.of("tokenId", tokenId, "applicationName", applicationName, "fileName", fileName)));
+  }
+
 
   private FileRevision createFilePath(final Session session, final Directory startingDirectory,
       final String[] remainingPath) {
@@ -89,15 +109,25 @@ public class FileRevisionRepository {
   }
 
   public void createFileStructureFromFunction(final Session session, final Function function,
-      final Application application) {
+      final Application application, final Landscape landscape) {
     final String[] splitFqn = function.getFqn().split("\\.");
     final String[] pathSegments = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
     if (pathSegments.length < 1) {
       return;
     }
 
-    final FileRevision file = createFileStructure(session, pathSegments, application.getName());
+    FileRevision file = createFileStructure(session, pathSegments, application.getName());
     if (file == null) {
+      //      return;
+      file = findFileRevisionByNameAndApplicationNameAndLandscapeToken(session,
+          splitFqn[splitFqn.length - 2], application.getName(), landscape.getTokenId()).orElse(
+          null);
+    }
+
+    if (file == null) {
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("FileRevision exists but doesn't exist!?!");
+      }
       return;
     }
 
@@ -132,9 +162,8 @@ public class FileRevisionRepository {
      If dynamic data created FileRevision without Commit -> ignore and create new FileRevision
      If FileRevision with name does not exist -> create new FileRevision
      */
-    final FileRevision file =
-        createFileStructure(session, fileData.getPackageName().split("\\."),
-            fileData.getApplicationName());
+    final FileRevision file = createFileStructure(session, fileData.getPackageName().split("\\."),
+        fileData.getApplicationName());
 
     final Commit commit = commitRepository.getOrCreateCommit(session, fileData.getCommitID(),
         fileData.getLandscapeToken());

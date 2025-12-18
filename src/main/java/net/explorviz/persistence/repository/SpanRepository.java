@@ -98,7 +98,8 @@ public class SpanRepository {
     span.setFunction(function);
 
     try {
-      fileRevisionRepository.createFileStructureFromFunction(session, function, application);
+      fileRevisionRepository.createFileStructureFromFunction(session, function, application,
+          landscape);
     } catch (NoSuchElementException e) {
       if (LOGGER.isDebugEnabled()) {
         LOGGER.debug("Error while persisting span: " + e);
