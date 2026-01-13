@@ -35,13 +35,6 @@ public class FileRevisionRepository {
       ORDER BY size(nodes(p)) DESC
       LIMIT 1;""";
 
-  private static final String FIND_BY_NAME_AND_APPLICATION_NAME_AND_LANDSCAPE_TOKEN_STATEMENT = """
-      MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application {name: $applicationName})
-      -[:HAS_ROOT]->(:Directory)
-      -[:CONTAINS*0..]->(f:FileRevision {name: $fileName})
-      RETURN f;
-      """;
-
   @Inject
   private SessionFactory sessionFactory;
 
@@ -55,14 +48,6 @@ public class FileRevisionRepository {
   private CommitRepository commitRepository;
 
   private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
-
-  public Optional<FileRevision> findFileRevisionByNameAndApplicationNameAndLandscapeToken(
-      final Session session, final String fileName, final String applicationName,
-      final String tokenId) {
-    return Optional.ofNullable(session.queryForObject(FileRevision.class,
-        FIND_BY_NAME_AND_APPLICATION_NAME_AND_LANDSCAPE_TOKEN_STATEMENT,
-        Map.of("tokenId", tokenId, "applicationName", applicationName, "fileName", fileName)));
-  }
 
 
   private FileRevision createFilePath(final Session session, final Directory startingDirectory,
@@ -95,7 +80,7 @@ public class FileRevisionRepository {
     final String[] remainingPath =
         resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
     if (remainingPath.length == 0) {
-      return null;
+      return resultMap.get("existingNode") instanceof FileRevision fileRev ? fileRev : null;
     }
 
     final Directory startingDirectory =
@@ -109,21 +94,15 @@ public class FileRevisionRepository {
   }
 
   public void createFileStructureFromFunction(final Session session, final Function function,
-      final Application application, final Landscape landscape) {
-    final String[] splitFqn = function.getFqn().split("\\.");
+      final String functionFqn, final Application application, final Landscape landscape,
+      final String commitId) {
+    final String[] splitFqn = functionFqn.split("\\.");
     final String[] pathSegments = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
     if (pathSegments.length < 1) {
       return;
     }
 
     FileRevision file = createFileStructure(session, pathSegments, application.getName());
-    if (file == null) {
-      //      return;
-      file = findFileRevisionByNameAndApplicationNameAndLandscapeToken(session,
-          splitFqn[splitFqn.length - 2], application.getName(), landscape.getTokenId()).orElse(
-          null);
-    }
-
     if (file == null) {
       if (LOGGER.isDebugEnabled()) {
         LOGGER.debug("FileRevision exists but doesn't exist!?!");
@@ -133,6 +112,12 @@ public class FileRevisionRepository {
 
     file.addFunction(function);
     session.save(file);
+
+    if (commitId != null) {
+      Commit commit = commitRepository.getOrCreateCommit(session, commitId, landscape.getTokenId());
+      commit.addFileRevision(file);
+      session.save(commit);
+    }
   }
 
   public void createFileStructureFromFileData(final Session session, final FileData fileData) {
@@ -158,8 +143,12 @@ public class FileRevisionRepository {
 
     /* TODO: What if dynamic data already created a FileRevision with the function but (perhaps)
         TODO: from a different commit?
-     If dynamic data created FileRevision with Commit -> create missing Repo/Branch nodes
      If dynamic data created FileRevision without Commit -> ignore and create new FileRevision
+      -> Checken, ob Datei ohne Commit existiert
+        *.a.b.c.file
+        x.y.a.b.c.file
+      -> Copy von Datei erstellen
+
      If FileRevision with name does not exist -> create new FileRevision
      */
     final FileRevision file = createFileStructure(session, fileData.getPackageName().split("\\."),

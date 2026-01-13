@@ -10,17 +10,17 @@ public class Function {
   @GeneratedValue
   private Long id;
 
-  private String fqn;
+  private String name;
 
   public Function() {
     // Empty constructor required by Neo4j OGM
   }
 
-  public Function(final String fqn) {
-    this.fqn = fqn;
+  public Function(final String name) {
+    this.name = name;
   }
 
-  public String getFqn() {
-    return fqn;
+  public String getName() {
+    return name;
   }
 }

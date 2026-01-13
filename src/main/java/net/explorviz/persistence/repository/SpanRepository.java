@@ -66,6 +66,11 @@ public class SpanRepository {
   public void persistSpan(final SpanData spanData) {
     final Session session = sessionFactory.openSession();
 
+    String commitId = null;
+    if (!spanData.getCommitId().isEmpty()) {
+      commitId = spanData.getCommitId();
+    }
+
     final Span span = new Span(spanData);
 
     if (!spanData.getParentId().isEmpty()) {
@@ -98,8 +103,8 @@ public class SpanRepository {
     span.setFunction(function);
 
     try {
-      fileRevisionRepository.createFileStructureFromFunction(session, function, application,
-          landscape);
+      fileRevisionRepository.createFileStructureFromFunction(session, function,
+          spanData.getFunctionFqn(), application, landscape, commitId);
     } catch (NoSuchElementException e) {
       if (LOGGER.isDebugEnabled()) {
         LOGGER.debug("Error while persisting span: " + e);

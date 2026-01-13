@@ -2,6 +2,8 @@ package net.explorviz.persistence.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Function;
@@ -13,29 +15,36 @@ public class FunctionRepository {
 
   private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT = """
       MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Trace)-[:CONTAINS]->
-            (:Span)-[:REPRESENTS]->(f:Function {fqn: $fqn})
-      RETURN f;
-      """;
+          (:Span)-[:REPRESENTS]->(f:Function {name: $name})
+      WITH f, $pathSegments AS pathSegments
+      MATCH p = (:Directory|FileRevision)-[:CONTAINS]->*(:Directory|FileRevision)-[:CONTAINS]->(f)
+      WHERE
+      all(j IN range(0, length(p)-1) WHERE nodes(p)[j].name = pathSegments[j])
+      RETURN f;""";
 
   @Inject
   private SessionFactory sessionFactory;
 
   public Optional<Function> findFunctionByFqnAndLandscapeToken(final Session session,
-      final String functionFqn, final String tokenId) {
+      final String fqn, final String tokenId) {
+    String[] splitFqn = fqn.split("\\.");
+    String[] functionPath = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
+    String functionName = splitFqn[splitFqn.length - 1];
     return Optional.ofNullable(
         session.queryForObject(Function.class, FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT,
-            Map.of("tokenId", tokenId, "fqn", functionFqn)));
+            Map.of("tokenId", tokenId, "name", functionName, "pathSegments", functionPath)));
   }
 
   public Optional<Function> findFunctionByFqnAndLandscapeToken(final String tokenId,
-      final String functionFqn) {
+      final String fqn) {
     final Session session = sessionFactory.openSession();
-    return findFunctionByFqnAndLandscapeToken(session, tokenId, functionFqn);
+    return findFunctionByFqnAndLandscapeToken(session, fqn, tokenId);
   }
 
-  public Function getOrCreateFunction(final Session session, final String functionFqn,
+  public Function getOrCreateFunction(final Session session, final String fqn,
       final String tokenId) {
-    return findFunctionByFqnAndLandscapeToken(session, functionFqn, tokenId).orElse(
-        new Function(functionFqn));
+    String[] splitFqn = fqn.split("\\.");
+    return findFunctionByFqnAndLandscapeToken(session, fqn, tokenId).orElse(
+        new Function(splitFqn[splitFqn.length - 1]));
   }
 }
