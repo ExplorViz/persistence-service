@@ -52,6 +52,7 @@ public class FileRevisionRepository {
 
   private FileRevision createFilePath(final Session session, final Directory startingDirectory,
       final String[] remainingPath) {
+    System.out.println("createFilePath called");
     Directory currentDirectory = startingDirectory;
     for (int i = 0; i < remainingPath.length - 1; i++) {
       final Directory newDirectory = new Directory(remainingPath[i]);
@@ -65,7 +66,7 @@ public class FileRevisionRepository {
     return file;
   }
 
-  private FileRevision createFileStructure(final Session session, final String[] filePath,
+  private Map<String, Object> findLongestPathMatch(final Session session, final String[] filePath,
       final String applicationName) {
     final Result result = session.query(FIND_LONGEST_PATH_MATCH,
         Map.of("pathSegments", filePath, "applicationName", applicationName));
@@ -75,13 +76,23 @@ public class FileRevisionRepository {
       throw new NoSuchElementException("resultIterator empty");
     }
 
-    final Map<String, Object> resultMap = resultIterator.next();
+    return resultIterator.next();
+  }
+
+  private FileRevision createFileStructure(final Session session, final String[] filePath,
+      final String applicationName) {
+    System.out.println("createFileStructure called");
+
+    final Map<String, Object> resultMap = findLongestPathMatch(session, filePath, applicationName);
 
     final String[] remainingPath =
         resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
     if (remainingPath.length == 0) {
+      System.out.println("Already existing");
       return resultMap.get("existingNode") instanceof FileRevision fileRev ? fileRev : null;
     }
+
+    System.out.println("3");
 
     final Directory startingDirectory =
         resultMap.get("existingNode") instanceof Directory dir ? dir : null;
@@ -89,6 +100,8 @@ public class FileRevisionRepository {
       // Root directory not matched, application does not exist or has no root
       throw new NoSuchElementException("startingDirectory is null");
     }
+
+    System.out.println("4");
 
     return createFilePath(session, startingDirectory, remainingPath);
   }
@@ -159,5 +172,38 @@ public class FileRevisionRepository {
     commit.addFileRevision(file);
 
     session.save(commit);
+  }
+
+  public FileRevision createFileStructureFromFilePath(final Session session, final String filePath,
+      final Application application, final Landscape landscape) {
+    System.out.println("createFileStructureFromFilePath called");
+
+    final Map<String, Object> resultMap =
+        findLongestPathMatch(session, filePath.split("/"), application.getName());
+
+    final String[] remainingPath =
+        resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
+    if (remainingPath.length == 0) {
+      System.out.println("Already existing");
+      FileRevision existingFile =
+          resultMap.get("existingNode") instanceof FileRevision fileRev ? fileRev : null;
+//      Directory dir = session.queryForObject(Directory.class,
+//          "MATCH (d:Directory)-[:CONTAINS]->(f:FileRevision) WHERE elementId(f)=$fileId RETURN d;",
+//          Map.of("fileId", existingFile.getId()));
+
+      FileRevision copiedFile =
+          new FileRevision(existingFile.getName(), existingFile.getFunctions());
+
+//      dir.addFileRevision(copiedFile);
+//      session.save(dir);
+
+      return copiedFile;
+    }
+
+    FileRevision file = createFileStructure(session, filePath.split("/"), application.getName());
+
+    System.out.println(file);
+
+    return file;
   }
 }

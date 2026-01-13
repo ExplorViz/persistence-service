@@ -2,6 +2,7 @@ package net.explorviz.persistence.ogm;
 
 import java.util.HashSet;
 import java.util.Set;
+import com.google.common.base.internal.Finalizer;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
@@ -26,9 +27,26 @@ public class FileRevision {
     this.name = name;
   }
 
+  public FileRevision(final String name, final Set<Function> functions) {
+    this.name = name;
+    this.functions = functions;
+  }
+
   public void addFunction(final Function function) {
     final Set<Function> newFunctions = new HashSet<>(functions);
     newFunctions.add(function);
     functions = Set.copyOf(newFunctions);
+  }
+
+  public Long getId() {
+    return this.id;
+  }
+
+  public String getName() {
+    return this.name;
+  }
+
+  public Set<Function> getFunctions() {
+    return this.functions;
   }
 }

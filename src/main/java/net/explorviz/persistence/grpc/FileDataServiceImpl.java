@@ -21,8 +21,10 @@ public class FileDataServiceImpl implements FileDataService {
 
   @Override
   public Uni<Empty> sendFileData(final FileData request) {
-    final Session session = sessionFactory.openSession();
-    fileRevisionRepository.createFileStructureFromFileData(session, request);
     return Uni.createFrom().item(Empty.getDefaultInstance());
+
+//    final Session session = sessionFactory.openSession();
+//    fileRevisionRepository.createFileStructureFromFileData(session, request);
+//    return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 }
