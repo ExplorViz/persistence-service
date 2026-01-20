@@ -3,7 +3,6 @@ package net.explorviz.persistence.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Function;
@@ -27,9 +26,9 @@ public class FunctionRepository {
 
   public Optional<Function> findFunctionByFqnAndLandscapeToken(final Session session,
       final String fqn, final String tokenId) {
-    String[] splitFqn = fqn.split("\\.");
-    String[] functionPath = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
-    String functionName = splitFqn[splitFqn.length - 1];
+    final String[] splitFqn = fqn.split("\\.");
+    final String[] functionPath = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
+    final String functionName = splitFqn[splitFqn.length - 1];
     return Optional.ofNullable(
         session.queryForObject(Function.class, FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT,
             Map.of("tokenId", tokenId, "name", functionName, "pathSegments", functionPath)));
@@ -43,7 +42,7 @@ public class FunctionRepository {
 
   public Function getOrCreateFunction(final Session session, final String fqn,
       final String tokenId) {
-    String[] splitFqn = fqn.split("\\.");
+    final String[] splitFqn = fqn.split("\\.");
     return findFunctionByFqnAndLandscapeToken(session, fqn, tokenId).orElse(
         new Function(splitFqn[splitFqn.length - 1]));
   }

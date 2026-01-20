@@ -2,7 +2,6 @@ package net.explorviz.persistence.ogm;
 
 import java.util.HashSet;
 import java.util.Set;
-import com.google.common.base.internal.Finalizer;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
