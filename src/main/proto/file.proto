@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.explorviz.persistence.proto";
+option java_outer_classname = "FileProto";
+
+import "google/protobuf/empty.proto";
+
+service FileDataService {
+  rpc sendFileData (FileData) returns (google.protobuf.Empty) {}
+}
+
+enum Language {
+  LANGUAGE_UNSPECIFIED = 0;
+  JAVA = 1;
+  JAVASCRIPT = 2;
+  TYPESCRIPT = 3;
+  PYTHON = 4;
+}
+
+enum ClassType {
+  CLASS_TYPE_UNSPECIFIED = 0;
+  CLASS = 1;
+  INTERFACE = 2;
+  ENUM = 3;
+  ABSTRACT_CLASS = 4;
+  ANONYMOUS_CLASS = 5;
+}
+
+message ParameterData {
+  string name = 1;
+  string type = 2;
+  repeated string modifiers = 3;
+}
+
+message FieldData {
+  string name = 1;
+  string type = 2;
+  repeated string modifiers = 3;
+}
+
+message FunctionData {
+  string name = 1;
+  string return_type = 2;
+  bool is_constructor = 3;
+  repeated string annotations = 4;
+  repeated string modifiers = 5;
+  repeated ParameterData parameters = 6;
+  // Fully qualified method names that are called by this function
+  repeated string outgoing_method_calls = 7;
+  map<string, double> metrics = 8;
+  int32 start_line = 9;
+  int32 end_line = 10;
+}
+
+message ClassData {
+  string name = 1;
+  ClassType type = 2;
+  repeated string modifiers = 3;
+  repeated string implemented_interfaces = 4;
+  repeated string superclasses = 5;
+  repeated string annotations = 6;
+  repeated FieldData fields = 7;
+  repeated ClassData inner_classes = 8;
+  repeated FunctionData functions = 9;
+  repeated string enum_values = 10;
+
+  map<string, double> metrics = 11;
+}
+
+message FileData {
+  string landscape_token = 1;
+  string file_hash = 2;
+
+  // Path relative to root of repository
+  string file_path = 3;
+
+  Language language = 4;
+  optional string package_name = 5;
+  repeated string import_names = 6;
+  repeated ClassData classes = 7;
+  // Top-level / global functions
+  repeated FunctionData functions = 8;
+  map<string, double> metrics = 9;
+
+  // Author of the last commit touching this file
+  string last_editor = 10;
+
+  // Git file metrics
+  int32 added_lines = 11;
+  int32 modified_lines = 12;
+  int32 deleted_lines = 13;
+}
+

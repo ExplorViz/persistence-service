@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.explorviz.persistence.proto";
+option java_outer_classname = "StateProto";
+
+import "google/protobuf/empty.proto";
+
+service StateDataService {
+  rpc RequestStateData (StateDataRequest) returns (StateData) {}
+}
+
+message StateDataRequest {
+  string landscape_token = 1;
+  string repository_name = 2;
+  string branch_name = 3;
+
+  // Application name -> root application path relative to repo root
+  // Default example: { "foo_application": "" }
+  map<string, string> application_paths = 4;
+}
+
+message StateData {
+  // Newest already persisted commit
+  string commit_id = 1;
+}
+
