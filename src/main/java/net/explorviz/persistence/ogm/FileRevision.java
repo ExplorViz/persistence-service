@@ -13,6 +13,8 @@ public class FileRevision {
   @GeneratedValue
   private Long id;
 
+  private String hash;
+
   private String name;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
@@ -26,7 +28,18 @@ public class FileRevision {
     this.name = name;
   }
 
+  public FileRevision(final String hash, final String name) {
+    this.hash = hash;
+    this.name = name;
+  }
+
   public FileRevision(final String name, final Set<Function> functions) {
+    this.name = name;
+    this.functions = functions;
+  }
+
+  public FileRevision(final String hash, final String name, final Set<Function> functions) {
+    this.hash = hash;
     this.name = name;
     this.functions = functions;
   }
@@ -39,6 +52,10 @@ public class FileRevision {
 
   public Long getId() {
     return this.id;
+  }
+
+  public String getHash() {
+    return this.hash;
   }
 
   public String getName() {

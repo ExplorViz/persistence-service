@@ -61,12 +61,12 @@ public class StateDataServiceImpl implements StateDataService {
     }
 
     request.getApplicationPathsMap().forEach((String k, String v) -> {
-      Application application =
+      final Application application =
           applicationRepository.getOrCreateApplication(session, k, request.getLandscapeToken());
       if (v.isEmpty()) {
         application.setRootDirectory(repository.getRootDirectory());
       } else {
-        Directory applicationRootDirectory =
+        final Directory applicationRootDirectory =
             directoryRepository.createDirectoryStructureAndReturnLastDir(session, v.split("/"),
                 request.getRepositoryName(), request.getLandscapeToken());
         application.setRootDirectory(applicationRootDirectory);
@@ -76,7 +76,7 @@ public class StateDataServiceImpl implements StateDataService {
 
     session.save(List.of(repository, landscape));
 
-    Commit latestCommit =
+    final Commit latestCommit =
         commitRepository.findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(session,
                 request.getRepositoryName(), request.getLandscapeToken(), request.getBranchName())
             .orElse(null);

@@ -1,19 +1,17 @@
 package net.explorviz.persistence.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import net.explorviz.persistence.ogm.Branch;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import net.explorviz.persistence.ogm.Directory;
 import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @ApplicationScoped
 public class DirectoryRepository {
   private static final String FIND_LONGEST_PATH_MATCH = """
+      WITH $pathSegments AS pathSegments
       MATCH (l:Landscape {tokenId: $tokenId})
         -[:CONTAINS]->(r:Repository {name: $repoName})
         -[:HAS_ROOT]->(rd:Directory {name: $repoName})
@@ -28,10 +26,10 @@ public class DirectoryRepository {
       LIMIT 1;
       """;
 
-  private Map<String, Object> findLongestPathMatch(final Session session, final String[] filePath,
-      final String repoName, final String landscapeTokenId) {
+  private Map<String, Object> findLongestPathMatch(final Session session,
+      final String[] pathSegments, final String repoName, final String landscapeTokenId) {
     final Result result = session.query(FIND_LONGEST_PATH_MATCH,
-        Map.of("tokenId", landscapeTokenId, "repoName", repoName));
+        Map.of("tokenId", landscapeTokenId, "repoName", repoName, "pathSegments", pathSegments));
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
     if (!resultIterator.hasNext()) {
@@ -43,7 +41,7 @@ public class DirectoryRepository {
 
   public Directory createDirectoryStructureAndReturnLastDir(final Session session,
       final String[] filePath, final String repoName, final String landscapeTokenId) {
-    Map<String, Object> resultMap =
+    final Map<String, Object> resultMap =
         findLongestPathMatch(session, filePath, repoName, landscapeTokenId);
     final Directory existingDir =
         resultMap.get("existingDir") instanceof Directory dir ? dir : null;
@@ -56,7 +54,7 @@ public class DirectoryRepository {
 
     Directory lastDir = existingDir;
     for (final String dirName : remainingPath) {
-      Directory newDir = new Directory(dirName);
+      final Directory newDir = new Directory(dirName);
       lastDir.addSubdirectory(newDir);
       lastDir = newDir;
     }

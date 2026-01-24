@@ -4,15 +4,17 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
-import net.explorviz.persistence.proto.FileData;
+import net.explorviz.persistence.proto.FileIdentifier;
 import org.jboss.logging.Logger;
 import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
@@ -20,6 +22,9 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
 public class FileRevisionRepository {
+  /* TODO: Nicht sicher, ob die hier nach der Modelländerung noch 100% funktioniert
+      - Mir fehlt jegliche Zuordnung zu Landscape
+   */
   private static final String FIND_LONGEST_PATH_MATCH = """
       WITH $pathSegments AS pathSegments, $applicationName as applicationName
       OPTIONAL MATCH (:Application {name: applicationName})-[:HAS_ROOT]->(rootDir:Directory)
@@ -41,6 +46,9 @@ public class FileRevisionRepository {
   private ApplicationRepository applicationRepository;
 
   @Inject
+  private DirectoryRepository directoryRepository;
+
+  @Inject
   private LandscapeRepository landscapeRepository;
 
   @Inject
@@ -48,6 +56,10 @@ public class FileRevisionRepository {
 
   private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
 
+
+  /* TODO: Think about to change how the dynamic data creates the file structure.
+      Maybe splitting the query into multiple sub-routines as in createFileStructureFromStaticData
+   */
 
   private FileRevision createFilePath(final Session session, final Directory startingDirectory,
       final String[] remainingPath) {
@@ -125,70 +137,33 @@ public class FileRevisionRepository {
     }
   }
 
-  public void createFileStructureFromFileData(final Session session, final FileData fileData) {
+  public FileRevision createFileStructureFromStaticData(final Session session,
+      final FileIdentifier fileIdentifier, final String repoName, final String landscapeTokenId) {
+    final String[] pathSegments = fileIdentifier.getFilePath().split("/");
+    final String[] directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 2);
 
-    //    System.out.println(fileData.getPackageName());
-    //    System.out.println(fileData.getCommitID());
-    //    System.out.println(fileData.getLandscapeToken());
-    //    System.out.println(fileData.getApplicationName());
-    //    System.out.println("");
-
-    final Landscape landscape =
-        landscapeRepository.getOrCreateLandscape(session, fileData.getLandscapeToken());
-
-    final Application application =
-        applicationRepository.getOrCreateApplication(session, fileData.getApplicationName(),
-            fileData.getLandscapeToken());
-
-    if (application.getRootDirectory() == null) {
-      final Directory applicationRoot = new Directory("*");
-      application.setRootDirectory(applicationRoot);
-    }
-    landscape.addApplication(application);
-
-    /* TODO: What if dynamic data already created a FileRevision with the function but (perhaps)
-        TODO: from a different commit?
-     If dynamic data created FileRevision without Commit -> ignore and create new FileRevision
-      -> Checken, ob Datei ohne Commit existiert
-        *.a.b.c.file
-        x.y.a.b.c.file
-      -> Copy von Datei erstellen
-
-     If FileRevision with name does not exist -> create new FileRevision
+    final FileRevision file =
+        new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1]);
+    /* TODO: Maybe add repoName as first element of directorySegments
+             (depending on how the paths are built)
      */
-    final FileRevision file = createFileStructure(session, fileData.getPackageName().split("\\."),
-        fileData.getApplicationName());
+    final Directory parentDir =
+        directoryRepository.createDirectoryStructureAndReturnLastDir(session, directorySegments,
+            repoName, landscapeTokenId);
+    parentDir.addFileRevision(file);
 
-    final Commit commit = commitRepository.getOrCreateCommit(session, fileData.getCommitID(),
-        fileData.getLandscapeToken());
-    commit.addFileRevision(file);
+    session.save(List.of(parentDir, file));
 
-    session.save(commit);
+    return file;
   }
 
-  public FileRevision createFileStructureFromFilePath(final Session session, final String filePath,
-      final Application application, final Landscape landscape) {
-    final Map<String, Object> resultMap =
-        findLongestPathMatch(session, filePath.split("/"), application.getName());
-
-    final String[] remainingPath =
-        resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
-    if (remainingPath.length == 0) {
-      final FileRevision existingFile =
-          resultMap.get("existingNode") instanceof FileRevision fileRev ? fileRev : null;
-      final Directory dir = session.queryForObject(Directory.class,
-          "MATCH (d:Directory)-[:CONTAINS]->(f:FileRevision) WHERE id(f)=$fileId RETURN d;",
-          Map.of("fileId", existingFile.getId()));
-
-      final FileRevision copiedFile =
-          new FileRevision(existingFile.getName(), existingFile.getFunctions());
-
-      dir.addFileRevision(copiedFile);
-      session.save(dir);
-
-      return copiedFile;
-    }
-
-    return createFileStructure(session, filePath.split("/"), application.getName());
+  public Optional<FileRevision> getFileRevisionFromHash(final Session session,
+      final String fileHash, final String repoName, final String landscapeTokenId) {
+    return Optional.ofNullable(session.queryForObject(FileRevision.class, """
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $repoName})
+        MATCH (r)-[:CONTAINS]->(c:Commit)-[:CONTAINS]->(f:FileRevision {hash: $fileHash})
+        RETURN f
+        LIMIT 1;
+        """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash)));
   }
 }

@@ -1,0 +1,108 @@
+package net.explorviz.persistence.grpc;
+
+import com.google.protobuf.Empty;
+import io.quarkus.grpc.GrpcService;
+import io.smallrye.common.annotation.Blocking;
+import io.smallrye.mutiny.Uni;
+import jakarta.inject.Inject;
+import java.util.List;
+import net.explorviz.persistence.ogm.Branch;
+import net.explorviz.persistence.ogm.Commit;
+import net.explorviz.persistence.ogm.FileRevision;
+import net.explorviz.persistence.ogm.Repository;
+import net.explorviz.persistence.proto.CommitData;
+import net.explorviz.persistence.proto.CommitService;
+import net.explorviz.persistence.proto.FileIdentifier;
+import net.explorviz.persistence.repository.ApplicationRepository;
+import net.explorviz.persistence.repository.BranchRepository;
+import net.explorviz.persistence.repository.CommitRepository;
+import net.explorviz.persistence.repository.FileRevisionRepository;
+import net.explorviz.persistence.repository.LandscapeRepository;
+import net.explorviz.persistence.repository.RepositoryRepository;
+import org.neo4j.ogm.session.Session;
+import org.neo4j.ogm.session.SessionFactory;
+
+@GrpcService
+public class CommitServiceImpl implements CommitService {
+
+  @Inject
+  private ApplicationRepository applicationRepository;
+
+  @Inject
+  private BranchRepository branchRepository;
+
+  @Inject
+  private CommitRepository commitRepository;
+
+  @Inject
+  private LandscapeRepository landscapeRepository;
+
+  @Inject
+  private RepositoryRepository repositoryRepository;
+
+  @Inject
+  private FileRevisionRepository fileRevisionRepository;
+
+  @Inject
+  private SessionFactory sessionFactory;
+
+  private static final String NO_PARENT_ID = "NONE";
+
+  @Blocking
+  @Override
+  public Uni<Empty> sendCommitReport(final CommitData request) {
+    // TODO: Handle tags. There are not handled yet
+    final Session session = sessionFactory.openSession();
+
+    final Repository repo = repositoryRepository.findRepositoryByNameAndLandscapeToken(session,
+        request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
+    if (repo == null) {
+      return Uni.createFrom().item(() -> Empty.newBuilder().build());
+    }
+
+    final Branch branch = branchRepository.getOrCreateBranch(session, request.getBranchName(),
+        request.getRepositoryName(), request.getLandscapeToken());
+    repo.addBranch(branch);
+
+    final Commit commit = commitRepository.getOrCreateCommit(session, request.getCommitId(),
+        request.getLandscapeToken());
+    commit.setBranch(branch);
+    repo.addCommit(commit);
+
+    for (final FileIdentifier f : request.getAddedFilesList()) {
+      final FileRevision file = fileRevisionRepository.createFileStructureFromStaticData(session, f,
+          request.getRepositoryName(), request.getLandscapeToken());
+      commit.addFileRevision(file);
+    }
+
+    for (final FileIdentifier f : request.getModifiedFilesList()) {
+      final FileRevision file = fileRevisionRepository.createFileStructureFromStaticData(session, f,
+          request.getRepositoryName(), request.getLandscapeToken());
+      commit.addFileRevision(file);
+    }
+
+    for (final FileIdentifier f : request.getUnchangedFilesList()) {
+      FileRevision file = fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
+          request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
+
+      if (file == null) {
+        file = fileRevisionRepository.createFileStructureFromStaticData(session, f,
+            request.getRepositoryName(), request.getLandscapeToken());
+      }
+
+      commit.addFileRevision(file);
+    }
+
+    if (request.getParentCommitId().isEmpty() || NO_PARENT_ID.equals(request.getParentCommitId())) {
+      session.save(List.of(repo, branch, commit));
+    } else {
+      final Commit parentCommit =
+          commitRepository.getOrCreateCommit(session, request.getParentCommitId(),
+              request.getLandscapeToken());
+      commit.addParent(parentCommit);
+      session.save(List.of(repo, branch, commit, parentCommit));
+    }
+
+    return Uni.createFrom().item(() -> Empty.newBuilder().build());
+  }
+}
