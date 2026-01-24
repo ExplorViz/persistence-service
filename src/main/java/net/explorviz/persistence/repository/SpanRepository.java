@@ -55,6 +55,7 @@ public class SpanRepository {
     return findSpanById(session, spanId).orElse(new Span(spanId));
   }
 
+  // TODO: IMPORTANT: Doesn't work correctly anymore after change of database model
   /* TODO: Handle optional commitId
     If span has not commitId and a FileRevision with same id with no connected Commit exits, then
     nothing happens, otherwise if no FileRevision exists or if all existing FileRevisions already
@@ -93,7 +94,7 @@ public class SpanRepository {
       final Directory applicationRoot = new Directory("*");
       application.setRootDirectory(applicationRoot);
     }
-    landscape.addApplication(application);
+    // landscape.addApplication(application);
 
     session.save(application);
 

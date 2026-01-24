@@ -2,6 +2,7 @@ package net.explorviz.persistence.grpc;
 
 import com.google.protobuf.Empty;
 import io.quarkus.grpc.GrpcService;
+import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import net.explorviz.persistence.proto.SpanData;
@@ -22,6 +23,7 @@ public class SpanDataServiceImpl implements SpanDataService {
   @Inject
   private TraceRepository traceRepository;
 
+  @Blocking
   @Override
   public Uni<Empty> persistSpan(final SpanData spanData) {
     spanRepository.persistSpan(spanData);
