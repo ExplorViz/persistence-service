@@ -46,4 +46,14 @@ public class FunctionRepository {
     return findFunctionByFqnAndLandscapeToken(session, fqn, tokenId).orElse(
         new Function(splitFqn[splitFqn.length - 1]));
   }
+
+  public Optional<Function> findFunctionByLandscapeTokenAndRepositoryAndFilePath(
+      final Session session, final String tokenId, final String repoName,
+      final String[] pathSegments) {
+    /*
+    TODO: Create cypher query that tries to find a Function node restricted to a Landscape,
+     a Repository, and a specific file path
+     */
+    return Optional.empty();
+  }
 }

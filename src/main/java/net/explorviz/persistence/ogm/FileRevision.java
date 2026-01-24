@@ -1,7 +1,10 @@
 package net.explorviz.persistence.ogm;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import net.explorviz.persistence.proto.Language;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
@@ -16,6 +19,25 @@ public class FileRevision {
   private String hash;
 
   private String name;
+
+  private Language language;
+
+  private String packageName;
+
+  private Set<String> importNames = new HashSet<>();
+
+  private Map<String, Double> metrics = new HashMap<>();
+
+  private String lastEditor;
+
+  private int addedLines;
+
+  private int modifiedLines;
+
+  private int deletedLines;
+
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private Set<ClassNode> classes = new HashSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Function> functions = new HashSet<>();
@@ -44,6 +66,12 @@ public class FileRevision {
     this.functions = functions;
   }
 
+  public void addClass(final ClassNode classNode) {
+    final Set<ClassNode> newClasses = new HashSet<>(classes);
+    newClasses.add(classNode);
+    classes = Set.copyOf(newClasses);
+  }
+
   public void addFunction(final Function function) {
     final Set<Function> newFunctions = new HashSet<>(functions);
     newFunctions.add(function);
@@ -64,5 +92,73 @@ public class FileRevision {
 
   public Set<Function> getFunctions() {
     return this.functions;
+  }
+
+  public void setHash(final String hash) {
+    this.hash = hash;
+  }
+
+  public void setName(final String name) {
+    this.name = name;
+  }
+
+  public Language getLanguage() {
+    return language;
+  }
+
+  public void setLanguage(final Language language) {
+    this.language = language;
+  }
+
+  public String getPackageName() {
+    return packageName;
+  }
+
+  public void setPackageName(final String packageName) {
+    this.packageName = packageName;
+  }
+
+  public String getLastEditor() {
+    return lastEditor;
+  }
+
+  public void setLastEditor(final String lastEditor) {
+    this.lastEditor = lastEditor;
+  }
+
+  public int getAddedLines() {
+    return addedLines;
+  }
+
+  public void setAddedLines(final int addedLines) {
+    this.addedLines = addedLines;
+  }
+
+  public int getModifiedLines() {
+    return modifiedLines;
+  }
+
+  public void setModifiedLines(final int modifiedLines) {
+    this.modifiedLines = modifiedLines;
+  }
+
+  public int getDeletedLines() {
+    return deletedLines;
+  }
+
+  public void setDeletedLines(final int deletedLines) {
+    this.deletedLines = deletedLines;
+  }
+
+  public void addImportNames(final String importName) {
+    final Set<String> newImportNames = new HashSet<>(importNames);
+    newImportNames.add(importName);
+    importNames = Set.copyOf(newImportNames);
+  }
+
+  public void addMetric(final String key, final Double value) {
+    final Map<String, Double> newMetrics = new HashMap<>(metrics);
+    newMetrics.put(key, value);
+    metrics = Map.copyOf(newMetrics);
   }
 }
