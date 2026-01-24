@@ -14,8 +14,6 @@ public class Commit {
 
   private String author;
 
-  private ZonedDateTime date;
-
   @Relationship(type = "BELONGS_TO", direction = Relationship.Direction.OUTGOING)
   private Branch branch;
 
@@ -35,6 +33,10 @@ public class Commit {
 
   public void setBranch(final Branch branch) {
     this.branch = branch;
+  }
+
+  public String getHash() {
+    return this.hash;
   }
 
   public void addParent(final Commit commit) {

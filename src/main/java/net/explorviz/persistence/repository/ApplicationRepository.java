@@ -12,9 +12,9 @@ import org.neo4j.ogm.session.SessionFactory;
 public class ApplicationRepository {
 
   private static final String FIND_BY_NAME_AND_LANDSCAPE_TOKEN_STATEMENT = """
-      MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application {name: $name})
-      OPTIONAL MATCH (a)-[h:HAS_ROOT]->(applicationRoot:Directory)
-      RETURN a, h, applicationRoot;
+      MATCH (l:Landscape {tokenId: $tokenId})
+        -->*(appRoot:Directory)<-[h:HAS_ROOT]-(app:Application {name: $name})
+      RETURN app, h, appRoot;
       """;
 
   @Inject

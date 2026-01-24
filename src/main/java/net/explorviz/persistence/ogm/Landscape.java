@@ -19,9 +19,6 @@ public class Landscape {
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Repository> repositories = new HashSet<>();
 
-  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Application> applications = new HashSet<>();
-
   public Landscape() {
     // Empty constructor required by Neo4j OGM
   }
@@ -46,12 +43,6 @@ public class Landscape {
     final Set<Repository> newRepositories = new HashSet<>(repositories);
     newRepositories.add(repo);
     repositories = Set.copyOf(newRepositories);
-  }
-
-  public void addApplication(final Application application) {
-    final Set<Application> newApplications = new HashSet<>(applications);
-    newApplications.add(application);
-    applications = Set.copyOf(newApplications);
   }
 
   public String getTokenId() {
