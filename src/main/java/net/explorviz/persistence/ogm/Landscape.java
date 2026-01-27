@@ -11,8 +11,6 @@ public class Landscape {
   @Id
   private String tokenId;
 
-  private String tokenSecret;
-
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Trace> traces = new HashSet<>();
 
@@ -23,9 +21,8 @@ public class Landscape {
     // Empty constructor required by Neo4j OGM
   }
 
-  public Landscape(final String tokenId, final String tokenSecret, final Set<Trace> traces) {
+  public Landscape(final String tokenId, final Set<Trace> traces) {
     this.tokenId = tokenId;
-    this.tokenSecret = tokenSecret;
     this.traces = traces;
   }
 
