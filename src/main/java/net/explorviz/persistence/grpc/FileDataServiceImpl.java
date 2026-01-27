@@ -66,7 +66,9 @@ public class FileDataServiceImpl implements FileDataService {
     }
 
     for (final FunctionData f : request.getFunctionsList()) {
-      file.addFunction(new Function(f));
+      final Function function = new Function(f);
+      function.addParameters(f.getParametersList());
+      file.addFunction(function);
     }
 
     file.setHasFileData(true);
@@ -92,7 +94,9 @@ public class FileDataServiceImpl implements FileDataService {
           }
 
           for (final FunctionData f : classData.getFunctionsList()) {
-            clazz.addFunctions(new Function(f));
+            final Function function = new Function(f);
+            function.addParameters(f.getParametersList());
+            clazz.addFunction(function);
           }
 
           session.save(clazz);

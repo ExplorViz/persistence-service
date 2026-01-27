@@ -90,7 +90,7 @@ public class Clazz {
     innerClasses = Set.copyOf(newInnerClasses);
   }
 
-  public void addFunctions(final Function function) {
+  public void addFunction(final Function function) {
     final Set<Function> newFunctions = new HashSet<>(functions);
     newFunctions.add(function);
     functions = Set.copyOf(newFunctions);

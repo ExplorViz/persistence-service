@@ -2,12 +2,15 @@ package net.explorviz.persistence.ogm;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.explorviz.persistence.proto.FunctionData;
+import net.explorviz.persistence.proto.ParameterData;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 public class Function {
@@ -25,8 +28,6 @@ public class Function {
 
   private final Set<String> modifiers;
 
-  // TODO: Decide how to handle parameters (own node class?)
-
   private final Set<String> outgoingMethodCalls;
 
   private final Map<String, Double> metrics;
@@ -34,6 +35,9 @@ public class Function {
   private int startLine;
 
   private int endLine;
+
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private Set<Parameter> parameters = new HashSet<>();
 
   public Function() {
     this.annotations = new HashSet<>();
@@ -64,5 +68,17 @@ public class Function {
 
   public String getName() {
     return name;
+  }
+
+  public void addParameter(final Parameter parameter) {
+    final Set<Parameter> newParameters = new HashSet<>(parameters);
+    newParameters.add(parameter);
+    parameters = Set.copyOf(newParameters);
+  }
+
+  public void addParameters(final List<ParameterData> parameterDataList) {
+    for (final ParameterData p : parameterDataList) {
+      addParameter(new Parameter(p.getName(), p.getType(), p.getModifiersList()));
+    }
   }
 }
