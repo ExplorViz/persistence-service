@@ -1,6 +1,7 @@
 package net.explorviz.persistence.grpc;
 
 import com.google.protobuf.Empty;
+import io.grpc.Status;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
@@ -57,7 +58,9 @@ public class CommitServiceImpl implements CommitService {
     final Repository repo = repositoryRepository.findRepositoryByNameAndLandscapeToken(session,
         request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
     if (repo == null) {
-      return Uni.createFrom().item(() -> Empty.newBuilder().build());
+      return Uni.createFrom().failure(
+          Status.FAILED_PRECONDITION.withDescription("No corresponding state data was sent before.")
+              .asRuntimeException());
     }
 
     final Branch branch = branchRepository.getOrCreateBranch(session, request.getBranchName(),
@@ -82,13 +85,11 @@ public class CommitServiceImpl implements CommitService {
     }
 
     for (final FileIdentifier f : request.getUnchangedFilesList()) {
-      FileRevision file = fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
-          request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
-
-      if (file == null) {
-        file = fileRevisionRepository.createFileStructureFromStaticData(session, f,
-            request.getRepositoryName(), request.getLandscapeToken());
-      }
+      final FileRevision file =
+          fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
+              request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
+                () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
+                  request.getRepositoryName(), request.getLandscapeToken()));
 
       commit.addFileRevision(file);
     }

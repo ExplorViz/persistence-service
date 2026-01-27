@@ -37,7 +37,7 @@ public class FileRevision {
   private int deletedLines;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<ClassNode> classes = new HashSet<>();
+  private Set<Clazz> classes = new HashSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Function> functions = new HashSet<>();
@@ -66,9 +66,9 @@ public class FileRevision {
     this.functions = functions;
   }
 
-  public void addClass(final ClassNode classNode) {
-    final Set<ClassNode> newClasses = new HashSet<>(classes);
-    newClasses.add(classNode);
+  public void addClass(final Clazz clazz) {
+    final Set<Clazz> newClasses = new HashSet<>(classes);
+    newClasses.add(clazz);
     classes = Set.copyOf(newClasses);
   }
 

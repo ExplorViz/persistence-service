@@ -6,7 +6,7 @@ import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import net.explorviz.persistence.ogm.ClassNode;
+import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.proto.ClassData;
@@ -60,21 +60,12 @@ public class FileDataServiceImpl implements FileDataService {
     file.setDeletedLines(request.getDeletedLines());
 
     for (final ClassData c : request.getClassesList()) {
-      final ClassNode classNode = createClassNode(session, c, request);
-      file.addClass(classNode);
+      final Clazz clazz = createClazz(session, c, request);
+      file.addClass(clazz);
     }
 
-    // TODO: Search function objects and set relation or create new function object if it not exists
     for (final FunctionData f : request.getFunctionsList()) {
-      Function function =
-          functionRepository.findFunctionByLandscapeTokenAndRepositoryAndFilePath(session,
-              request.getLandscapeToken(), request.getRepositoryName(),
-              request.getFilePath().split("/")).orElse(null);
-
-      if (function == null) {
-        function = new Function(f);
-      }
-
+      final Function function = new Function(f);
       file.addFunction(function);
     }
 
@@ -83,32 +74,29 @@ public class FileDataServiceImpl implements FileDataService {
     return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
-  private ClassNode createClassNode(final Session session, final ClassData classData,
+  private Clazz createClazz(final Session session, final ClassData classData,
       final FileData request) {
-    ClassNode classNode =
-        classNodeRepository.findClassByLandscapeTokenAndRepositoryAndFileHash(session,
-                request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash())
-            .orElse(null);
+    return classNodeRepository.findClassByLandscapeTokenAndRepositoryAndFileHash(session,
+            request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash())
+        .orElseGet(() -> {
+          final Clazz clazz = new Clazz(classData);
 
-    if (classNode == null) {
-      classNode = new ClassNode(classData);
+          // TODO: Handle fields
 
-      // TODO: Handle fields
+          for (final ClassData c : classData.getInnerClassesList()) {
+            final Clazz innerClass = createClazz(session, c, request);
+            clazz.addInnerClass(innerClass);
+          }
 
-      for (final ClassData c : classData.getInnerClassesList()) {
-        final ClassNode innerClass = createClassNode(session, c, request);
-        classNode.addInnerClass(innerClass);
-      }
+          for (final FunctionData f : classData.getFunctionsList()) {
+            // Create new function, since classNode was newly created
+            final Function function = new Function(f);
+            clazz.addFunctions(function);
+          }
 
-      for (final FunctionData f : classData.getFunctionsList()) {
-        // Create new function, since classNode was newly created
-        final Function function = new Function(f);
-        classNode.addFunctions(function);
-      }
+          session.save(clazz);
 
-      session.save(classNode);
-    }
-
-    return classNode;
+          return clazz;
+        });
   }
 }

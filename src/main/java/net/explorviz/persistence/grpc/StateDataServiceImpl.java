@@ -67,8 +67,8 @@ public class StateDataServiceImpl implements StateDataService {
         application.setRootDirectory(repository.getRootDirectory());
       } else {
         final Directory applicationRootDirectory =
-            directoryRepository.createDirectoryStructureAndReturnLastDir(session, v.split("/"),
-                request.getRepositoryName(), request.getLandscapeToken());
+            directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(session,
+                v.split("/"), request.getRepositoryName(), request.getLandscapeToken());
         application.setRootDirectory(applicationRootDirectory);
       }
       session.save(application);

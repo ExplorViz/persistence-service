@@ -21,30 +21,33 @@ public class Function {
 
   private boolean isConstructor;
 
-  private Set<String> annotations = new HashSet<>();
+  private final Set<String> annotations;
 
-  private Set<String> modifiers = new HashSet<>();
+  private final Set<String> modifiers;
 
   // TODO: Decide how to handle parameters (own node class?)
 
-  private Set<String> outgoingMethodCalls = new HashSet<>();
+  private final Set<String> outgoingMethodCalls;
 
-  private Map<String, Double> metrics = new HashMap<>();
+  private final Map<String, Double> metrics;
 
   private int startLine;
 
   private int endLine;
 
   public Function() {
-    // Empty constructor required by Neo4j OGM
+    this.annotations = new HashSet<>();
+    this.modifiers = new HashSet<>();
+    this.outgoingMethodCalls = new HashSet<>();
+    this.metrics = new HashMap<>();
   }
 
   public Function(final String name) {
     this.name = name;
-  }
-
-  public String getName() {
-    return name;
+    this.annotations = new HashSet<>();
+    this.modifiers = new HashSet<>();
+    this.outgoingMethodCalls = new HashSet<>();
+    this.metrics = new HashMap<>();
   }
 
   public Function(final FunctionData functionData) {
@@ -57,5 +60,9 @@ public class Function {
     this.metrics = functionData.getMetricsMap();
     this.startLine = functionData.getStartLine();
     this.endLine = functionData.getEndLine();
+  }
+
+  public String getName() {
+    return name;
   }
 }

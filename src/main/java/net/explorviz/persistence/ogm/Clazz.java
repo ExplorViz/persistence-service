@@ -12,7 +12,7 @@ import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class ClassNode {
+public class Clazz {
   @Id
   @GeneratedValue
   private Long id;
@@ -21,41 +21,58 @@ public class ClassNode {
 
   private ClassType type;
 
-  private Set<String> modifiers = new HashSet<>();
+  private final Set<String> modifiers;
 
-  private Set<String> implementedInterfaces = new HashSet<>();
+  private final Set<String> implementedInterfaces;
 
   // TODO: Might change to a relationship to Classes
-  private Set<String> superClasses = new HashSet<>();
+  private final Set<String> superClasses;
 
-  private Set<String> annotations = new HashSet<>();
+  private final Set<String> annotations;
 
   // TODO: Decide how to handle fields (own node class?)
 
-  private Set<String> enumValues = new HashSet<>();
+  private final Set<String> enumValues;
 
-  private Map<String, Double> metrics = new HashMap<>();
+  private final Map<String, Double> metrics;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<ClassNode> innerClasses = new HashSet<>();
+  private Set<Clazz> innerClasses = new HashSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Function> functions = new HashSet<>();
 
-  public ClassNode() {
-    // Empty constructor required by Neo4j OGM
+  public Clazz() {
+    this.modifiers = new HashSet<>();
+    this.implementedInterfaces = new HashSet<>();
+    this.superClasses = new HashSet<>();
+    this.annotations = new HashSet<>();
+    this.enumValues = new HashSet<>();
+    this.metrics = new HashMap<>();
   }
 
-  public ClassNode(final String name) {
+  public Clazz(final String name) {
     this.name = name;
+    this.modifiers = new HashSet<>();
+    this.implementedInterfaces = new HashSet<>();
+    this.superClasses = new HashSet<>();
+    this.annotations = new HashSet<>();
+    this.enumValues = new HashSet<>();
+    this.metrics = new HashMap<>();
   }
 
-  public ClassNode(final String name, final ClassType type) {
+  public Clazz(final String name, final ClassType type) {
     this.name = name;
     this.type = type;
+    this.modifiers = new HashSet<>();
+    this.implementedInterfaces = new HashSet<>();
+    this.superClasses = new HashSet<>();
+    this.annotations = new HashSet<>();
+    this.enumValues = new HashSet<>();
+    this.metrics = new HashMap<>();
   }
 
-  public ClassNode(final ClassData classData) {
+  public Clazz(final ClassData classData) {
     this.name = classData.getName();
     this.type = classData.getType();
     this.modifiers = new HashSet<>(classData.getModifiersList());
@@ -67,8 +84,8 @@ public class ClassNode {
     this.metrics = classData.getMetricsMap();
   }
 
-  public void addInnerClass(final ClassNode innerClass) {
-    final Set<ClassNode> newInnerClasses = new HashSet<>(innerClasses);
+  public void addInnerClass(final Clazz innerClass) {
+    final Set<Clazz> newInnerClasses = new HashSet<>(innerClasses);
     newInnerClasses.add(innerClass);
     innerClasses = Set.copyOf(newInnerClasses);
   }

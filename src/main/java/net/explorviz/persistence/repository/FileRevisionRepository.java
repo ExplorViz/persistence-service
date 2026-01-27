@@ -148,8 +148,8 @@ public class FileRevisionRepository {
              (depending on how the paths are built)
      */
     final Directory parentDir =
-        directoryRepository.createDirectoryStructureAndReturnLastDir(session, directorySegments,
-            repoName, landscapeTokenId);
+        directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(session,
+            directorySegments, repoName, landscapeTokenId);
     parentDir.addFileRevision(file);
 
     session.save(List.of(parentDir, file));

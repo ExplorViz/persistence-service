@@ -10,7 +10,7 @@ import org.neo4j.ogm.session.Session;
 
 @ApplicationScoped
 public class DirectoryRepository {
-  private static final String FIND_LONGEST_PATH_MATCH = """
+  private static final String FIND_LONGEST_PATH_MATCH_STATIC_DATA = """
       WITH $pathSegments AS pathSegments
       MATCH (l:Landscape {tokenId: $tokenId})
         -[:CONTAINS]->(r:Repository {name: $repoName})
@@ -26,9 +26,9 @@ public class DirectoryRepository {
       LIMIT 1;
       """;
 
-  private Map<String, Object> findLongestPathMatch(final Session session,
+  private Map<String, Object> findLongestPathMatchStaticData(final Session session,
       final String[] pathSegments, final String repoName, final String landscapeTokenId) {
-    final Result result = session.query(FIND_LONGEST_PATH_MATCH,
+    final Result result = session.query(FIND_LONGEST_PATH_MATCH_STATIC_DATA,
         Map.of("tokenId", landscapeTokenId, "repoName", repoName, "pathSegments", pathSegments));
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
@@ -39,10 +39,10 @@ public class DirectoryRepository {
     return resultIterator.next();
   }
 
-  public Directory createDirectoryStructureAndReturnLastDir(final Session session,
+  public Directory createDirectoryStructureAndReturnLastDirStaticData(final Session session,
       final String[] filePath, final String repoName, final String landscapeTokenId) {
     final Map<String, Object> resultMap =
-        findLongestPathMatch(session, filePath, repoName, landscapeTokenId);
+        findLongestPathMatchStaticData(session, filePath, repoName, landscapeTokenId);
     final Directory existingDir =
         resultMap.get("existingDir") instanceof Directory dir ? dir : null;
     if (existingDir == null) {
