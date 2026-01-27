@@ -11,6 +11,7 @@ import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Repository;
+import net.explorviz.persistence.ogm.Tag;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
 import net.explorviz.persistence.proto.FileIdentifier;
@@ -20,6 +21,7 @@ import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.RepositoryRepository;
+import net.explorviz.persistence.repository.TagRepository;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -45,6 +47,9 @@ public class CommitServiceImpl implements CommitService {
   private FileRevisionRepository fileRevisionRepository;
 
   @Inject
+  private TagRepository tagRepository;
+
+  @Inject
   private SessionFactory sessionFactory;
 
   private static final String NO_PARENT_ID = "NONE";
@@ -52,7 +57,6 @@ public class CommitServiceImpl implements CommitService {
   @Blocking
   @Override
   public Uni<Empty> sendCommitReport(final CommitData request) {
-    // TODO: Handle tags. There are not handled yet
     final Session session = sessionFactory.openSession();
 
     final Repository repo = repositoryRepository.findRepositoryByNameAndLandscapeToken(session,
@@ -92,6 +96,12 @@ public class CommitServiceImpl implements CommitService {
                   request.getRepositoryName(), request.getLandscapeToken()));
 
       commit.addFileRevision(file);
+    }
+
+    for (final String tagName : request.getTagsList()) {
+      final Tag tag =
+          tagRepository.findTagByName(session, tagName).orElse(new Tag(tagName));
+      commit.addTag(tag);
     }
 
     if (request.getParentCommitId().isEmpty() || NO_PARENT_ID.equals(request.getParentCommitId())) {

@@ -22,6 +22,9 @@ public class Commit {
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<FileRevision> fileRevisions = new HashSet<>();
 
+  @Relationship(type = "IS_TAGGED_WITH", direction = Relationship.Direction.OUTGOING)
+  private Set<Tag> tags = new HashSet<>();
+
   public Commit() {
     // Empty constructor required by Neo4j OGM
   }
@@ -48,5 +51,11 @@ public class Commit {
     final Set<FileRevision> newFileRevisions = new HashSet<>(fileRevisions);
     newFileRevisions.add(fileRevision);
     fileRevisions = Set.copyOf(newFileRevisions);
+  }
+
+  public void addTag(final Tag tag) {
+    final Set<Tag> newTags = new HashSet<>(tags);
+    newTags.add(tag);
+    tags = Set.copyOf(newTags);
   }
 }
