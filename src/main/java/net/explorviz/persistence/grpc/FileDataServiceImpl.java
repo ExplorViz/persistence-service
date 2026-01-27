@@ -69,6 +69,8 @@ public class FileDataServiceImpl implements FileDataService {
       file.addFunction(function);
     }
 
+    file.setHasFileData(true);
+
     session.save(file);
 
     return Uni.createFrom().item(Empty.getDefaultInstance());

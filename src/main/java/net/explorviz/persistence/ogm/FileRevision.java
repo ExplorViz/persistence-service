@@ -20,6 +20,8 @@ public class FileRevision {
 
   private String name;
 
+  private boolean hasFileData;
+
   private Language language;
 
   private String packageName;
@@ -148,6 +150,14 @@ public class FileRevision {
 
   public void setDeletedLines(final int deletedLines) {
     this.deletedLines = deletedLines;
+  }
+
+  public boolean isHasFileData() {
+    return hasFileData;
+  }
+
+  public void setHasFileData(final boolean hasFileData) {
+    this.hasFileData = hasFileData;
   }
 
   public void addImportNames(final String importName) {

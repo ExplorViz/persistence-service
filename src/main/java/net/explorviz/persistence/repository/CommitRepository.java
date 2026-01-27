@@ -27,6 +27,7 @@ public class CommitRepository {
 
   public Optional<Commit> findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(
       final Session session, final String repoName, final String tokenId, final String branchName) {
+    // TODO: Update query: Find latest fully persisted commit in database
     return Optional.ofNullable(session.queryForObject(Commit.class, """
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $repoName})
         MATCH (r)-[:CONTAINS]->(b:Branch {name: $branchName})
@@ -35,7 +36,8 @@ public class CommitRepository {
           MATCH (child:Commit)-[:HAS_PARENT]->(c)
           WHERE (child)-[:BELONGS_TO]->(b)
         }
-        RETURN c
+        OPTIONAL MATCH (c)-[h:HAS_PARENT]->(p:Commit)
+        RETURN c, p, h
         LIMIT 1;
         """, Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }

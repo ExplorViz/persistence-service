@@ -143,9 +143,14 @@ public class FileRevisionRepository {
     final String[] directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 2);
 
     final FileRevision file =
-        new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1]);
+        getFileRevisionFromHash(session, fileIdentifier.getFileHash(), repoName,
+            landscapeTokenId).orElse(
+              new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1])
+            );
+
     /* TODO: Maybe add repoName as first element of directorySegments
              (depending on how the paths are built)
+             #FRN
      */
     final Directory parentDir =
         directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(session,
