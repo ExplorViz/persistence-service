@@ -7,9 +7,11 @@ import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import net.explorviz.persistence.ogm.Clazz;
+import net.explorviz.persistence.ogm.Field;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.proto.ClassData;
+import net.explorviz.persistence.proto.FieldData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.proto.FunctionData;
@@ -60,13 +62,11 @@ public class FileDataServiceImpl implements FileDataService {
     file.setDeletedLines(request.getDeletedLines());
 
     for (final ClassData c : request.getClassesList()) {
-      final Clazz clazz = createClazz(session, c, request);
-      file.addClass(clazz);
+      file.addClass(createClazz(session, c, request));
     }
 
     for (final FunctionData f : request.getFunctionsList()) {
-      final Function function = new Function(f);
-      file.addFunction(function);
+      file.addFunction(new Function(f));
     }
 
     file.setHasFileData(true);
@@ -83,17 +83,16 @@ public class FileDataServiceImpl implements FileDataService {
         .orElseGet(() -> {
           final Clazz clazz = new Clazz(classData);
 
-          // TODO: Handle fields
+          for (final FieldData f : classData.getFieldsList()) {
+            clazz.addField(new Field(f.getName(), f.getType(), f.getModifiersList()));
+          }
 
           for (final ClassData c : classData.getInnerClassesList()) {
-            final Clazz innerClass = createClazz(session, c, request);
-            clazz.addInnerClass(innerClass);
+            clazz.addInnerClass(createClazz(session, c, request));
           }
 
           for (final FunctionData f : classData.getFunctionsList()) {
-            // Create new function, since classNode was newly created
-            final Function function = new Function(f);
-            clazz.addFunctions(function);
+            clazz.addFunctions(new Function(f));
           }
 
           session.save(clazz);

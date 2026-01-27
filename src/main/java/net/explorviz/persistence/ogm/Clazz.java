@@ -30,8 +30,6 @@ public class Clazz {
 
   private final Set<String> annotations;
 
-  // TODO: Decide how to handle fields (own node class?)
-
   private final Set<String> enumValues;
 
   private final Map<String, Double> metrics;
@@ -41,6 +39,9 @@ public class Clazz {
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Function> functions = new HashSet<>();
+
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private Set<Field> fields = new HashSet<>();
 
   public Clazz() {
     this.modifiers = new HashSet<>();
@@ -79,7 +80,6 @@ public class Clazz {
     this.implementedInterfaces = new HashSet<>(classData.getImplementedInterfacesList());
     this.superClasses = new HashSet<>(classData.getSuperclassesList());
     this.annotations = new HashSet<>(classData.getAnnotationsList());
-    // TODO: Handle fields
     this.enumValues = new HashSet<>(classData.getEnumValuesList());
     this.metrics = classData.getMetricsMap();
   }
@@ -94,5 +94,11 @@ public class Clazz {
     final Set<Function> newFunctions = new HashSet<>(functions);
     newFunctions.add(function);
     functions = Set.copyOf(newFunctions);
+  }
+
+  public void addField(final Field field) {
+    final Set<Field> newFields = new HashSet<>(fields);
+    newFields.add(field);
+    fields = Set.copyOf(newFields);
   }
 }
