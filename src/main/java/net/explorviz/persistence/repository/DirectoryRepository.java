@@ -21,7 +21,7 @@ public class DirectoryRepository {
         WHERE nodes(p)[j].name = pathSegments[j]
       )
       RETURN coalesce(last(nodes(p)), rd) AS existingDir,
-             pathSegments[coalesce(length(p+1), 0)..] AS remainingPath
+             pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
       ORDER BY size(nodes(p)) DESC
       LIMIT 1;
       """;

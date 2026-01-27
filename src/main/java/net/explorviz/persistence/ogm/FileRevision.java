@@ -1,8 +1,6 @@
 package net.explorviz.persistence.ogm;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import net.explorviz.persistence.proto.Language;
 import org.neo4j.ogm.annotation.GeneratedValue;
@@ -28,7 +26,7 @@ public class FileRevision {
 
   private Set<String> importNames = new HashSet<>();
 
-  private Map<String, Double> metrics = new HashMap<>();
+  //  private Map<String, Double> metrics = new HashMap<>();
 
   private String lastEditor;
 
@@ -166,9 +164,9 @@ public class FileRevision {
     importNames = Set.copyOf(newImportNames);
   }
 
-  public void addMetric(final String key, final Double value) {
-    final Map<String, Double> newMetrics = new HashMap<>(metrics);
-    newMetrics.put(key, value);
-    metrics = Map.copyOf(newMetrics);
-  }
+  //  public void addMetric(final String key, final Double value) {
+  //    final Map<String, Double> newMetrics = new HashMap<>(metrics);
+  //    newMetrics.put(key, value);
+  //    metrics = Map.copyOf(newMetrics);
+  //  }
 }

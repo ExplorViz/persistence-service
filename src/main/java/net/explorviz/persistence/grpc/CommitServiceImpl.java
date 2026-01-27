@@ -56,7 +56,8 @@ public class CommitServiceImpl implements CommitService {
 
   @Blocking
   @Override
-  public Uni<Empty> sendCommitReport(final CommitData request) {
+  public Uni<Empty> persistCommit(final CommitData request) {
+    // TODO: Handle tags. There are not handled yet
     final Session session = sessionFactory.openSession();
 
     final Repository repo = repositoryRepository.findRepositoryByNameAndLandscapeToken(session,

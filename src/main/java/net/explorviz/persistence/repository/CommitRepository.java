@@ -37,7 +37,7 @@ public class CommitRepository {
           WHERE (child)-[:BELONGS_TO]->(b)
         }
         OPTIONAL MATCH (c)-[h:HAS_PARENT]->(p:Commit)
-        RETURN c, p, h
+        RETURN c
         LIMIT 1;
         """, Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }

@@ -15,7 +15,7 @@ import net.explorviz.persistence.proto.FieldData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.proto.FunctionData;
-import net.explorviz.persistence.repository.ClassNodeRepository;
+import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import org.neo4j.ogm.session.Session;
@@ -25,7 +25,7 @@ import org.neo4j.ogm.session.SessionFactory;
 public class FileDataServiceImpl implements FileDataService {
 
   @Inject
-  private ClassNodeRepository classNodeRepository;
+  private ClazzRepository clazzRepository;
 
   @Inject
   private FileRevisionRepository fileRevisionRepository;
@@ -38,7 +38,7 @@ public class FileDataServiceImpl implements FileDataService {
 
   @Blocking
   @Override
-  public Uni<Empty> sendFileData(final FileData request) {
+  public Uni<Empty> persistFile(final FileData request) {
     final Session session = sessionFactory.openSession();
 
     final FileRevision file =
@@ -55,7 +55,7 @@ public class FileDataServiceImpl implements FileDataService {
     for (final String importName : request.getImportNamesList()) {
       file.addImportNames(importName);
     }
-    request.getMetricsMap().forEach(file::addMetric);
+    //    request.getMetricsMap().forEach(file::addMetric);
     file.setLastEditor(request.getLastEditor());
     file.setAddedLines(request.getAddedLines());
     file.setModifiedLines(request.getModifiedLines());
@@ -80,7 +80,7 @@ public class FileDataServiceImpl implements FileDataService {
 
   private Clazz createClazz(final Session session, final ClassData classData,
       final FileData request) {
-    return classNodeRepository.findClassByLandscapeTokenAndRepositoryAndFileHash(session,
+    return clazzRepository.findClassByLandscapeTokenAndRepositoryAndFileHash(session,
             request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash())
         .orElseGet(() -> {
           final Clazz clazz = new Clazz(classData);

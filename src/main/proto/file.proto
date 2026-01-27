@@ -7,7 +7,7 @@ option java_outer_classname = "FileProto";
 import "google/protobuf/empty.proto";
 
 service FileDataService {
-  rpc sendFileData (FileData) returns (google.protobuf.Empty) {}
+  rpc PersistFile (FileData) returns (google.protobuf.Empty) {}
 }
 
 enum Language {
@@ -92,4 +92,3 @@ message FileData {
   int32 modified_lines = 13;
   int32 deleted_lines = 14;
 }
-

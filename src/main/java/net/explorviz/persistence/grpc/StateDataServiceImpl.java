@@ -44,7 +44,7 @@ public class StateDataServiceImpl implements StateDataService {
 
   @Blocking
   @Override
-  public Uni<StateData> requestStateData(final StateDataRequest request) {
+  public Uni<StateData> getStateData(final StateDataRequest request) {
     final Session session = sessionFactory.openSession();
 
     final Landscape landscape =

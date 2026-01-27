@@ -1,5 +1,6 @@
 package net.explorviz.persistence.repository;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Map;
 import java.util.Optional;
@@ -7,7 +8,8 @@ import net.explorviz.persistence.ogm.Clazz;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
-public class ClassNodeRepository {
+@ApplicationScoped
+public class ClazzRepository {
 
   @Inject
   private SessionFactory sessionFactory;
@@ -19,7 +21,7 @@ public class ClassNodeRepository {
           -[:CONTAINS]->(:Repository {name: $repoName})
           -[:CONTAINS]->(:Commit)
           -[:CONTAINS]->(f:FileRevision {hash: $fileHash})
-          -[:CONTAINS]->(cl:ClassNode)
+          -[:CONTAINS]->(cl:Clazz)
         RETURN cl
         LIMIT 1;
         """, Map.of("tokenId", tokenId, "repoName", repoName, "fileHash", fileHash)));

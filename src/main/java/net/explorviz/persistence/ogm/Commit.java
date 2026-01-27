@@ -1,5 +1,6 @@
 package net.explorviz.persistence.ogm;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import org.neo4j.ogm.annotation.Id;
@@ -12,6 +13,10 @@ public class Commit {
   private String hash;
 
   private String author;
+
+  private Instant authorDate;
+
+  private Instant commitDate;
 
   @Relationship(type = "BELONGS_TO", direction = Relationship.Direction.OUTGOING)
   private Branch branch;
@@ -33,14 +38,6 @@ public class Commit {
     this.hash = hash;
   }
 
-  public void setBranch(final Branch branch) {
-    this.branch = branch;
-  }
-
-  public String getHash() {
-    return this.hash;
-  }
-
   public void addParent(final Commit commit) {
     final Set<Commit> newParentCommits = new HashSet<>(parentCommits);
     newParentCommits.add(commit);
@@ -57,5 +54,17 @@ public class Commit {
     final Set<Tag> newTags = new HashSet<>(tags);
     newTags.add(tag);
     tags = Set.copyOf(newTags);
+  }
+
+  public void setBranch(final Branch branch) {
+    this.branch = branch;
+  }
+
+  public String getHash() {
+    return this.hash;
+  }
+
+  public Instant getCommitDate() {
+    return commitDate;
   }
 }

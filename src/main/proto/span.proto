@@ -7,17 +7,17 @@ option java_outer_classname = "SpanProto";
 import "google/protobuf/empty.proto";
 
 service SpanDataService {
-    rpc PersistSpan (SpanData) returns (google.protobuf.Empty) {}
+  rpc PersistSpan (SpanData) returns (google.protobuf.Empty) {}
 }
 
 message SpanData {
-    string span_id = 1;
-    string parent_id = 2;
-    string trace_id = 3;
-    string landscape_token_id = 4;
-    int64 start_time = 5;
-    int64 end_time = 6;
-    string application_name = 7;
-    string function_fqn = 8;
-    optional string commit_id = 9;
+  string span_id = 1;
+  string parent_id = 2;
+  string trace_id = 3;
+  string landscape_token_id = 4;
+  int64 start_time = 5;
+  int64 end_time = 6;
+  string application_name = 7;
+  string function_fqn = 8;
+  optional string commit_id = 9;
 }

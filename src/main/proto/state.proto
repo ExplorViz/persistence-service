@@ -4,10 +4,8 @@ option java_multiple_files = true;
 option java_package = "net.explorviz.persistence.proto";
 option java_outer_classname = "StateProto";
 
-import "google/protobuf/empty.proto";
-
 service StateDataService {
-  rpc RequestStateData (StateDataRequest) returns (StateData) {}
+  rpc GetStateData (StateDataRequest) returns (StateData) {}
 }
 
 message StateDataRequest {
@@ -24,4 +22,3 @@ message StateData {
   // Newest already persisted commit
   string commit_id = 1;
 }
-
