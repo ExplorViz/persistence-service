@@ -16,6 +16,7 @@ enum Language {
   JAVASCRIPT = 2;
   TYPESCRIPT = 3;
   PYTHON = 4;
+  PLAINTEXT = 5;
 }
 
 enum ClassType {
