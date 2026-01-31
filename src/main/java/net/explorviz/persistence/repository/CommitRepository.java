@@ -28,9 +28,10 @@ public class CommitRepository {
   public Optional<Commit> findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(
       final Session session, final String repoName, final String tokenId, final String branchName) {
     return Optional.ofNullable(session.queryForObject(Commit.class, """
-        MATCH (:Landscape {tokenId: 'mytokenvalue'})
-              -[:CONTAINS]->(:Repository {name: 'myrepo'})
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
               -[:CONTAINS]->(c:Commit)
+              -[:BELONGS_TO]->(:Branch {name: $branchName})
         WITH c, [(c)-[:CONTAINS]->(f:FileRevision) | f] AS filesInCommit
         WHERE all(file IN filesInCommit WHERE file.hasFileData)
               AND NOT isEmpty(filesInCommit)
