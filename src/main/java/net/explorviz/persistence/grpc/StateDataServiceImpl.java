@@ -6,6 +6,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import java.util.List;
 import net.explorviz.persistence.ogm.Application;
+import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.Landscape;
@@ -14,6 +15,7 @@ import net.explorviz.persistence.proto.StateData;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
 import net.explorviz.persistence.repository.ApplicationRepository;
+import net.explorviz.persistence.repository.BranchRepository;
 import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.DirectoryRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
@@ -29,6 +31,9 @@ public class StateDataServiceImpl implements StateDataService {
 
   @Inject
   private ApplicationRepository applicationRepository;
+
+  @Inject
+  private BranchRepository branchRepository;
 
   @Inject
   private CommitRepository commitRepository;
@@ -54,6 +59,11 @@ public class StateDataServiceImpl implements StateDataService {
         repositoryRepository.getOrCreateRepository(session, request.getRepositoryName(),
             request.getLandscapeToken());
     landscape.addRepository(repository);
+
+    final Branch branch = branchRepository.getOrCreateBranch(session, request.getBranchName(),
+        request.getRepositoryName(), request.getLandscapeToken());
+
+    repository.addBranch(branch);
 
     if (repository.getRootDirectory() == null) {
       final Directory repoRootDirectory = new Directory(request.getRepositoryName());
