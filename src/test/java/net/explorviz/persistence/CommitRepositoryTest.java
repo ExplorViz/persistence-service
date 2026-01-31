@@ -66,7 +66,7 @@ class CommitRepositoryTest {
 
     session.save(landscape);
 
-    Optional<Commit> latestCommit = commitRepository.findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(
+    Optional<Commit> latestCommit = commitRepository.findLatestFullyPersistedCommit(
         session, "myrepo", "mytokenvalue", "main");
 
     assertTrue(latestCommit.isPresent());

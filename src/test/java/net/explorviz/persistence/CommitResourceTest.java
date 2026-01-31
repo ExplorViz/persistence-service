@@ -8,9 +8,10 @@ import io.quarkus.grpc.GrpcClient;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.time.Duration;
-import java.util.List;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
+import net.explorviz.persistence.proto.FileData;
+import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.proto.FileIdentifier;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
@@ -28,6 +29,9 @@ class CommitResourceTest {
   CommitService commitService;
 
   @GrpcClient
+  FileDataService fileDataService;
+
+  @GrpcClient
   StateDataService stateDataService;
 
   @Inject
@@ -42,37 +46,41 @@ class CommitResourceTest {
   // Example test for a REST endpoint. Will be removed once API is implemented.
   @Test
   void testGetLatestCommit() {
-        StateDataRequest stateDataRequest =
-            StateDataRequest.newBuilder().setLandscapeToken("mytokenvalue").setRepositoryName("myrepo")
-                .setBranchName("main").build();
+    StateDataRequest stateDataRequest =
+        StateDataRequest.newBuilder().setLandscapeToken("mytokenvalue").setRepositoryName("myrepo")
+            .setBranchName("main").build();
 
-        stateDataService.getStateData(stateDataRequest).await()
-            .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    stateDataService.getStateData(stateDataRequest).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
-        CommitData commitData1 =
-            CommitData.newBuilder().setCommitId("commit1").setRepositoryName("myrepo")
-                .setBranchName("main").setLandscapeToken("mytokenvalue")
-                .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-                .addAllAddedFiles(List.of(
-                    FileIdentifier.newBuilder().setFileHash("1").setFilePath("myrepo/src/File1.java")
-                        .build(),
-                    FileIdentifier.newBuilder().setFileHash("2").setFilePath("myrepo/src/File2.java")
-                        .build())).build();
+    CommitData commitData1 =
+        CommitData.newBuilder().setCommitId("commit1").setRepositoryName("myrepo")
+            .setBranchName("main").setLandscapeToken("mytokenvalue")
+            .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
+            .addAddedFiles(
+                FileIdentifier.newBuilder().setFileHash("1").setFilePath("src/File1.java").build())
+            .build();
 
-        CommitData commitData2 =
-            CommitData.newBuilder().setCommitId("commit2").setParentCommitId("commit1")
-                .setRepositoryName("myrepo").setBranchName("main").setLandscapeToken("mytokenvalue")
-                .setAuthorDate(Timestamp.newBuilder().setSeconds(2).setNanos(200).build())
-                .addAllModifiedFiles(List.of(
-                    FileIdentifier.newBuilder().setFileHash("1").setFilePath("myrepo/src/File1.java")
-                        .build(),
-                    FileIdentifier.newBuilder().setFileHash("2").setFilePath("myrepo/src/File2.java")
-                        .build())).build();
+    CommitData commitData2 =
+        CommitData.newBuilder().setCommitId("commit2").setParentCommitId("commit1")
+            .setRepositoryName("myrepo").setBranchName("main").setLandscapeToken("mytokenvalue")
+            .setAuthorDate(Timestamp.newBuilder().setSeconds(2).setNanos(200).build())
+            .addAddedFiles(
+                FileIdentifier.newBuilder().setFileHash("2").setFilePath("src/File2.java").build())
+            .addModifiedFiles(
+                FileIdentifier.newBuilder().setFileHash("1").setFilePath("src/File1.java").build())
+            .build();
 
-        commitService.persistCommit(commitData1).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-        commitService.persistCommit(commitData2).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    commitService.persistCommit(commitData1).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    commitService.persistCommit(commitData2).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
-        given().when().get("/mytokenvalue/commits/myrepo/main/latest").then().assertThat()
-            .body("hash", equalTo("commit2"));
+    FileData fileData =
+        FileData.newBuilder().setFileHash("1").setFilePath("src/File1.java")
+            .setRepositoryName("myrepo").setLandscapeToken("mytokenvalue").build();
+
+    fileDataService.persistFile(fileData).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    given().when().get("/mytokenvalue/commits/myrepo/main/latest").then().assertThat()
+        .body("hash", equalTo("commit1"));
   }
 }

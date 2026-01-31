@@ -87,7 +87,7 @@ public class StateDataServiceImpl implements StateDataService {
     session.save(List.of(repository, landscape));
 
     final Commit latestCommit =
-        commitRepository.findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(session,
+        commitRepository.findLatestFullyPersistedCommit(session,
                 request.getRepositoryName(), request.getLandscapeToken(), request.getBranchName())
             .orElse(null);
 

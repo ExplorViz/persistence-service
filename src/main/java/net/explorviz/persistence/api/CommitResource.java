@@ -30,7 +30,7 @@ public class CommitResource {
       @RestPath final String branchName) {
     final Session session = sessionFactory.openSession();
     final Optional<Commit> latestCommit =
-        commitRepository.findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(session,
+        commitRepository.findLatestFullyPersistedCommit(session,
             repositoryName,
             landscapeToken, branchName);
     if (latestCommit.isEmpty()) {

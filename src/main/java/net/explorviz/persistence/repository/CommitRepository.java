@@ -25,7 +25,11 @@ public class CommitRepository {
     return findCommitById(session, commitHash);
   }
 
-  public Optional<Commit> findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(
+  /**
+   * Find latest commit for which we have seen a CommitData message and also a FileData message
+   * for every file included in the commit.
+   */
+  public Optional<Commit> findLatestFullyPersistedCommit(
       final Session session, final String repoName, final String tokenId, final String branchName) {
     return Optional.ofNullable(session.queryForObject(Commit.class, """
         MATCH (:Landscape {tokenId: $tokenId})
