@@ -27,19 +27,16 @@ public class CommitRepository {
 
   public Optional<Commit> findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(
       final Session session, final String repoName, final String tokenId, final String branchName) {
-    // TODO: Update query: Find latest fully persisted commit in database
     return Optional.ofNullable(session.queryForObject(Commit.class, """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $repoName})
-        MATCH (r)-[:CONTAINS]->(b:Branch {name: $branchName})
-        MATCH (r)-[:CONTAINS]->(c:Commit)-[:BELONGS_TO]->(b)
-        WHERE NOT EXISTS {
-          MATCH (child:Commit)-[:HAS_PARENT]->(c)
-          WHERE (child)-[:BELONGS_TO]->(b)
-        }
-        OPTIONAL MATCH (c)-[h:HAS_PARENT]->(p:Commit)
+        MATCH (:Landscape {tokenId: 'mytokenvalue'})
+              -[:CONTAINS]->(:Repository {name: 'myrepo'})
+              -[:CONTAINS]->(c:Commit)
+        WITH c, [(c)-[:CONTAINS]->(f:FileRevision) | f] AS filesInCommit
+        WHERE all(file IN filesInCommit WHERE file.hasFileData)
+              AND NOT isEmpty(filesInCommit)
         RETURN c
-        LIMIT 1;
-        """, Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
+        ORDER BY c.commitDate
+        LIMIT 1;""", Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }
 
   public Optional<Commit> findCommitByHashAndLandscapeToken(final Session session,

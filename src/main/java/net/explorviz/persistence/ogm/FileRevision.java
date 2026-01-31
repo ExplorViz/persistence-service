@@ -168,13 +168,13 @@ public class FileRevision {
     importNames = Set.copyOf(newImportNames);
   }
 
-    public void addMetric(final String key, final Double value) {
-      final Map<String, Double> newMetrics = new HashMap<>(metrics);
-      newMetrics.put(key, value);
-      metrics = Map.copyOf(newMetrics);
-    }
+  public void addMetric(final String key, final Double value) {
+    final Map<String, Double> newMetrics = new HashMap<>(metrics);
+    newMetrics.put(key, value);
+    metrics = Map.copyOf(newMetrics);
+  }
 
-    public Map<String, Double> getMetrics() {
-      return this.metrics;
-    }
+  public Map<String, Double> getMetrics() {
+    return this.metrics;
+  }
 }

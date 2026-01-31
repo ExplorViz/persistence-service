@@ -67,4 +67,8 @@ public class Commit {
   public Instant getCommitDate() {
     return commitDate;
   }
+
+  public void setCommitDate(final Instant commitDate) {
+    this.commitDate = commitDate;
+  }
 }

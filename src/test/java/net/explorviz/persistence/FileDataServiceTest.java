@@ -1,10 +1,6 @@
 package net.explorviz.persistence;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.Timestamp;
 import io.quarkus.grpc.GrpcClient;
@@ -28,9 +24,9 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @QuarkusTest
-class FileResourceTest {
+class FileDataServiceTest {
 
-  private static final int GRPC_AWAIT_SECONDS = 5;
+  private static final long GRPC_AWAIT_SECONDS = 5;
 
   @GrpcClient
   CommitService commitService;

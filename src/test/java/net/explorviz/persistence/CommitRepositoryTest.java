@@ -1,0 +1,76 @@
+package net.explorviz.persistence;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import java.time.Instant;
+import java.util.Optional;
+import net.explorviz.persistence.ogm.Branch;
+import net.explorviz.persistence.ogm.Commit;
+import net.explorviz.persistence.ogm.FileRevision;
+import net.explorviz.persistence.ogm.Landscape;
+import net.explorviz.persistence.ogm.Repository;
+import net.explorviz.persistence.repository.CommitRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.neo4j.ogm.session.Session;
+import org.neo4j.ogm.session.SessionFactory;
+
+@QuarkusTest
+class CommitRepositoryTest {
+
+  @Inject
+  CommitRepository commitRepository;
+
+  @Inject
+  SessionFactory sessionFactory;
+
+  @BeforeEach
+  void cleanup() {
+    Session session = sessionFactory.openSession();
+    session.purgeDatabase();
+  }
+
+  @Test
+  void testFindLatestCommit() {
+    Session session = sessionFactory.openSession();
+
+    FileRevision file1 = new FileRevision("File1.java");
+    file1.setHasFileData(true);
+
+    FileRevision file2 = new FileRevision("File2.java");
+
+    Branch branch = new Branch("main");
+
+    Commit commit1 = new Commit("commit1");
+    commit1.addFileRevision(file1);
+    commit1.setCommitDate(Instant.ofEpochMilli(1000));
+    commit1.setBranch(branch);
+
+    Commit commit2 = new Commit("commit2");
+    commit2.addParent(commit1);
+    commit2.addFileRevision(file1);
+    commit2.addFileRevision(file2);
+    commit2.setCommitDate(Instant.ofEpochMilli(2000));
+    commit2.setBranch(branch);
+
+    Repository repository = new Repository("myrepo");
+    repository.addBranch(branch);
+    repository.addCommit(commit1);
+    repository.addCommit(commit2);
+
+    Landscape landscape = new Landscape("mytokenvalue");
+    landscape.addRepository(repository);
+
+    session.save(landscape);
+
+    Optional<Commit> latestCommit = commitRepository.findLatestCommitByRepositoryNameAndLandscapeTokenAndBranchName(
+        session, "myrepo", "mytokenvalue", "main");
+
+    assertTrue(latestCommit.isPresent());
+    System.out.println(latestCommit.get().getHash());
+    assertEquals("commit1", latestCommit.get().getHash());
+  }
+}
