@@ -10,6 +10,7 @@ import net.explorviz.persistence.proto.ParameterData;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
@@ -30,6 +31,7 @@ public class Function {
 
   private final Set<String> outgoingMethodCalls;
 
+  @Properties
   private final Map<String, Double> metrics;
 
   private int startLine;
