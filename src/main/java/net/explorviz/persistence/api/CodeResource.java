@@ -6,11 +6,15 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.model.ApplicationCommitTree;
+import net.explorviz.persistence.api.model.BranchPoint;
+import net.explorviz.persistence.api.model.BranchTree;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.repository.RepositoryRepository;
 import org.jboss.resteasy.reactive.RestPath;
@@ -50,7 +54,7 @@ public class CodeResource {
       throw new jakarta.ws.rs.NotFoundException("Application not found for id: " + appId);
     }
 
-    final List<net.explorviz.persistence.api.model.BranchTree> branches = new java.util.ArrayList<>();
+    final List<BranchTree> branches = new ArrayList<>();
     final Iterable<Map<String, Object>> data = repositoryRepository.findCommitTreeData(repoName, landscapeToken);
 
     for (Map<String, Object> row : data) {
@@ -62,19 +66,19 @@ public class CodeResource {
       Object commitsObj = row.get("commitHashes");
       List<String> commits;
       if (commitsObj instanceof String[]) {
-        commits = java.util.Arrays.asList((String[]) commitsObj);
+        commits = Arrays.asList((String[]) commitsObj);
       } else if (commitsObj instanceof List) {
         commits = (List<String>) commitsObj;
       } else {
-        commits = new java.util.ArrayList<>();
+        commits = new ArrayList<>();
       }
       
-      branches.add(new net.explorviz.persistence.api.model.BranchTree(branchName, commits, 
-          new net.explorviz.persistence.api.model.BranchPoint("NONE", "")));
+      branches.add(new BranchTree(branchName, commits, 
+          new BranchPoint("NONE", "")));
     }
 
-    return java.util.Map.of(appId, 
-        new net.explorviz.persistence.api.model.ApplicationCommitTree(repoName, branches));
+    return Map.of(appId, 
+        new ApplicationCommitTree(repoName, branches));
   }
 
   private String hashId(String val) {
