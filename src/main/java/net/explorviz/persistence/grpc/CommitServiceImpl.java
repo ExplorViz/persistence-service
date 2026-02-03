@@ -79,13 +79,11 @@ public class CommitServiceImpl implements CommitService {
     for (final FileIdentifier f : request.getAddedFilesList()) {
       final FileRevision file = fileRevisionRepository.createFileStructureFromStaticData(session, f,
           request.getRepositoryName(), request.getLandscapeToken(), commit);
-      commit.addFileRevision(file);
     }
 
     for (final FileIdentifier f : request.getModifiedFilesList()) {
       final FileRevision file = fileRevisionRepository.createFileStructureFromStaticData(session, f,
           request.getRepositoryName(), request.getLandscapeToken(), commit);
-      commit.addFileRevision(file);
     }
 
     for (final FileIdentifier f : request.getUnchangedFilesList()) {
@@ -94,7 +92,6 @@ public class CommitServiceImpl implements CommitService {
               request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
                 () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
                   request.getRepositoryName(), request.getLandscapeToken(), commit));
-      commit.addFileRevision(file);
     }
 
     for (final String tagName : request.getTagsList()) {
