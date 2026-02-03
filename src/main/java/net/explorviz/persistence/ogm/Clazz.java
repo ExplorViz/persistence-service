@@ -103,4 +103,10 @@ public class Clazz {
     newFields.add(field);
     fields = Set.copyOf(newFields);
   }
+  public Set<Function> getFunctions() {
+    return functions;
+  }
+  public String getName() {
+    return name;
+  }
 }

@@ -65,4 +65,51 @@ public class CommitRepository {
     return findCommitByHashAndLandscapeToken(session, commitHash, tokenId).orElse(
         new Commit(commitHash));
   }
+
+  public Optional<Commit> findDeepCommit(final String commitHash, final String tokenId) {
+    final Session session = sessionFactory.openSession();
+    // Verify existence in landscape first
+    final Optional<Commit> commit = findCommitByHashAndLandscapeToken(session, commitHash, tokenId);
+    if (commit.isEmpty()) {
+      return Optional.empty();
+    }
+    // Load with depth 3 to get FileRevisions(1), Classes(2), Functions(3)
+    return Optional.ofNullable(session.load(Commit.class, commit.get().getHash(), 3));
+  }
+
+  public Optional<Commit> findLatestDeepCommit(final String tokenId) {
+    final Session session = sessionFactory.openSession();
+    // Find latest commit in landscape
+    final Optional<Commit> latest = Optional.ofNullable(session.queryForObject(Commit.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository)
+              -[:CONTAINS]->(c:Commit)
+        WITH c
+        ORDER BY c.commitDate DESC
+        LIMIT 1
+        RETURN c;
+        """, Map.of("tokenId", tokenId)));
+
+    if (latest.isEmpty()) {
+      return Optional.empty();
+    }
+    
+    // Load deep
+    return Optional.ofNullable(session.load(Commit.class, latest.get().getHash(), 3));
+  }
+
+  public Optional<String> findRepositoryName(final String tokenId, final String commitHash) {
+    final Session session = sessionFactory.openSession();
+    final Iterable<Map<String, Object>> result = session.query("""
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(r:Repository)
+              -[:CONTAINS]->(c:Commit {hash: $commitHash})
+        RETURN r.name as name;
+        """, Map.of("tokenId", tokenId, "commitHash", commitHash));
+
+    if (result.iterator().hasNext()) {
+      return Optional.ofNullable((String) result.iterator().next().get("name"));
+    }
+    return Optional.empty();
+  }
 }

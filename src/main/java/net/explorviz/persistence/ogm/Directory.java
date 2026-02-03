@@ -44,4 +44,14 @@ public class Directory {
   public String getName() {
     return name;
   }
+  public Long getId() {
+    return id;
+  }
+
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.INCOMING)
+  private Directory parent;
+
+  public Directory getParent() {
+    return parent;
+  }
 }

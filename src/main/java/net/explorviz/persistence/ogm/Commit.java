@@ -73,4 +73,7 @@ public class Commit {
   public void setCommitDate(final Instant commitDate) {
     this.commitDate = commitDate;
   }
+  public Set<FileRevision> getFileRevisions() {
+    return fileRevisions;
+  }
 }

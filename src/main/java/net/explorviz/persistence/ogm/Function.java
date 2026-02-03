@@ -83,4 +83,7 @@ public class Function {
       addParameter(new Parameter(p.getName(), p.getType(), p.getModifiersList()));
     }
   }
+  public Map<String, Double> getMetrics() {
+    return metrics;
+  }
 }

@@ -177,4 +177,14 @@ public class FileRevision {
   public Map<String, Double> getMetrics() {
     return this.metrics;
   }
+  public Set<Clazz> getClasses() {
+    return classes;
+  }
+
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.INCOMING)
+  private Directory parentDirectory;
+
+  public Directory getParentDirectory() {
+    return parentDirectory;
+  }
 }
