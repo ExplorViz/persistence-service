@@ -139,34 +139,30 @@ public class FileRevisionRepository {
   }
 
   public FileRevision createFileStructureFromStaticData(final Session session,
-      final FileIdentifier fileIdentifier, final String repoName, final String landscapeTokenId) {
+      final FileIdentifier fileIdentifier, final String repoName, final String landscapeTokenId,
+      final Commit commit) {
     final String[] pathSegments = fileIdentifier.getFilePath().split("/");
-    String[] directorySegments = { repoName };
+    String[] directorySegments = {repoName};
     if (pathSegments.length > 1) {
       directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 2);
-      directorySegments =
-          Stream.concat(Stream.of(repoName), Arrays.stream(directorySegments)).toArray(String[]::new);
+      directorySegments = Stream.concat(Stream.of(repoName), Arrays.stream(directorySegments))
+          .toArray(String[]::new);
     }
 
-    System.out.println("I1");
+    FileRevision file = getFileRevisionFromHash(session, fileIdentifier.getFileHash(), repoName,
+        landscapeTokenId).orElse(null);
+    if (file == null) {
+      file = new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1]);
+    }
 
-    final FileRevision file =
-        getFileRevisionFromHash(session, fileIdentifier.getFileHash(), repoName,
-            landscapeTokenId).orElse(
-            new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1]));
-
-    System.out.println("I2");
+    commit.addFileRevision(file);
 
     final Directory parentDir =
         directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(session,
             directorySegments, repoName, landscapeTokenId);
     parentDir.addFileRevision(file);
 
-    System.out.println("I3");
-
-    session.save(List.of(parentDir, file));
-
-    System.out.println("I4");
+    session.save(List.of(parentDir, commit, file));
 
     return file;
   }

@@ -70,7 +70,6 @@ class CommitRepositoryTest {
         session, "myrepo", "mytokenvalue", "main");
 
     assertTrue(latestCommit.isPresent());
-    System.out.println(latestCommit.get().getHash());
     assertEquals("commit1", latestCommit.get().getHash());
   }
 }
