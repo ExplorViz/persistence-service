@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.stream.Stream;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
@@ -140,24 +141,32 @@ public class FileRevisionRepository {
   public FileRevision createFileStructureFromStaticData(final Session session,
       final FileIdentifier fileIdentifier, final String repoName, final String landscapeTokenId) {
     final String[] pathSegments = fileIdentifier.getFilePath().split("/");
-    final String[] directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 2);
+    String[] directorySegments = { repoName };
+    if (pathSegments.length > 1) {
+      directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 2);
+      directorySegments =
+          Stream.concat(Stream.of(repoName), Arrays.stream(directorySegments)).toArray(String[]::new);
+    }
+
+    System.out.println("I1");
 
     final FileRevision file =
         getFileRevisionFromHash(session, fileIdentifier.getFileHash(), repoName,
             landscapeTokenId).orElse(
-              new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1])
-            );
+            new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1]));
 
-    /* TODO: Maybe add repoName as first element of directorySegments
-             (depending on how the paths are built)
-             #FRN
-     */
+    System.out.println("I2");
+
     final Directory parentDir =
         directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(session,
             directorySegments, repoName, landscapeTokenId);
     parentDir.addFileRevision(file);
 
+    System.out.println("I3");
+
     session.save(List.of(parentDir, file));
+
+    System.out.println("I4");
 
     return file;
   }

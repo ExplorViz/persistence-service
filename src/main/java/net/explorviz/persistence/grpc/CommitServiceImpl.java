@@ -57,7 +57,6 @@ public class CommitServiceImpl implements CommitService {
   @Blocking
   @Override
   public Uni<Empty> persistCommit(final CommitData request) {
-    // TODO: Handle tags. There are not handled yet
     final Session session = sessionFactory.openSession();
 
     final Repository repo = repositoryRepository.findRepositoryByNameAndLandscapeToken(session,
@@ -95,7 +94,6 @@ public class CommitServiceImpl implements CommitService {
               request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
                 () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
                   request.getRepositoryName(), request.getLandscapeToken()));
-
       commit.addFileRevision(file);
     }
 
