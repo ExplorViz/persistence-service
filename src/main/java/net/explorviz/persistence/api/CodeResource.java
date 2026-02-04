@@ -10,13 +10,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.model.ApplicationCommitTree;
 import net.explorviz.persistence.api.model.BranchPoint;
 import net.explorviz.persistence.api.model.BranchTree;
+import net.explorviz.persistence.api.model.FlatLandscape;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.repository.RepositoryRepository;
+import net.explorviz.persistence.service.StructureService;
 import org.jboss.resteasy.reactive.RestPath;
 
 @Path("/v2/code")
@@ -24,6 +27,9 @@ public class CodeResource {
 
   @Inject
   RepositoryRepository repositoryRepository;
+
+  @Inject
+  StructureService structureService;
 
   @GET
   @Path("/applications/{landscapeToken}")
@@ -39,7 +45,7 @@ public class CodeResource {
   @GET
   @Path("/commit-tree/{landscapeToken}/{appId}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Map<String, ApplicationCommitTree> getCommitTree(@RestPath final String landscapeToken,
+  public ApplicationCommitTree getCommitTree(@RestPath final String landscapeToken,
       @RestPath final String appId) {
 
     String repoName = null;
@@ -77,8 +83,32 @@ public class CodeResource {
           new BranchPoint("NONE", "")));
     }
 
-    return Map.of(appId, 
-        new ApplicationCommitTree(repoName, branches));
+    return new ApplicationCommitTree(repoName, branches);
+  }
+
+  @GET
+  @Path("/structure/{landscapeToken}/{appId}/{commitId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public FlatLandscape getStructure(@RestPath final String landscapeToken,
+      @RestPath final String appId, @RestPath final String commitId) {
+    Optional<FlatLandscape> landscape = structureService.getLandscape(landscapeToken, commitId);
+    if (landscape.isEmpty()) {
+      throw new jakarta.ws.rs.NotFoundException("Structure not found for commit: " + commitId);
+    }
+    return landscape.get();
+  }
+
+  @GET
+  @Path("/structure/{landscapeToken}/{appId}/{commitId1}-{commitId2}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public FlatLandscape getComparisonStructure(@RestPath final String landscapeToken,
+      @RestPath final String appId, @RestPath final String commitId1,
+      @RestPath final String commitId2) {
+    Optional<FlatLandscape> landscape = structureService.getLandscape(landscapeToken, List.of(commitId1, commitId2));
+    if (landscape.isEmpty()) {
+      throw new jakarta.ws.rs.NotFoundException("Structure not found for commits: " + commitId1 + ", " + commitId2);
+    }
+    return landscape.get();
   }
 
   private String hashId(String val) {

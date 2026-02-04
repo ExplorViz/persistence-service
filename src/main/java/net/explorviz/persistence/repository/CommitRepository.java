@@ -41,7 +41,7 @@ public class CommitRepository {
         WHERE all(file IN filesInCommit WHERE file.hasFileData)
               AND NOT isEmpty(filesInCommit)
         RETURN c
-        ORDER BY c.commitDate
+        ORDER BY coalesce(c.commitDate, 0) ASC
         LIMIT 1;""", Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }
 
@@ -69,24 +69,16 @@ public class CommitRepository {
 
   public Optional<Commit> findDeepCommit(final String commitHash, final String tokenId) {
     final Session session = sessionFactory.openSession();
-    // Verify existence in landscape first
+    
+    // First, verify existence and get the commit
     final Optional<Commit> existingCommit = findCommitByHashAndLandscapeToken(session, commitHash, tokenId);
     if (existingCommit.isEmpty()) {
       return Optional.empty();
     }
     
-    // Load deep
-    // We use a two-step loading process to avoid traversing the entire commit history
-    // (which would happen if we used a large depth on Commit) while still retrieving
-    // the deep directory structure (which requires a large depth on FileRevision).
-    
-    // Load deep
-    // We use a multi-step loading process to ensure the graph is fully hydrated without fetching excessive history.
-    
     final String hash = existingCommit.get().getHash();
 
-    // 1. Get Directory IDs via Cypher
-    // We need to find all directories in the path from files to root
+    // 1. Find all Directory IDs that are parents of files in this commit
     Iterable<Map<String, Object>> dirResult = session.query("""
        MATCH (c:Commit {hash: $hash})-[:CONTAINS]->(f:FileRevision)
        MATCH path = (d:Directory)-[:CONTAINS*]->(f)
@@ -99,93 +91,47 @@ public class CommitRepository {
     java.util.List<Long> dirIds = new java.util.ArrayList<>();
     dirResult.forEach(row -> dirIds.add((Long) row.get("id")));
 
-    // 2. Get FileRevision IDs via Cypher
-    Iterable<Map<String, Object>> fileResult = session.query("""
-       MATCH (c:Commit {hash: $hash})-[:CONTAINS]->(f:FileRevision)
-       RETURN id(f) as id
-    """, Map.of("hash", hash));
-    
-    java.util.List<Long> fileIds = new java.util.ArrayList<>();
-    fileResult.forEach(row -> fileIds.add((Long) row.get("id")));
-
-    // Clear session to ensure clean slate
-    session.clear();
-
-    // 3. Load Directories (depth 1 links parents)
+    // 2. Load all these directories at depth 1 to establish the parent-child relationships
     if (!dirIds.isEmpty()) {
        session.loadAll(net.explorviz.persistence.ogm.Directory.class, dirIds, 1);
     }
     
-    // 4. Load Files (depth 1 links to Directories and Classes)
-    if (!fileIds.isEmpty()) {
-       session.loadAll(FileRevision.class, fileIds, 1);
-    }
-    
-    // 5. Load Commit (depth 1 links to Files)
-    final Commit commit = session.load(Commit.class, hash, 1);
-    
-    if (commit == null) {
-      return Optional.empty();
-    }
-    
-    return Optional.of(commit);
+    // 3. Load the commit itself at depth 3
+    // This will load Commit -> FileRevision -> Clazz -> Function
+    // Since Directories are already in the session, they will be correctly linked.
+    return Optional.ofNullable(session.load(Commit.class, hash, 3));
   }
 
   public java.util.List<Commit> findLatestDeepCommits(final String tokenId) {
     final Session session = sessionFactory.openSession();
-    // Find latest commit for each repository in landscape
-    final Iterable<Map<String, Object>> result = session.query("""
-        MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository)
-        MATCH (r)-[:CONTAINS]->(c:Commit)
-        WITH r, c
-        ORDER BY c.commitDate DESC
-        WITH r, head(collect(c)) as latestCommit
-        RETURN latestCommit.hash as hash
-        """, Map.of("tokenId", tokenId));
-
-    final java.util.List<Commit> commits = new java.util.ArrayList<>();
     
-    for (final Map<String, Object> row : result) {
-      final String hash = (String) row.get("hash");
+    // Step 1: Find all repositories for this token
+    final Iterable<Map<String, Object>> repoResult = session.query("""
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository)
+        RETURN r.name as name
+        """, Map.of("tokenId", tokenId));
+    
+    final java.util.List<Commit> latestCommits = new java.util.ArrayList<>();
+    for (final Map<String, Object> row : repoResult) {
+      final String repoName = (String) row.get("name");
       
-      // Load Dirs - capture all directories in the path
-      Iterable<Map<String, Object>> dirResult = session.query("""
-         MATCH (c:Commit {hash: $hash})-[:CONTAINS]->(f:FileRevision)
-         MATCH path = (d:Directory)-[:CONTAINS*]->(f)
-         UNWIND nodes(path) as dirNode
-         WITH DISTINCT dirNode
-         WHERE dirNode:Directory
-         RETURN id(dirNode) as id
-      """, Map.of("hash", hash));
-
-      java.util.List<Long> dirIds = new java.util.ArrayList<>();
-      dirResult.forEach(dirRow -> dirIds.add((Long) dirRow.get("id")));
+      // Step 2: Find latest commit for this repository
+      final Iterable<Map<String, Object>> commitResult = session.query("""
+          MATCH (l:Landscape {tokenId: $tokenId})
+                -[:CONTAINS]->(r:Repository {name: $repoName})
+          MATCH (r)-[:CONTAINS]->(c:Commit)
+          RETURN c.hash as hash
+          ORDER BY coalesce(c.commitDate, 0) DESC, c.hash DESC
+          LIMIT 1
+          """, Map.of("tokenId", tokenId, "repoName", repoName));
       
-      if (!dirIds.isEmpty()) {
-         session.loadAll(net.explorviz.persistence.ogm.Directory.class, dirIds, 1);
-      }
-      
-      // Load Files
-      Iterable<Map<String, Object>> fileResult = session.query("""
-         MATCH (c:Commit {hash: $hash})-[:CONTAINS]->(f:FileRevision)
-         RETURN id(f) as id
-      """, Map.of("hash", hash));
-
-      java.util.List<Long> fileIds = new java.util.ArrayList<>();
-      fileResult.forEach(fileRow -> fileIds.add((Long) fileRow.get("id")));
-      
-      if (!fileIds.isEmpty()) {
-         session.loadAll(FileRevision.class, fileIds, 1);
-      }
-      
-      // Load commit
-      final Commit c = session.load(Commit.class, hash, 1);
-      if (c != null) {
-        commits.add(c);
+      if (commitResult.iterator().hasNext()) {
+        final String hash = (String) commitResult.iterator().next().get("hash");
+        findDeepCommit(hash, tokenId).ifPresent(latestCommits::add);
       }
     }
     
-    return commits;
+    return latestCommits;
   }
 
   public Optional<String> findRepositoryName(final String tokenId, final String commitHash) {
@@ -201,5 +147,52 @@ public class CommitRepository {
       return Optional.ofNullable((String) result.iterator().next().get("name"));
     }
     return Optional.empty();
+  }
+
+  public java.util.List<String> findBranches(final String tokenId, final String repoName) {
+    final Session session = sessionFactory.openSession();
+    final Iterable<Map<String, Object>> result = session.query("""
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(r:Repository {name: $repoName})
+              -[:CONTAINS]->(b:Branch)
+        RETURN b.name as name;
+        """, Map.of("tokenId", tokenId, "repoName", repoName));
+
+    final java.util.List<String> branches = new java.util.ArrayList<>();
+    result.forEach(row -> branches.add((String) row.get("name")));
+    return branches;
+  }
+
+  public java.util.List<Commit> findCommitsByBranch(final String tokenId,
+      final String repoName, final String branchName) {
+    final Session session = sessionFactory.openSession();
+    final Iterable<Commit> result = session.query(Commit.class, """
+        MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(r:Repository {name: $repoName})
+              -[:CONTAINS]->(c:Commit)
+              -[:BELONGS_TO]->(b:Branch {name: $branchName})
+        RETURN c
+        ORDER BY coalesce(c.commitDate, 0) DESC;
+        """, Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName));
+
+    final java.util.List<Commit> commits = new java.util.ArrayList<>();
+    result.forEach(commits::add);
+    return commits;
+  }
+
+  public java.util.List<Commit> findCommitsByRepository(final String tokenId,
+      final String repoName) {
+    final Session session = sessionFactory.openSession();
+    final Iterable<Commit> result = session.query(Commit.class, """
+        MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(r:Repository {name: $repoName})
+              -[:CONTAINS]->(c:Commit)
+        RETURN c
+        ORDER BY coalesce(c.commitDate, 0) DESC;
+        """, Map.of("tokenId", tokenId, "repoName", repoName));
+
+    final java.util.List<Commit> commits = new java.util.ArrayList<>();
+    result.forEach(commits::add);
+    return commits;
   }
 }

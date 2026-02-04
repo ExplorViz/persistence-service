@@ -60,7 +60,7 @@ public class RepositoryRepository {
         MATCH (r)-[:CONTAINS]->(c:Commit)
         OPTIONAL MATCH (c)-[:BELONGS_TO]->(b:Branch)
         WITH b, c
-        ORDER BY c.commitDate ASC
+        ORDER BY coalesce(c.commitDate, 0) ASC
         RETURN b.name as branchName, collect(c.hash) as commitHashes
         """, Map.of("tokenId", tokenId, "repoName", repoName));
   }

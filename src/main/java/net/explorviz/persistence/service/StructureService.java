@@ -25,15 +25,23 @@ public class StructureService {
   CommitRepository commitRepository;
 
   public Optional<FlatLandscape> getLandscape(final String token, final String commitId) {
-    Optional<Commit> deepCommit = commitRepository.findDeepCommit(commitId, token);
+    return getLandscape(token, java.util.List.of(commitId));
+  }
 
-    if (deepCommit.isEmpty()) {
-      return Optional.empty();
+  public Optional<FlatLandscape> getLandscape(final String token, final java.util.List<String> commitIds) {
+    final FlatLandscape landscape = new FlatLandscape(token);
+    final Map<String, District> districtMap = new HashMap<>();
+    boolean found = false;
+
+    for (String commitId : commitIds) {
+      Optional<Commit> deepCommit = commitRepository.findDeepCommit(commitId, token);
+      if (deepCommit.isPresent()) {
+        addToFlatLandscape(landscape, deepCommit.get(), token, districtMap);
+        found = true;
+      }
     }
 
-    final FlatLandscape landscape = new FlatLandscape(token);
-    addToFlatLandscape(landscape, deepCommit.get(), token);
-    return Optional.of(landscape);
+    return found ? Optional.of(landscape) : Optional.empty();
   }
 
   /**
@@ -50,25 +58,23 @@ public class StructureService {
     }
 
     final FlatLandscape landscape = new FlatLandscape(token);
+    final Map<String, District> districtMap = new HashMap<>();
     for (final Commit commit : deepCommits) {
-      addToFlatLandscape(landscape, commit, token);
+      addToFlatLandscape(landscape, commit, token, districtMap);
     }
     return Optional.of(landscape);
   }
 
-  private void addToFlatLandscape(final FlatLandscape landscape, final Commit commit, final String token) {
+  private void addToFlatLandscape(final FlatLandscape landscape, final Commit commit,
+      final String token, final Map<String, District> districtMap) {
 
 
     // 1. Create Application (City)
     final String repoName = commitRepository.findRepositoryName(token, commit.getHash())
         .orElse("UnknownApplication");
     final String cityId = hashId(repoName);
-    final City appCity = new City(cityId, repoName);
-    landscape.cities.put(appCity.id, appCity);
-
-    // Helper map for ensuring unique District IDs/objects
-    // Key: Directory ID (as String) -> District object
-    final Map<String, District> districtMap = new HashMap<>();
+    
+    final City appCity = landscape.cities.computeIfAbsent(cityId, id -> new City(id, repoName));
 
     // 2. Iterate FileRevisions
     for (final net.explorviz.persistence.ogm.FileRevision file : commit.getFileRevisions()) {
@@ -100,11 +106,15 @@ public class StructureService {
         building.fqn = constructFqn(file, parentDir); 
         building.parentDistrictId = district.id;
         building.parentCityId = appCity.id;
-        district.buildingIds.add(building.id);
+        if (!district.buildingIds.contains(building.id)) {
+           district.buildingIds.add(building.id);
+        }
       }
 
       // Add to city's global building list
-      appCity.buildingIds.add(building.id);
+      if (!appCity.buildingIds.contains(building.id)) {
+        appCity.buildingIds.add(building.id);
+      }
 
       building.language = mapLanguage(file.getLanguage());
       building.metrics = file.getMetrics();
@@ -166,8 +176,12 @@ public class StructureService {
     d.name = "root";
     d.fqn = "root";
     d.parentCityId = city.id;
-    city.rootDistrictIds.add(d.id);
-    city.districtIds.add(d.id); // Add to global list
+    if (!city.rootDistrictIds.contains(d.id)) {
+       city.rootDistrictIds.add(d.id);
+    }
+    if (!city.districtIds.contains(d.id)) {
+       city.districtIds.add(d.id); // Add to global list
+    }
     
     landscape.districts.put(d.id, d);
     districtMap.put(d.id, d);
@@ -203,15 +217,21 @@ public class StructureService {
     if (parentDir != null) {
       final District parentDistrict = getOrCreateDistrictFromDirectory(parentDir, city, landscape, districtMap);
       d.parentDistrictId = parentDistrict.id;
-      parentDistrict.districtIds.add(d.id);
+      if (!parentDistrict.districtIds.contains(d.id)) {
+        parentDistrict.districtIds.add(d.id);
+      }
     } else {
       // Top level directory (root of source tree?)
       // Attach to City
-      city.rootDistrictIds.add(d.id);
+      if (!city.rootDistrictIds.contains(d.id)) {
+        city.rootDistrictIds.add(d.id);
+      }
     }
     
     // Add to city's global list
-    city.districtIds.add(d.id);
+    if (!city.districtIds.contains(d.id)) {
+      city.districtIds.add(d.id);
+    }
 
     landscape.districts.put(d.id, d);
     districtMap.put(dirId, d);

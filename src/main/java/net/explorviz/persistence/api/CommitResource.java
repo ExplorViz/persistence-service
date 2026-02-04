@@ -7,6 +7,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.Optional;
+import java.util.List;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.repository.CommitRepository;
 import org.jboss.resteasy.reactive.RestPath;
@@ -37,5 +38,22 @@ public class CommitResource {
       throw new NotFoundException("No commit present for repository: " + repositoryName);
     }
     return latestCommit.get();
+  }
+
+  @GET
+  @Path("/{repositoryName}/branches")
+  @Produces(MediaType.APPLICATION_JSON)
+  public List<String> listBranches(@RestPath final String landscapeToken,
+      @RestPath final String repositoryName) {
+    return commitRepository.findBranches(landscapeToken, repositoryName);
+  }
+
+  @GET
+  @Path("/{repositoryName}/{branchName}/commits")
+  @Produces(MediaType.APPLICATION_JSON)
+  public List<Commit> listCommits(@RestPath final String landscapeToken,
+      @RestPath final String repositoryName,
+      @RestPath final String branchName) {
+    return commitRepository.findCommitsByBranch(landscapeToken, repositoryName, branchName);
   }
 }

@@ -74,6 +74,17 @@ public class CommitServiceImpl implements CommitService {
     final Commit commit = commitRepository.getOrCreateCommit(session, request.getCommitId(),
         request.getLandscapeToken());
     commit.setBranch(branch);
+    
+    if (request.hasAuthorDate()) {
+      commit.setAuthorDate(java.time.Instant.ofEpochSecond(
+          request.getAuthorDate().getSeconds(), request.getAuthorDate().getNanos()));
+    }
+    
+    if (request.hasCommitDate()) {
+      commit.setCommitDate(java.time.Instant.ofEpochSecond(
+          request.getCommitDate().getSeconds(), request.getCommitDate().getNanos()));
+    }
+    
     repo.addCommit(commit);
 
     for (final FileIdentifier f : request.getAddedFilesList()) {
@@ -92,6 +103,7 @@ public class CommitServiceImpl implements CommitService {
               request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
                 () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
                   request.getRepositoryName(), request.getLandscapeToken(), commit));
+      commit.addFileRevision(file);
     }
 
     for (final String tagName : request.getTagsList()) {
