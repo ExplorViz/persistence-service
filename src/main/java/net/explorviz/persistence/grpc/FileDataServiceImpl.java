@@ -41,9 +41,8 @@ public class FileDataServiceImpl implements FileDataService {
   public Uni<Empty> persistFile(final FileData request) {
     final Session session = sessionFactory.openSession();
 
-    final FileRevision file =
-        fileRevisionRepository.getFileRevisionFromHash(session, request.getFileHash(),
-            request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
+    final FileRevision file = fileRevisionRepository.getFileRevisionFromHash(session, request.getFileHash(),
+        request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
 
     if (file == null) {
       return Uni.createFrom().failure(Status.FAILED_PRECONDITION.withDescription(
@@ -55,7 +54,7 @@ public class FileDataServiceImpl implements FileDataService {
     for (final String importName : request.getImportNamesList()) {
       file.addImportNames(importName);
     }
-    //    request.getMetricsMap().forEach(file::addMetric);
+    request.getMetricsMap().forEach(file::addMetric);
     file.setLastEditor(request.getLastEditor());
     file.setAddedLines(request.getAddedLines());
     file.setModifiedLines(request.getModifiedLines());
@@ -81,7 +80,7 @@ public class FileDataServiceImpl implements FileDataService {
   private Clazz createClazz(final Session session, final ClassData classData,
       final FileData request) {
     return clazzRepository.findClassByLandscapeTokenAndRepositoryAndFileHash(session,
-            request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash())
+        request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash())
         .orElseGet(() -> {
           final Clazz clazz = new Clazz(classData);
 
