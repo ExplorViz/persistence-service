@@ -2,6 +2,7 @@ package net.explorviz.persistence.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Landscape;
@@ -27,5 +28,10 @@ public class LandscapeRepository {
 
   public Landscape getOrCreateLandscape(final Session session, final String tokenId) {
     return findLandscapeByTokenId(session, tokenId).orElse(new Landscape(tokenId));
+  }
+
+  public Collection<Landscape> findAllLandscapes() {
+    final Session session = sessionFactory.openSession();
+    return session.loadAll(Landscape.class, 0);
   }
 }
