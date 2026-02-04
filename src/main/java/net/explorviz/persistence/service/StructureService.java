@@ -31,7 +31,9 @@ public class StructureService {
       return Optional.empty();
     }
 
-    return Optional.of(buildFlatLandscape(token, deepCommit.get()));
+    final FlatLandscape landscape = new FlatLandscape(token);
+    addToFlatLandscape(landscape, deepCommit.get(), token);
+    return Optional.of(landscape);
   }
 
   /**
@@ -41,17 +43,21 @@ public class StructureService {
    * @return the flat landscape structure of the latest commit
    */
   public Optional<FlatLandscape> getLandscape(final String token) {
-    Optional<Commit> deepCommit = commitRepository.findLatestDeepCommit(token);
+    final java.util.List<Commit> deepCommits = commitRepository.findLatestDeepCommits(token);
 
-    if (deepCommit.isEmpty()) {
+    if (deepCommits.isEmpty()) {
       return Optional.empty();
     }
 
-    return Optional.of(buildFlatLandscape(token, deepCommit.get()));
+    final FlatLandscape landscape = new FlatLandscape(token);
+    for (final Commit commit : deepCommits) {
+      addToFlatLandscape(landscape, commit, token);
+    }
+    return Optional.of(landscape);
   }
 
-  private FlatLandscape buildFlatLandscape(final String token, final Commit commit) {
-    final FlatLandscape landscape = new FlatLandscape(token);
+  private void addToFlatLandscape(final FlatLandscape landscape, final Commit commit, final String token) {
+
 
     // 1. Create Application (City)
     final String repoName = commitRepository.findRepositoryName(token, commit.getHash())
@@ -75,25 +81,18 @@ public class StructureService {
       final net.explorviz.persistence.ogm.Directory parentDir = file.getParentDirectory();
 
       if (parentDir == null) {
+        // System.out.println("DEBUG: File " + file.getName() + " has null parent directory.");
         // Root file (no parent directory)
         building.fqn = file.getName();
         building.parentCityId = appCity.id;
         
         // Even if root, we attach it to the city
-        // We can create a "root" district for consistency if needed, 
-        // but for now let's attach to city directly logic.
-        // However, building.parentDistrictId is mandatory in some views?
-        // Let's create a virtual root district ID based on the City ID + "root"
-        // Or if user strictly wants DB IDs... a root file has no directory ID.
-        // Let's map it to a synthetic root district for the app.
-        
-        // Wait, if parentDir is null, it means it's at the top level of the repo?
-        // Let's assume so.
         final District rootDistrict = getOrCreateSyntheticRootDistrict(appCity, landscape, districtMap);
         building.parentDistrictId = rootDistrict.id;
         rootDistrict.buildingIds.add(building.id);
 
       } else {
+        // System.out.println("DEBUG: File " + file.getName() + " has parent " + parentDir.getName());
         // Has a parent directory
         // Construct hierarchy up to root (or up to null parent)
         final District district = getOrCreateDistrictFromDirectory(parentDir, appCity, landscape, districtMap);
@@ -120,7 +119,7 @@ public class StructureService {
         final String clsFqn = clazz.getName(); 
         cls.id = hashId(clsFqn); 
         cls.name = simpleName(clsFqn);
-        cls.fqn = clsFqn;
+        cls.fqn = clsFqn.replace('/', '.');
         
         building.classIds.add(cls.id);
         landscape.classes.put(cls.id, cls);
@@ -152,7 +151,6 @@ public class StructureService {
       }
     }
 
-    return landscape;
   }
   
   private District getOrCreateSyntheticRootDistrict(final City city, 
@@ -228,7 +226,7 @@ public class StructureService {
       // Let's use file.getPackageName() if available, else fallback?
       String pkg = file.getPackageName();
       if (pkg != null && !pkg.isEmpty()) {
-          return pkg + "." + file.getName();
+          return pkg.replace('/', '.') + "." + file.getName();
       }
       return file.getName();
   }
@@ -253,7 +251,7 @@ public class StructureService {
 
   private String simpleName(String fqn) {
       if (fqn == null) return "";
-      int lastDot = fqn.lastIndexOf('.');
-      return lastDot == -1 ? fqn : fqn.substring(lastDot + 1);
+      int lastSeparator = Math.max(fqn.lastIndexOf('.'), fqn.lastIndexOf('/'));
+      return lastSeparator == -1 ? fqn : fqn.substring(lastSeparator + 1);
   }
 }

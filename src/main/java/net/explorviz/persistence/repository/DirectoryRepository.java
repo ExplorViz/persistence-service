@@ -54,9 +54,19 @@ public class DirectoryRepository {
 
     Directory lastDir = existingDir;
     for (final String dirName : remainingPath) {
-      final Directory newDir = new Directory(dirName);
-      lastDir.addSubdirectory(newDir);
-      lastDir = newDir;
+      Directory nextDir = null;
+      for (final Directory sub : lastDir.getSubdirectories()) {
+        if (sub.getName().equals(dirName)) {
+          nextDir = sub;
+          break;
+        }
+      }
+
+      if (nextDir == null) {
+        nextDir = new Directory(dirName);
+        lastDir.addSubdirectory(nextDir);
+      }
+      lastDir = nextDir;
     }
     session.save(existingDir);
 

@@ -66,14 +66,28 @@ public class FileRevisionRepository {
       final String[] remainingPath) {
     Directory currentDirectory = startingDirectory;
     for (int i = 0; i < remainingPath.length - 1; i++) {
-      final Directory newDirectory = new Directory(remainingPath[i]);
-      currentDirectory.addSubdirectory(newDirectory);
-      currentDirectory = newDirectory;
+        final String dirName = remainingPath[i];
+        Directory nextDir = null;
+        for (final Directory sub : currentDirectory.getSubdirectories()) {
+          if (sub.getName().equals(dirName)) {
+            nextDir = sub;
+            break;
+          }
+        }
+
+        if (nextDir == null) {
+          nextDir = new Directory(dirName);
+          currentDirectory.addSubdirectory(nextDir);
+        }
+        currentDirectory = nextDir;
     }
 
     final FileRevision file = new FileRevision(remainingPath[remainingPath.length - 1]);
-    currentDirectory.addFileRevision(file);
+    file.setParentDirectory(currentDirectory);
+    
+    // We must save the file to persist the relationship, as we will remove the outgoing relationship from Directory
     session.save(startingDirectory);
+    session.save(file);
     return file;
   }
 
@@ -113,7 +127,7 @@ public class FileRevisionRepository {
   public void createFileStructureFromFunction(final Session session, final Function function,
       final String functionFqn, final Application application, final Landscape landscape,
       final String commitId) {
-    final String[] splitFqn = functionFqn.split("\\.");
+    final String[] splitFqn = functionFqn.split("[./]");
     final String[] pathSegments = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
     if (pathSegments.length < 1) {
       return;
@@ -144,7 +158,7 @@ public class FileRevisionRepository {
     final String[] pathSegments = fileIdentifier.getFilePath().split("/");
     String[] directorySegments = {repoName};
     if (pathSegments.length > 1) {
-      directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 2);
+      directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 1);
       directorySegments = Stream.concat(Stream.of(repoName), Arrays.stream(directorySegments))
           .toArray(String[]::new);
     }
@@ -157,10 +171,10 @@ public class FileRevisionRepository {
 
     commit.addFileRevision(file);
 
-    final Directory parentDir =
+    final Directory parentDir = 
         directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(session,
             directorySegments, repoName, landscapeTokenId);
-    parentDir.addFileRevision(file);
+    file.setParentDirectory(parentDir);
 
     session.save(List.of(parentDir, commit, file));
 

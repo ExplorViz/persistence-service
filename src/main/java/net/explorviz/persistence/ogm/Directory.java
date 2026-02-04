@@ -18,9 +18,6 @@ public class Directory {
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Directory> subdirectories = new HashSet<>();
 
-  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<FileRevision> fileRevisions = new HashSet<>();
-
   public Directory() {
     // Empty constructor required by Neo4j OGM
   }
@@ -30,15 +27,12 @@ public class Directory {
   }
 
   public void addSubdirectory(final Directory directory) {
-    final Set<Directory> newSubdirectories = new HashSet<>(subdirectories);
-    newSubdirectories.add(directory);
-    subdirectories = Set.copyOf(newSubdirectories);
+    subdirectories.add(directory);
+    directory.setParent(this);
   }
 
-  public void addFileRevision(final FileRevision fileRevision) {
-    final Set<FileRevision> newFileRevisions = new HashSet<>(fileRevisions);
-    newFileRevisions.add(fileRevision);
-    fileRevisions = Set.copyOf(newFileRevisions);
+  public Set<Directory> getSubdirectories() {
+    return subdirectories;
   }
 
   public String getName() {
@@ -53,5 +47,9 @@ public class Directory {
 
   public Directory getParent() {
     return parent;
+  }
+
+  public void setParent(final Directory parent) {
+    this.parent = parent;
   }
 }

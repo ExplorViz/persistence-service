@@ -187,4 +187,8 @@ public class FileRevision {
   public Directory getParentDirectory() {
     return parentDirectory;
   }
+
+  public void setParentDirectory(final Directory parentDirectory) {
+    this.parentDirectory = parentDirectory;
+  }
 }
