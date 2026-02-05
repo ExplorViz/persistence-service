@@ -9,12 +9,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
-import net.explorviz.persistence.ogm.Function;
-import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.proto.FileIdentifier;
 import org.jboss.logging.Logger;
 import org.neo4j.ogm.model.Result;
@@ -23,21 +22,41 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
 public class FileRevisionRepository {
-  /* TODO: Nicht sicher, ob die hier nach der Modelländerung noch 100% funktioniert
-      - Mir fehlt jegliche Zuordnung zu Landscape
-   */
-  private static final String FIND_LONGEST_PATH_MATCH = """
-      WITH $pathSegments AS pathSegments, $applicationName as applicationName
-      OPTIONAL MATCH (:Application {name: applicationName})-[:HAS_ROOT]->(rootDir:Directory)
-      OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)-[:CONTAINS]->*(:Directory|FileRevision)
+
+  private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT = """
+      MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
+            <-[:HAS_ROOT]-(app:Application {name: $appName})
+      OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
+            -[:CONTAINS]->*(lastNode:Directory|FileRevision)
       WHERE
-        (rootDir)-[:CONTAINS]->(fqnRoot) AND
-        all(j IN range(0, length(p)) WHERE nodes(p)[j].name = pathSegments[j]) AND
-        (length(p) + 1 < size(pathSegments) XOR "FileRevision" IN labels(last(nodes(p))))
+        (appRootDir)-[:CONTAINS]->(fqnRoot) AND
+        all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
+        (length(p) + 1 < size($pathSegments) XOR "FileRevision" IN labels(lastNode)) AND
+        NOT EXISTS {
+            (:Commit)-[:CONTAINS]->(lastNode)
+          }
       RETURN
-        coalesce(last(nodes(p)), rootDir) AS existingNode,
-        pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
-      ORDER BY size(nodes(p)) DESC
+        coalesce(lastNode, appRootDir) AS existingNode,
+        $pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
+      ORDER BY length(p) DESC
+      LIMIT 1;""";
+
+  private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITH_COMMIT = """
+      MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
+            <-[:HAS_ROOT]-(app:Application {name: $appName})
+      OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
+            -[:CONTAINS]->*(lastNode:Directory|FileRevision)
+      WHERE
+        (appRootDir)-[:CONTAINS]->(fqnRoot) AND
+        all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
+        (length(p) + 1 < size($pathSegments) XOR ("FileRevision" IN labels(lastNode) AND
+          EXISTS {
+            (:Commit {hash: $commitHash})-[:CONTAINS]->(lastNode)
+          })
+      RETURN
+        coalesce(lastNode, appRootDir) AS existingNode,
+        $pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
+      ORDER BY length(p) DESC
       LIMIT 1;""";
 
   @Inject
@@ -52,17 +71,10 @@ public class FileRevisionRepository {
   @Inject
   private LandscapeRepository landscapeRepository;
 
-  @Inject
-  private CommitRepository commitRepository;
-
   private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
 
-
-  /* TODO: Think about to change how the dynamic data creates the file structure.
-      Maybe splitting the query into multiple sub-routines as in createFileStructureFromStaticData
-   */
-
-  private FileRevision createFilePath(final Session session, final Directory startingDirectory,
+  private FileRevision createRemainingFilePath(final Session session,
+      final Directory startingDirectory,
       final String[] remainingPath) {
     Directory currentDirectory = startingDirectory;
     for (int i = 0; i < remainingPath.length - 1; i++) {
@@ -77,10 +89,20 @@ public class FileRevisionRepository {
     return file;
   }
 
-  private Map<String, Object> findLongestPathMatch(final Session session, final String[] filePath,
-      final String applicationName) {
-    final Result result = session.query(FIND_LONGEST_PATH_MATCH,
-        Map.of("pathSegments", filePath, "applicationName", applicationName));
+  private Map<String, Object> findLongestPathMatchForFqn(final Session session,
+      final String[] fileFqn, final String applicationName, final String landscapeToken,
+      @Nullable final String commitHash) {
+
+    Result result;
+
+    if (commitHash != null) {
+      result = session.query(FIND_LONGEST_PATH_MATCH_FOR_FQN_WITH_COMMIT,
+          Map.of("pathSegments", fileFqn, "appName", applicationName, "tokenId", landscapeToken,
+              "commitHash", commitHash));
+    } else {
+      result = session.query(FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT,
+          Map.of("pathSegments", fileFqn, "appName", applicationName, "tokenId", landscapeToken));
+    }
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
     if (!resultIterator.hasNext()) {
@@ -90,52 +112,65 @@ public class FileRevisionRepository {
     return resultIterator.next();
   }
 
-  private FileRevision createFileStructure(final Session session, final String[] filePath,
-      final String applicationName) {
-    final Map<String, Object> resultMap = findLongestPathMatch(session, filePath, applicationName);
+  /**
+   * Create any missing Directory / FileRevision nodes according to the provided FQN for an existing
+   * Application object which is already connected to the Landscape graph.
+   *
+   * @param session         OGM session object.
+   * @param applicationName Name of an existing application which is already connected to the
+   *                        Landscape with the given token.
+   * @param splitFileFqn    File FQN starting from application root (not inclusive), e.g. ["net",
+   *                        "explorviz", "persistence", "MyClass.java"]
+   * @return The existing or newly created FileRevision according to the provided FQN
+   */
+  public FileRevision createFileStructureForExistingApplicationFromFileFqn(final Session session,
+      final String[] splitFileFqn, final String applicationName, final String landscapeToken,
+      @Nullable final String commitHash) {
+
+    if (splitFileFqn.length < 1) {
+      throw new IllegalArgumentException("FQN must not be empty");
+    }
+
+    final Map<String, Object> resultMap =
+        findLongestPathMatchForFqn(session, splitFileFqn, applicationName, landscapeToken,
+            commitHash);
 
     final String[] remainingPath =
         resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
     if (remainingPath.length == 0) {
-      return resultMap.get("existingNode") instanceof FileRevision fileRev ? fileRev : null;
+      if (resultMap.get("existingNode") instanceof FileRevision fileRev) {
+        return fileRev;
+      }
+      throw new NoSuchElementException("remainingPath is length 0, but result is not FileRevision");
     }
 
     final Directory startingDirectory =
         resultMap.get("existingNode") instanceof Directory dir ? dir : null;
     if (startingDirectory == null) {
       // Root directory not matched, application does not exist or has no root
-      throw new NoSuchElementException("startingDirectory is null");
+      throw new NoSuchElementException("startingDirectory is null. Does the application exist?");
     }
 
-    return createFilePath(session, startingDirectory, remainingPath);
+    return createRemainingFilePath(session, startingDirectory, remainingPath);
   }
 
-  public void createFileStructureFromFunction(final Session session, final Function function,
-      final String functionFqn, final Application application, final Landscape landscape,
-      final String commitId) {
-    final String[] splitFqn = functionFqn.split("\\.");
-    final String[] pathSegments = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
-    if (pathSegments.length < 1) {
-      return;
-    }
+  /**
+   * Create Directory / FileRevision nodes according to the provided FQN for a newly created
+   * Application object which is not yet connected to the Landscape graph.
+   *
+   * @param session      OGM session object.
+   * @param application  Newly created application object, assumed not to have a root directory.
+   * @param splitFileFqn File FQN starting from application root (not inclusive), e.g. ["net",
+   *                     "explorviz", "persistence", "MyClass.java"]
+   * @return The newly created FileRevision according to the provided FQN
+   */
+  public FileRevision createFileStructureForNewApplicationFromFqn(final Session session,
+      final Application application, final String[] splitFileFqn) {
 
-    final FileRevision file = createFileStructure(session, pathSegments, application.getName());
-    if (file == null) {
-      if (LOGGER.isDebugEnabled()) {
-        LOGGER.debug("FileRevision exists but doesn't exist!?!");
-      }
-      return;
-    }
-
-    file.addFunction(function);
-    session.save(file);
-
-    if (commitId != null) {
-      final Commit commit =
-          commitRepository.getOrCreateCommit(session, commitId, landscape.getTokenId());
-      commit.addFileRevision(file);
-      session.save(commit);
-    }
+    final Directory rootDir = new Directory("*");
+    application.setRootDirectory(rootDir);
+    session.save(application);
+    return createRemainingFilePath(session, rootDir, splitFileFqn);
   }
 
   public FileRevision createFileStructureFromStaticData(final Session session,

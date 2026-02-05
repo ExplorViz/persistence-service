@@ -13,7 +13,7 @@ public class ApplicationRepository {
 
   private static final String FIND_BY_NAME_AND_LANDSCAPE_TOKEN_STATEMENT = """
       MATCH (l:Landscape {tokenId: $tokenId})
-        -->*(appRoot:Directory)<-[h:HAS_ROOT]-(app:Application {name: $name})
+        --*(appRoot:Directory)<-[h:HAS_ROOT]-(app:Application {name: $name})
       RETURN app, h, appRoot;
       """;
 
