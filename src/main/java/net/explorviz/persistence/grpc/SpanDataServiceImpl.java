@@ -25,6 +25,7 @@ import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.SpanRepository;
 import net.explorviz.persistence.repository.TraceRepository;
 import org.jboss.logging.Logger;
+import org.jboss.logging.Logger.Level;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -103,7 +104,9 @@ public class SpanDataServiceImpl implements SpanDataService {
             fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(session,
                 splitFileFqn, application.getName(), landscape.getTokenId(), commitId);
       } catch (NoSuchElementException | IllegalArgumentException e) {
-        LOGGER.error("Error while creating file structure for span: " + e);
+        if (LOGGER.isEnabled(Level.ERROR)) {
+          LOGGER.error("Error while creating file structure for span: " + e);
+        }
         return Uni.createFrom().item(Empty.getDefaultInstance());
       }
     }

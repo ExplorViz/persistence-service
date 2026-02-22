@@ -14,41 +14,39 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @IfBuildProfile("dev")
 @Path("/test")
-class TestResource {
+class ExampleDataResource {
 
   @Inject
-  SessionFactory sessionFactory;
+  private SessionFactory sessionFactory;
 
   @POST
   @Path("/repo")
-  public void createTestRepository() {
-    Session session = sessionFactory.openSession();
-
+  public void createTestingRepository() {
     Directory currentDir = new Directory("hello-world");
 
-    Commit commit1 = new Commit("commit1");
+    final Commit commit1 = new Commit("commit1");
 
-    Repository repository = new Repository("hello-world");
+    final Repository repository = new Repository("hello-world");
     repository.addRootDirectory(currentDir);
     repository.addCommit(commit1);
 
-    Landscape landscape = new Landscape("mytokenvalue");
+    final Landscape landscape = new Landscape("mytokenvalue");
     landscape.addRepository(repository);
 
-    String[] dirNames = new String[] {"net", "explorviz", "helloworld"};
-    for (String dirName : dirNames) {
-      Directory newDir = new Directory(dirName);
+    final String[] dirNames = {"net", "explorviz", "helloworld"};
+    for (final String dirName : dirNames) {
+      final Directory newDir = new Directory(dirName);
       currentDir.addSubdirectory(newDir);
       currentDir = newDir;
     }
 
-    FileRevision fileA = new FileRevision("ClassA.java");
-    FileRevision fileB = new FileRevision("ClassB.java");
-    FileRevision fileC = new FileRevision("ClassC.java");
+    final FileRevision fileA = new FileRevision("ClassA.java");
+    final FileRevision fileB = new FileRevision("ClassB.java");
+    final FileRevision fileC = new FileRevision("ClassC.java");
 
     currentDir.addFileRevision(fileA);
     currentDir.addFileRevision(fileB);
-    Directory packageDir = new Directory("innerpackage");
+    final Directory packageDir = new Directory("innerpackage");
     packageDir.addFileRevision(fileC);
     currentDir.addSubdirectory(packageDir);
 
@@ -56,6 +54,7 @@ class TestResource {
     commit1.addFileRevision(fileB);
     commit1.addFileRevision(fileC);
 
+    final Session session = sessionFactory.openSession();
     session.save(landscape);
   }
 }

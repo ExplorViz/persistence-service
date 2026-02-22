@@ -14,7 +14,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @Path("/{landscapeToken}/commits")
-public class CommitResource {
+class CommitResource {
 
   @Inject
   private CommitRepository commitRepository;

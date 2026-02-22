@@ -1,14 +1,19 @@
 package net.explorviz.persistence.ogm;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
+import net.explorviz.persistence.api.model.TypeOfAnalysis;
+import net.explorviz.persistence.api.model.landscape.City;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Repository {
+public class Repository implements Visualizable {
   @Id
   @GeneratedValue
   private Long id;
@@ -30,6 +35,14 @@ public class Repository {
 
   public Repository(final String name) {
     this.name = name;
+  }
+
+  public Long getId() {
+    return id;
+  }
+
+  public String getName() {
+    return name;
   }
 
   public void addCommit(final Commit commit) {
@@ -55,5 +68,17 @@ public class Repository {
 
   public Directory getRootDirectory() {
     return this.rootDirectory;
+  }
+
+
+  @Override
+  public VisualizationObject toVisualizationObject() {
+    return new City(id.toString(), getName(), TypeOfAnalysis.STATIC,
+        List.of(rootDirectory.getId().toString()), List.of());
+  }
+
+  @Override
+  public Stream<Visualizable> getVisualizableChildren() {
+    return Stream.of(rootDirectory);
   }
 }

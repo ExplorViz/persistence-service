@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import net.explorviz.persistence.proto.ClassData;
 import net.explorviz.persistence.proto.ClassType;
 import org.neo4j.ogm.annotation.GeneratedValue;
@@ -13,7 +15,7 @@ import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Clazz {
+public class Clazz implements Visualizable {
   @Id
   @GeneratedValue
   private Long id;
@@ -102,5 +104,28 @@ public class Clazz {
     final Set<Field> newFields = new HashSet<>(fields);
     newFields.add(field);
     fields = Set.copyOf(newFields);
+  }
+
+  public Long getId() {
+    return id;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public Set<Function> getFunctions() {
+    return functions;
+  }
+
+  @Override
+  public VisualizationObject toVisualizationObject() {
+    return new net.explorviz.persistence.api.model.landscape.Clazz(id.toString(), name,
+        functions.stream().map(f -> f.getId().toString()).toList());
+  }
+
+  @Override
+  public Stream<Visualizable> getVisualizableChildren() {
+    return Stream.empty();
   }
 }

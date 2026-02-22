@@ -2,13 +2,16 @@ package net.explorviz.persistence.ogm;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Stream;
+import net.explorviz.persistence.api.model.landscape.District;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Directory {
+public class Directory implements Visualizable {
   @Id
   @GeneratedValue
   private Long id;
@@ -41,7 +44,31 @@ public class Directory {
     fileRevisions = Set.copyOf(newFileRevisions);
   }
 
+  public Long getId() {
+    return id;
+  }
+
   public String getName() {
     return name;
+  }
+
+  public Set<Directory> getSubdirectories() {
+    return subdirectories;
+  }
+
+  public Set<FileRevision> getFileRevisions() {
+    return fileRevisions;
+  }
+
+  @Override
+  public VisualizationObject toVisualizationObject() {
+    return new District(id.toString(), name,
+        subdirectories.stream().map(d -> d.getId().toString()).toList(),
+        fileRevisions.stream().map(f -> f.getId().toString()).toList());
+  }
+
+  @Override
+  public Stream<Visualizable> getVisualizableChildren() {
+    return Stream.concat(subdirectories.stream(), fileRevisions.stream());
   }
 }

@@ -45,4 +45,12 @@ public class Landscape {
   public String getTokenId() {
     return this.tokenId;
   }
+
+  public Set<Trace> getTraces() {
+    return traces;
+  }
+
+  public Set<Repository> getRepositories() {
+    return repositories;
+  }
 }
