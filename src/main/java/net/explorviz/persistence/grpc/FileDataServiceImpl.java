@@ -57,7 +57,7 @@ public class FileDataServiceImpl implements FileDataService {
     for (final String importName : request.getImportNamesList()) {
       file.addImportNames(importName);
     }
-    //    request.getMetricsMap().forEach(file::addMetric); TODO: Why commented?
+    request.getMetricsMap().forEach(file::addMetric);
     file.setLastEditor(request.getLastEditor());
     file.setAddedLines(request.getAddedLines());
     file.setModifiedLines(request.getModifiedLines());
