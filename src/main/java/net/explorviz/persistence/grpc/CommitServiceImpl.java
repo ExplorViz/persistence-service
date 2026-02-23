@@ -6,6 +6,7 @@ import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
+import java.time.Instant;
 import java.util.List;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
@@ -73,6 +74,10 @@ public class CommitServiceImpl implements CommitService {
     final Commit commit = commitRepository.getOrCreateCommit(session, request.getCommitId(),
         request.getLandscapeToken());
     commit.setBranch(branch);
+    commit.setCommitDate(Instant.ofEpochSecond(request.getCommitDate().getSeconds(),
+        request.getCommitDate().getNanos()));
+    commit.setAuthorDate(Instant.ofEpochSecond(request.getAuthorDate().getSeconds(),
+        request.getAuthorDate().getNanos()));
     repo.addCommit(commit);
 
     for (final FileIdentifier f : request.getAddedFilesList()) {
@@ -87,14 +92,13 @@ public class CommitServiceImpl implements CommitService {
 
     for (final FileIdentifier f : request.getUnchangedFilesList()) {
       fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
-              request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
-                () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
-                  request.getRepositoryName(), request.getLandscapeToken(), commit));
+          request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
+          () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
+              request.getRepositoryName(), request.getLandscapeToken(), commit));
     }
 
     for (final String tagName : request.getTagsList()) {
-      final Tag tag =
-          tagRepository.findTagByName(session, tagName).orElse(new Tag(tagName));
+      final Tag tag = tagRepository.findTagByName(session, tagName).orElse(new Tag(tagName));
       commit.addTag(tag);
     }
 
