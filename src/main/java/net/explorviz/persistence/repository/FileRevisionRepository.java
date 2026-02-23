@@ -74,8 +74,7 @@ public class FileRevisionRepository {
   private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
 
   private FileRevision createRemainingFilePath(final Session session,
-      final Directory startingDirectory,
-      final String[] remainingPath) {
+      final Directory startingDirectory, final String[] remainingPath) {
     Directory currentDirectory = startingDirectory;
     for (int i = 0; i < remainingPath.length - 1; i++) {
       final Directory newDirectory = new Directory(remainingPath[i]);
@@ -184,8 +183,9 @@ public class FileRevisionRepository {
           .toArray(String[]::new);
     }
 
-    FileRevision file = getFileRevisionFromHash(session, fileIdentifier.getFileHash(), repoName,
-        landscapeTokenId).orElse(null);
+    FileRevision file =
+        getFileRevisionFromHashAndPath(session, fileIdentifier.getFileHash(), repoName,
+            landscapeTokenId, pathSegments).orElse(null);
     if (file == null) {
       file = new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1]);
     }
@@ -210,5 +210,20 @@ public class FileRevisionRepository {
         RETURN f
         LIMIT 1;
         """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash)));
+  }
+
+  public Optional<FileRevision> getFileRevisionFromHashAndPath(final Session session,
+      final String fileHash, final String repoName, final String landscapeTokenId,
+      final String[] pathSegments) {
+    return Optional.ofNullable(session.queryForObject(FileRevision.class, """
+        MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Repository {name: $repoName})
+          -[:HAS_ROOT]->(root:Directory)
+        MATCH p = (root)-[:CONTAINS]->*(file:FileRevision {hash: $fileHash})
+        WHERE all(j in range(1, length(p)) WHERE nodes(p)[j].name=$pathSegments[j-1])
+          AND length(p)=size($pathSegments)
+        RETURN file
+        LIMIT 1;
+        """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash,
+        "pathSegments", pathSegments)));
   }
 }

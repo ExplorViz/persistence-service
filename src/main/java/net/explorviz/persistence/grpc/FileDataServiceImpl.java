@@ -20,6 +20,7 @@ import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import java.util.Map;
 
 @GrpcService
 public class FileDataServiceImpl implements FileDataService {
@@ -42,8 +43,9 @@ public class FileDataServiceImpl implements FileDataService {
     final Session session = sessionFactory.openSession();
 
     final FileRevision file =
-        fileRevisionRepository.getFileRevisionFromHash(session, request.getFileHash(),
-            request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
+        fileRevisionRepository.getFileRevisionFromHashAndPath(session, request.getFileHash(),
+            request.getRepositoryName(), request.getLandscapeToken(),
+            request.getFilePath().split("/")).orElse(null);
 
     if (file == null) {
       return Uni.createFrom().failure(Status.FAILED_PRECONDITION.withDescription(
@@ -55,7 +57,7 @@ public class FileDataServiceImpl implements FileDataService {
     for (final String importName : request.getImportNamesList()) {
       file.addImportNames(importName);
     }
-    //    request.getMetricsMap().forEach(file::addMetric);
+    //    request.getMetricsMap().forEach(file::addMetric); TODO: Why commented?
     file.setLastEditor(request.getLastEditor());
     file.setAddedLines(request.getAddedLines());
     file.setModifiedLines(request.getModifiedLines());
