@@ -179,7 +179,7 @@ public class FileRevisionRepository {
     final String[] pathSegments = fileIdentifier.getFilePath().split("/");
     String[] directorySegments = {repoName};
     if (pathSegments.length > 1) {
-      directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 2);
+      directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 1);
       directorySegments = Stream.concat(Stream.of(repoName), Arrays.stream(directorySegments))
           .toArray(String[]::new);
     }
