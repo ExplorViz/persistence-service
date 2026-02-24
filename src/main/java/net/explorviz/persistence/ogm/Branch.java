@@ -19,4 +19,8 @@ public class Branch {
   public Branch(final String name) {
     this.name = name;
   }
+
+  public String getName() {
+    return this.name;
+  }
 }

@@ -8,8 +8,11 @@ import io.quarkus.grpc.GrpcClient;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import net.explorviz.persistence.ogm.Commit;
+import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
 import net.explorviz.persistence.proto.FileIdentifier;
@@ -35,47 +38,91 @@ class CommitServiceTest {
   @Inject
   SessionFactory sessionFactory;
 
+  private String landscapeToken;
+  private String repoName;
+  private String branchName;
+
   @BeforeEach
-  void cleanup() {
+  void init() {
     Session session = sessionFactory.openSession();
     session.purgeDatabase();
+    landscapeToken = "mytokenvalue";
+    repoName = "myrepo";
+    branchName = "main";
   }
 
   @Test
   void testFilesAddedFromCommitData() {
+    String commitHash = "commit1";
+    String fileHashOne = "1";
+    String fileNameOne = "File1.java";
+    String filePathOne = "src/" + fileNameOne;
+    String fileHashTwo = "2";
+    String fileNameTwo = "File2.java";
+    String filePathTwo = "src/" + fileNameTwo;
+
     StateDataRequest stateDataRequest =
-        StateDataRequest.newBuilder().setLandscapeToken("mytokenvalue").setRepositoryName("myrepo")
-            .setBranchName("main").build();
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setBranchName(branchName).build();
 
     stateDataService.getStateData(stateDataRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     CommitData commitData1 =
-        CommitData.newBuilder().setCommitId("commit1").setRepositoryName("myrepo")
-            .setBranchName("main").setLandscapeToken("mytokenvalue")
+        CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(repoName)
+            .setBranchName(branchName).setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(List.of(
-                FileIdentifier.newBuilder().setFileHash("1").setFilePath("src/File1.java").build(),
-                FileIdentifier.newBuilder().setFileHash("2").setFilePath("src/File2.java").build()))
-            .build();
-
-    CommitData commitData2 =
-        CommitData.newBuilder().setCommitId("commit1").setRepositoryName("myrepo")
-            .setBranchName("main").setLandscapeToken("mytokenvalue")
-            .setAuthorDate(Timestamp.newBuilder().setSeconds(2).setNanos(200).build())
-            .addAllModifiedFiles(List.of(
-                FileIdentifier.newBuilder().setFileHash("1").setFilePath("src/File1.java").build(),
-                FileIdentifier.newBuilder().setFileHash("2").setFilePath("src/File2.java").build()))
-            .build();
+            .addAllAddedFiles(List.of(FileIdentifier.newBuilder().setFileHash(fileHashOne)
+                    .setFilePath(filePathOne).build(),
+                FileIdentifier.newBuilder().setFileHash(fileHashTwo)
+                    .setFilePath(filePathTwo).build())).build();
 
     commitService.persistCommit(commitData1).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-    commitService.persistCommit(commitData2).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     Session session = sessionFactory.openSession();
 
-    Result result = session.query("MATCH (f:FileRevision) RETURN COUNT(f) AS count;", Map.of());
+    Commit commit = session.queryForObject(Commit.class, """
+        MATCH (c:Commit {hash: $commitHash}) RETURN c;
+        """, Map.of("commitHash", commitHash));
 
-    assertTrue(result.queryResults().iterator().hasNext());
-    assertEquals(2, (Long) result.queryResults().iterator().next().get("count"));
+    Iterable<FileRevision> files = session.query(FileRevision.class, """
+            MATCH (:Landscape {tokenId: $landscapeToken})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(:Commit {hash: $commitHash})
+              -[:CONTAINS]->(f:FileRevision)
+            RETURN f
+            ORDER BY f.name ASC;
+            """,
+        Map.of("landscapeToken", landscapeToken, "repoName", repoName, "commitHash", commitHash));
+
+    Boolean correctRepoPath = session.queryForObject(Boolean.class, """
+        RETURN EXISTS {
+        MATCH (:Landscape {tokenId: $landscapeToken})
+          -[:CONTAINS]->(:Repository {name: $repoName})
+          -[:HAS_ROOT]->(:Directory {name: $repoName})
+          -[:CONTAINS]->(:Directory {name: $srcName})
+          -[:CONTAINS]->(:FileRevision {name: $fileNameOne})
+        
+        MATCH (:Landscape {tokenId: $landscapeToken})
+          -[:CONTAINS]->(:Repository {name: $repoName})
+          -[:HAS_ROOT]->(:Directory {name: $repoName})
+          -[:CONTAINS]->(:Directory {name: $srcName})
+          -[:CONTAINS]->(:FileRevision {name: $fileNameTwo})
+        } AS exists
+        """, Map.of("landscapeToken", landscapeToken, "repoName", repoName, "srcName", "src",
+        "fileNameOne", fileNameOne, "fileNameTwo", fileNameTwo));
+
+    int count = 0;
+    for (FileRevision file : files) {
+      count++;
+    }
+
+    Iterator<FileRevision> it = files.iterator();
+
+    assertEquals(commitHash, commit.getHash());
+    assertEquals(2, count);
+    assertEquals(fileNameOne, it.next().getName());
+    assertEquals(fileNameTwo, it.next().getName());
+    assertTrue(correctRepoPath);
   }
 }

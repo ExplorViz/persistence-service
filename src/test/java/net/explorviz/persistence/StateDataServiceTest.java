@@ -1,15 +1,25 @@
 package net.explorviz.persistence;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.google.protobuf.Timestamp;
 import io.quarkus.grpc.GrpcClient;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
+import net.explorviz.persistence.proto.CommitData;
+import net.explorviz.persistence.proto.CommitService;
+import net.explorviz.persistence.proto.FileData;
+import net.explorviz.persistence.proto.FileDataService;
+import net.explorviz.persistence.proto.FileIdentifier;
+import net.explorviz.persistence.proto.Language;
+import net.explorviz.persistence.proto.StateData;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,24 +33,37 @@ class StateDataServiceTest {
   private static final long GRPC_AWAIT_SECONDS = 5;
 
   @GrpcClient
+  CommitService commitService;
+
+  @GrpcClient
+  FileDataService fileDataService;
+
+  @GrpcClient
   StateDataService stateDataService;
 
   @Inject
   SessionFactory sessionFactory;
 
+  private String landscapeToken;
+  private String repoName;
+  private String branchName;
+
   @BeforeEach
-  void cleanup() {
+  void init() {
     Session session = sessionFactory.openSession();
     session.purgeDatabase();
+    landscapeToken = "mytokenvalue";
+    repoName = "myrepo";
+    branchName = "main";
   }
 
   @Test
-  void testGetStateData() {
+  void testGetStateDataOnEmptyDB() {
     StateDataRequest stateDataRequest =
-        StateDataRequest.newBuilder().setLandscapeToken("mytokenvalue").setRepositoryName("myrepo")
-            .setBranchName("main").build();
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setBranchName(branchName).build();
 
-    stateDataService.getStateData(stateDataRequest).await()
+    StateData stateData = stateDataService.getStateData(stateDataRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     Session session = sessionFactory.openSession();
@@ -48,23 +71,97 @@ class StateDataServiceTest {
     Landscape landscape = session.queryForObject(Landscape.class, """
         MATCH (l:Landscape {tokenId: $tokenId})
         RETURN l;
-        """, Map.of("tokenId", "mytokenvalue"));
+        """, Map.of("tokenId", landscapeToken));
 
     Repository repository = session.queryForObject(Repository.class, """
         MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(r:Repository {name: $repoName})
         RETURN r;
-        """, Map.of("tokenId", "mytokenvalue", "repoName", "myrepo"));
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName));
 
     Branch branch = session.queryForObject(Branch.class, """
         MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
               -[:CONTAINS]->(b:Branch {name: $branchName})
         RETURN b;
-        """, Map.of("tokenId", "mytokenvalue", "repoName", "myrepo", "branchName", "main"));
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName, "branchName", branchName));
 
+    assertEquals("", stateData.getCommitId());
     assertNotNull(landscape);
+    assertEquals(landscapeToken, landscape.getTokenId());
     assertNotNull(repository);
+    assertEquals(repoName, repository.getName());
     assertNotNull(branch);
+    assertEquals(branchName, branch.getName());
+  }
+
+  @Test
+  void testGetStateDataWithExistingCommits() {
+    String commitHash = "commit1";
+    String fileHash = "1";
+    String filePath = "src/File1.java";
+
+    StateDataRequest stateDataPreparationRequest =
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setBranchName(branchName).build();
+
+    stateDataService.getStateData(stateDataPreparationRequest).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    Session session = sessionFactory.openSession();
+
+    CommitData commitDataOne =
+        CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(repoName)
+            .setBranchName(branchName).setLandscapeToken(landscapeToken)
+            .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
+            .addAllAddedFiles(List.of(
+                FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(filePath).build()))
+            .build();
+
+    commitService.persistCommit(commitDataOne).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    Map<String, Double> testMap = Map.of("count", 1d, "lines", 2d);
+
+    FileData fileDataOne =
+        FileData.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setFileHash(fileHash).setFilePath(filePath).setLanguage(Language.JAVA)
+            .addAllImportNames(List.of("Test")).addAllClasses(List.of()).addAllFunctions(List.of())
+            .putAllMetrics(testMap).setLastEditor("Testi").setAddedLines(1).setModifiedLines(1)
+            .setDeletedLines(0).build();
+
+    fileDataService.persistFile(fileDataOne).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    StateDataRequest stateDataRequest =
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setBranchName(branchName).build();
+
+    StateData stateData = stateDataService.getStateData(stateDataRequest).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    Landscape landscape = session.queryForObject(Landscape.class, """
+        MATCH (l:Landscape {tokenId: $tokenId})
+        RETURN l;
+        """, Map.of("tokenId", landscapeToken));
+
+    Repository repository = session.queryForObject(Repository.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(r:Repository {name: $repoName})
+        RETURN r;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName));
+
+    Branch branch = session.queryForObject(Branch.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(b:Branch {name: $branchName})
+        RETURN b;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName, "branchName", branchName));
+
+    assertEquals(commitHash, stateData.getCommitId());
+    assertNotNull(landscape);
+    assertEquals(landscapeToken, landscape.getTokenId());
+    assertNotNull(repository);
+    assertEquals(repoName, repository.getName());
+    assertNotNull(branch);
+    assertEquals(branchName, branch.getName());
   }
 }
