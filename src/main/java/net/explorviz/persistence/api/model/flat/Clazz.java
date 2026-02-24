@@ -1,11 +1,11 @@
-package net.explorviz.persistence.api.model.landscape;
+package net.explorviz.persistence.api.model.flat;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 
 @RegisterForReflection
-public record Building(String id, String name, List<String> classIds, List<String> functionIds)
-    implements VisualizationObject {
+public record Clazz(String id, String name, List<String> functionIds) implements
+    VisualizationObject {
   public String getId() {
     return id;
   }

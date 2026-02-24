@@ -4,6 +4,8 @@ import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import java.util.List;
+import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -30,6 +32,9 @@ class ExampleDataResource {
     repository.addRootDirectory(currentDir);
     repository.addCommit(commit1);
 
+    final Application application = new Application("hello-world");
+    application.setRootDirectory(currentDir);
+
     final Landscape landscape = new Landscape("mytokenvalue");
     landscape.addRepository(repository);
 
@@ -55,6 +60,6 @@ class ExampleDataResource {
     commit1.addFileRevision(fileC);
 
     final Session session = sessionFactory.openSession();
-    session.save(landscape);
+    session.save(List.of(landscape, application));
   }
 }

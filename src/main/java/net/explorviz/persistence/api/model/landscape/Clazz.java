@@ -1,16 +1,14 @@
 package net.explorviz.persistence.api.model.landscape;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
+import net.explorviz.persistence.ogm.FileRevision;
 
-@RegisterForReflection
-public record Clazz(String id, String name, List<String> functionIds) implements
-    VisualizationObject {
-  public String getId() {
-    return id;
-  }
-
-  public String getName() {
-    return name;
+public record Clazz(
+    String name,
+    int level,
+    List<Method> methods
+) {
+  public Clazz(final FileRevision ogmFile, final int level) {
+    this(ogmFile.getName(), level + 1, ogmFile.getFunctions().stream().map(Method::new).toList());
   }
 }

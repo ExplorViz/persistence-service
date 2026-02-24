@@ -1,4 +1,4 @@
-package net.explorviz.persistence.api.model.landscape;
+package net.explorviz.persistence.api.model.flat;
 
 public interface VisualizationObject {
   String getId();

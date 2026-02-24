@@ -1,7 +1,11 @@
 package net.explorviz.persistence.api.model.landscape;
 
-import java.util.Map;
+import java.util.List;
 
-public record Landscape(String landscapeToken,
-                        Map<String, VisualizationObject> visualizationObjects) {
+public record Landscape(
+    String landscapeToken,
+    List<Node> nodes,
+    List<K8sNode> k8sNodes
+) {
 }
+

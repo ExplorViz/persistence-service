@@ -1,4 +1,4 @@
-package net.explorviz.persistence.api.model.landscape;
+package net.explorviz.persistence.api.model.flat;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
