@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
+import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.ogm.Tag;
 import net.explorviz.persistence.proto.CommitData;
@@ -91,10 +92,15 @@ public class CommitServiceImpl implements CommitService {
     }
 
     for (final FileIdentifier f : request.getUnchangedFilesList()) {
-      fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
-          request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
-            () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
-                request.getRepositoryName(), request.getLandscapeToken(), commit));
+      FileRevision unchangedFile = fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
+          request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
+
+      if (unchangedFile == null) {
+        unchangedFile = fileRevisionRepository.createFileStructureFromStaticData(session, f,
+            request.getRepositoryName(), request.getLandscapeToken(), commit);
+      }
+
+      commit.addFileRevision(unchangedFile);
     }
 
     for (final String tagName : request.getTagsList()) {
