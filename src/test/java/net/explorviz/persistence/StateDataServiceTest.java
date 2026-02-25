@@ -10,7 +10,9 @@ import jakarta.inject.Inject;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
+import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.proto.CommitData;
@@ -59,9 +61,11 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataOnEmptyDB() {
+    String appName = "testApp";
+
     StateDataRequest stateDataRequest =
         StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
+            .setBranchName(branchName).putAllApplicationPaths(Map.of(appName, "")).build();
 
     StateData stateData = stateDataService.getStateData(stateDataRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
@@ -79,6 +83,21 @@ class StateDataServiceTest {
         RETURN r;
         """, Map.of("tokenId", landscapeToken, "repoName", repoName));
 
+    Directory rootDirectory = session.queryForObject(Directory.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:HAS_ROOT]->(root:Directory {name: $repoName})
+        RETURN root;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName));
+
+    Application application = session.queryForObject(Application.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:HAS_ROOT]->(:Directory {name: $repoName})
+              <-[:HAS_ROOT]-(a:Application {name: $appName})
+        RETURN a;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appName));
+
     Branch branch = session.queryForObject(Branch.class, """
         MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
@@ -88,22 +107,65 @@ class StateDataServiceTest {
 
     assertEquals("", stateData.getCommitId());
     assertNotNull(landscape);
-    assertEquals(landscapeToken, landscape.getTokenId());
     assertNotNull(repository);
-    assertEquals(repoName, repository.getName());
+    assertNotNull(rootDirectory);
+    assertNotNull(application);
     assertNotNull(branch);
-    assertEquals(branchName, branch.getName());
+  }
+
+  @Test
+  void testGetStateDataWithMultipleApplications() {
+    String appNameOne = "testAppOne";
+    String appPathOne = "src/" + appNameOne;
+    String appNameTwo = "testAppTwo";
+    String appPathTwo = "src/org/" + appNameTwo;
+
+    StateDataRequest stateDataRequest =
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setBranchName(branchName)
+            .putAllApplicationPaths(Map.of(appNameOne, appPathOne, appNameTwo, appPathTwo)).build();
+
+    StateData stateData = stateDataService.getStateData(stateDataRequest).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    Session session = sessionFactory.openSession();
+
+    Application applicationOne = session.queryForObject(Application.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:HAS_ROOT]->(:Directory {name: $repoName})
+              -[:CONTAINS]->(:Directory {name: 'src'})
+              -[:CONTAINS]->(:Directory {name: $appName})
+              <-[:HAS_ROOT]-(a:Application {name: $appName})
+        RETURN a;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appNameOne));
+
+    Application applicationTwo = session.queryForObject(Application.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:HAS_ROOT]->(:Directory {name: $repoName})
+              -[:CONTAINS]->(:Directory {name: 'src'})
+              -[:CONTAINS]->(:Directory {name: 'org'})
+              -[:CONTAINS]->(:Directory {name: $appName})
+              <-[:HAS_ROOT]-(a:Application {name: $appName})
+        RETURN a;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appNameTwo));
+
+    assertEquals("", stateData.getCommitId());
+    assertNotNull(applicationOne);
+    assertNotNull(applicationTwo);
   }
 
   @Test
   void testGetStateDataWithExistingCommits() {
+    String appName = "testApp";
     String commitHash = "commit1";
     String fileHash = "1";
     String filePath = "src/File1.java";
 
     StateDataRequest stateDataPreparationRequest =
         StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
+            .setBranchName(branchName).putAllApplicationPaths(Map.of(appName, "")).build();
 
     stateDataService.getStateData(stateDataPreparationRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
@@ -118,7 +180,8 @@ class StateDataServiceTest {
                 FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(filePath).build()))
             .build();
 
-    commitService.persistCommit(commitDataOne).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    commitService.persistCommit(commitDataOne).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     Map<String, Double> testMap = Map.of("count", 1d, "lines", 2d);
 
@@ -133,7 +196,7 @@ class StateDataServiceTest {
 
     StateDataRequest stateDataRequest =
         StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
+            .setBranchName(branchName).putAllApplicationPaths(Map.of(appName, "")).build();
 
     StateData stateData = stateDataService.getStateData(stateDataRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
@@ -149,6 +212,21 @@ class StateDataServiceTest {
         RETURN r;
         """, Map.of("tokenId", landscapeToken, "repoName", repoName));
 
+    Directory rootDirectory = session.queryForObject(Directory.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:HAS_ROOT]->(root:Directory {name: $repoName})
+        RETURN root;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName));
+
+    Application application = session.queryForObject(Application.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:HAS_ROOT]->(:Directory {name: $repoName})
+              <-[:HAS_ROOT]-(a:Application {name: $appName})
+        RETURN a;
+        """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appName));
+
     Branch branch = session.queryForObject(Branch.class, """
         MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
@@ -158,10 +236,9 @@ class StateDataServiceTest {
 
     assertEquals(commitHash, stateData.getCommitId());
     assertNotNull(landscape);
-    assertEquals(landscapeToken, landscape.getTokenId());
     assertNotNull(repository);
-    assertEquals(repoName, repository.getName());
+    assertNotNull(rootDirectory);
+    assertNotNull(application);
     assertNotNull(branch);
-    assertEquals(branchName, branch.getName());
   }
 }

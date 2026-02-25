@@ -14,7 +14,8 @@ public class RepositoryRepository {
 
   private static final String FIND_BY_NAME_AND_LANDSCAPE_TOKEN_STATEMENT = """
       MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $name})
-      RETURN r;
+        -[h:HAS_ROOT]->(root:Directory)
+      RETURN r, root, h;
       """;
 
   private static final String FIND_REPO_WITH_FULL_FILE_TREE_OF_COMMIT = """

@@ -70,6 +70,8 @@ public class StateDataServiceImpl implements StateDataService {
       repository.addRootDirectory(repoRootDirectory);
     }
 
+    session.save(List.of(repository, landscape));
+
     request.getApplicationPathsMap().forEach((String k, String v) -> {
       final Application application =
           applicationRepository.getOrCreateApplication(session, k, request.getLandscapeToken());
