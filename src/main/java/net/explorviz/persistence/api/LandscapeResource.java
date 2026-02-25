@@ -20,6 +20,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @Path("/v2/landscapes/{landscapeToken}/structure")
+@SuppressWarnings("PMD.UseObjectForClearerAPI")
 class LandscapeResource {
 
   @Inject
@@ -42,10 +43,10 @@ class LandscapeResource {
       @RestPath final String commitHash) {
     final Session session = sessionFactory.openSession();
 
-    List<net.explorviz.persistence.ogm.Application> apps =
+    final List<net.explorviz.persistence.ogm.Application> ogmApps =
         applicationRepository.fetchAllFullyHydratedApplications(session, landscapeToken);
 
-    final Node node = new Node("", "", apps.stream().map(Application::new).toList());
+    final Node node = new Node("", "", ogmApps.stream().map(Application::new).toList());
     return new Landscape(landscapeToken, List.of(node), List.of());
   }
 

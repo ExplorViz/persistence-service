@@ -8,7 +8,7 @@ public record Application(
     String instanceId,
     List<Package> packages
 ) {
-  public Application(net.explorviz.persistence.ogm.Application ogmApp) {
+  public Application(final net.explorviz.persistence.ogm.Application ogmApp) {
     this(ogmApp.getName(), "", "", List.of(new Package(ogmApp.getRootDirectory(), 0)));
   }
 }

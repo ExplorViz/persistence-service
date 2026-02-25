@@ -13,6 +13,7 @@
 
   <rule ref="category/java/bestpractices.xml">
     <exclude name="AccessorMethodGeneration" />
+    <exclude name="GuardLogStatement" />
     <exclude name="UseVarargs" />
   </rule>
 

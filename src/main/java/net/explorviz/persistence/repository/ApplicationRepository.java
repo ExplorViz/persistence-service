@@ -52,9 +52,10 @@ public class ApplicationRepository {
    */
   public List<Application> fetchAllFullyHydratedApplications(final Session session,
       final String landscapeToken) {
-    Iterable<Application> appIterable = session.query(Application.class, FIND_APPLICATIONS_WITH_FULL_TREE,
-        Map.of("tokenId", landscapeToken));
-    List<Application> appList = new ArrayList<>();
+    final Iterable<Application> appIterable =
+        session.query(Application.class, FIND_APPLICATIONS_WITH_FULL_TREE,
+            Map.of("tokenId", landscapeToken));
+    final List<Application> appList = new ArrayList<>();
     appIterable.forEach(appList::add);
     return appList;
   }

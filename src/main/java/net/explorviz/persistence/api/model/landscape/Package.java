@@ -9,7 +9,7 @@ public record Package(
     List<Package> subPackages,
     List<Clazz> classes
 ) {
-  public Package(final Directory ogmDir, int level) {
+  public Package(final Directory ogmDir, final int level) {
     this(ogmDir.getName(), level,
         ogmDir.getSubdirectories().stream().map(d -> new Package(d, level + 1)).toList(),
         ogmDir.getFileRevisions().stream().map(f -> new Clazz(f, level + 1)).toList());

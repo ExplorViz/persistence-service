@@ -93,8 +93,8 @@ public class CommitServiceImpl implements CommitService {
     for (final FileIdentifier f : request.getUnchangedFilesList()) {
       fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
           request.getRepositoryName(), request.getLandscapeToken()).orElseGet(
-          () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
-              request.getRepositoryName(), request.getLandscapeToken(), commit));
+            () -> fileRevisionRepository.createFileStructureFromStaticData(session, f,
+                request.getRepositoryName(), request.getLandscapeToken(), commit));
     }
 
     for (final String tagName : request.getTagsList()) {

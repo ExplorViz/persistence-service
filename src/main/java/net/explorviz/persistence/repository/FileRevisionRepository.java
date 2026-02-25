@@ -21,6 +21,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class FileRevisionRepository {
 
   private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT = """
@@ -126,9 +127,7 @@ public class FileRevisionRepository {
       final String[] splitFileFqn, final String applicationName, final String landscapeToken,
       @Nullable final String commitHash) {
 
-    if (splitFileFqn.length < 1) {
-      throw new IllegalArgumentException("FQN must not be empty");
-    }
+    validateFqn(splitFileFqn);
 
     final Map<String, Object> resultMap =
         findLongestPathMatchForFqn(session, splitFileFqn, applicationName, landscapeToken,
@@ -225,5 +224,11 @@ public class FileRevisionRepository {
         LIMIT 1;
         """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash,
         "pathSegments", pathSegments)));
+  }
+
+  private void validateFqn(final String[] splitFqn) {
+    if (splitFqn.length == 0) {
+      throw new IllegalArgumentException("FQN must not be empty");
+    }
   }
 }

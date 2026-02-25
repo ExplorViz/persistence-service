@@ -20,7 +20,6 @@ import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
-import java.util.Map;
 
 @GrpcService
 public class FileDataServiceImpl implements FileDataService {
