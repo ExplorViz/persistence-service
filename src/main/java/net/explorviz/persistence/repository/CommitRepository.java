@@ -1,7 +1,9 @@
 package net.explorviz.persistence.repository;
 
+import com.google.common.collect.Lists;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Commit;
@@ -26,8 +28,8 @@ public class CommitRepository {
   }
 
   /**
-   * Find latest commit for which we have seen a CommitData message and also a FileData message
-   * for every file included in the commit.
+   * Find latest commit for which we have seen a CommitData message and also a FileData message for
+   * every file included in the commit.
    */
   public Optional<Commit> findLatestFullyPersistedCommit(
       final Session session, final String repoName, final String tokenId, final String branchName) {
@@ -58,6 +60,23 @@ public class CommitRepository {
       final String tokenId) {
     final Session session = sessionFactory.openSession();
     return findCommitByHashAndLandscapeToken(session, commitHash, tokenId);
+  }
+
+  /**
+   * Returns every commit (along with its branch) in the repository for a given application.
+   */
+  public List<Commit> findCommitsWithBranchForApplicationAndLandscapeToken(final Session session,
+      final String landscapeToken, final String applicationName) {
+    return Lists.newArrayList(session.query(Commit.class, """
+        MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(repo:Repository)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(:Application {name: $appName})
+        MATCH (repo)-[:CONTAINS]->(c:Commit)
+        OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
+        OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
+        RETURN DISTINCT c, r, b, h;
+        """, Map.of("tokenId", landscapeToken, "appName", applicationName)));
   }
 
   public Commit getOrCreateCommit(final Session session, final String commitHash,

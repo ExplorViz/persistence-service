@@ -58,6 +58,10 @@ public class Commit {
     tags = Set.copyOf(newTags);
   }
 
+  public Branch getBranch() {
+    return branch;
+  }
+
   public void setBranch(final Branch branch) {
     this.branch = branch;
   }
@@ -76,5 +80,9 @@ public class Commit {
 
   public void setAuthorDate(final Instant authorDate) {
     this.authorDate = authorDate;
+  }
+
+  public Set<Commit> getParentCommits() {
+    return parentCommits;
   }
 }
