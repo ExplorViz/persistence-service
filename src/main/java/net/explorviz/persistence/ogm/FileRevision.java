@@ -5,8 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-import net.explorviz.persistence.api.model.flat.Building;
-import net.explorviz.persistence.api.model.flat.VisualizationObject;
+import net.explorviz.persistence.api.model.landscape.BuildingDto;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import net.explorviz.persistence.proto.Language;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
@@ -183,7 +183,7 @@ public class FileRevision implements Visualizable {
 
   @Override
   public VisualizationObject toVisualizationObject() {
-    return new Building(id.toString(), name,
+    return new BuildingDto(id.toString(), name,
         classes.stream().map(c -> c.getId().toString()).toList(),
         functions.stream().map(f -> f.getId().toString()).toList());
   }

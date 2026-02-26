@@ -1,7 +1,7 @@
 package net.explorviz.persistence.ogm;
 
 import java.util.stream.Stream;
-import net.explorviz.persistence.api.model.flat.VisualizationObject;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 
 public interface Visualizable {
   VisualizationObject toVisualizationObject();

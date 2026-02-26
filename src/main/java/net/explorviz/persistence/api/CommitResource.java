@@ -14,6 +14,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @Path("/{landscapeToken}/commits")
+@SuppressWarnings("PMD.UseObjectForClearerAPI")
 class CommitResource {
 
   @Inject

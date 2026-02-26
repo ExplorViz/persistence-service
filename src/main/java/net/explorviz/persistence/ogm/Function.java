@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-import net.explorviz.persistence.api.model.flat.VisualizationObject;
+import net.explorviz.persistence.api.model.landscape.FunctionDto;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import net.explorviz.persistence.proto.FunctionData;
 import net.explorviz.persistence.proto.ParameterData;
 import org.neo4j.ogm.annotation.GeneratedValue;
@@ -96,7 +97,7 @@ public class Function implements Visualizable {
 
   @Override
   public VisualizationObject toVisualizationObject() {
-    return new net.explorviz.persistence.api.model.flat.Function(id.toString(), name, metrics);
+    return new FunctionDto(id.toString(), name, metrics);
   }
 
   @Override

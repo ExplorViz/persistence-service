@@ -5,7 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-import net.explorviz.persistence.api.model.flat.VisualizationObject;
+import net.explorviz.persistence.api.model.landscape.ClazzDto;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import net.explorviz.persistence.proto.ClassData;
 import net.explorviz.persistence.proto.ClassType;
 import org.neo4j.ogm.annotation.GeneratedValue;
@@ -120,7 +121,7 @@ public class Clazz implements Visualizable {
 
   @Override
   public VisualizationObject toVisualizationObject() {
-    return new net.explorviz.persistence.api.model.flat.Clazz(id.toString(), name,
+    return new ClazzDto(id.toString(), name,
         functions.stream().map(f -> f.getId().toString()).toList());
   }
 

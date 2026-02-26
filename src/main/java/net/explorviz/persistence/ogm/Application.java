@@ -3,8 +3,8 @@ package net.explorviz.persistence.ogm;
 import java.util.List;
 import java.util.stream.Stream;
 import net.explorviz.persistence.api.model.TypeOfAnalysis;
-import net.explorviz.persistence.api.model.flat.City;
-import net.explorviz.persistence.api.model.flat.VisualizationObject;
+import net.explorviz.persistence.api.model.landscape.CityDto;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
@@ -47,7 +47,7 @@ public class Application implements Visualizable {
 
   @Override
   public VisualizationObject toVisualizationObject() {
-    return new City(id.toString(), name, TypeOfAnalysis.DYNAMIC,
+    return new CityDto(id.toString(), name, TypeOfAnalysis.DYNAMIC,
         List.of(rootDirectory.getId().toString()), List.of());
   }
 

@@ -1,4 +1,4 @@
-package net.explorviz.persistence.api;
+package net.explorviz.persistence.api.v2;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -7,10 +7,11 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
-import net.explorviz.persistence.api.model.flat.VisualizationObject;
-import net.explorviz.persistence.api.model.landscape.Application;
-import net.explorviz.persistence.api.model.landscape.Landscape;
-import net.explorviz.persistence.api.model.landscape.Node;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
+import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
+import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
+import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
+import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.CommitRepository;
@@ -37,17 +38,17 @@ class LandscapeResource {
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Landscape getLatestCommit(@RestPath final String landscapeToken,
+  public LandscapeDto getLatestCommit(@RestPath final String landscapeToken,
       @RestPath final String repositoryName,
       @RestPath final String appName,
       @RestPath final String commitHash) {
     final Session session = sessionFactory.openSession();
 
-    final List<net.explorviz.persistence.ogm.Application> ogmApps =
+    final List<Application> ogmApps =
         applicationRepository.fetchAllFullyHydratedApplications(session, landscapeToken);
 
-    final Node node = new Node("", "", ogmApps.stream().map(Application::new).toList());
-    return new Landscape(landscapeToken, List.of(node), List.of());
+    final NodeDto node = new NodeDto("", "", ogmApps.stream().map(ApplicationDto::new).toList());
+    return new LandscapeDto(landscapeToken, List.of(node), List.of());
   }
 
   @GET

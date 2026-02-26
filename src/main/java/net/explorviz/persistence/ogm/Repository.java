@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 import net.explorviz.persistence.api.model.TypeOfAnalysis;
-import net.explorviz.persistence.api.model.flat.City;
-import net.explorviz.persistence.api.model.flat.VisualizationObject;
+import net.explorviz.persistence.api.model.landscape.CityDto;
+import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
@@ -73,7 +73,7 @@ public class Repository implements Visualizable {
 
   @Override
   public VisualizationObject toVisualizationObject() {
-    return new City(id.toString(), getName(), TypeOfAnalysis.STATIC,
+    return new CityDto(id.toString(), getName(), TypeOfAnalysis.STATIC,
         List.of(rootDirectory.getId().toString()), List.of());
   }
 
