@@ -6,6 +6,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import java.util.List;
 import net.explorviz.persistence.ogm.Application;
+import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -16,6 +17,7 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @IfBuildProfile("dev")
 @Path("/test")
+@SuppressWarnings("PMD.UseObjectForClearerAPI")
 class ExampleDataResource {
 
   @Inject
@@ -24,13 +26,29 @@ class ExampleDataResource {
   @POST
   @Path("/repo")
   public void createTestingRepository() {
-    Directory currentDir = new Directory("hello-world");
+    final Branch branch1 = new Branch("main");
+    final Branch branch2 = new Branch("feature-a");
 
     final Commit commit1 = new Commit("commit1");
+    final Commit commit2 = new Commit("commit2");
+    final Commit commit3 = new Commit("commit3");
+
+    commit2.addParent(commit1);
+    commit3.addParent(commit1);
+
+    commit1.setBranch(branch1);
+    commit2.setBranch(branch1);
+    commit3.setBranch(branch2);
+
+    Directory currentDir = new Directory("hello-world");
 
     final Repository repository = new Repository("hello-world");
     repository.addRootDirectory(currentDir);
     repository.addCommit(commit1);
+    repository.addCommit(commit2);
+    repository.addCommit(commit3);
+    repository.addBranch(branch1);
+    repository.addBranch(branch2);
 
     final Application application = new Application("hello-world");
     application.setRootDirectory(currentDir);
@@ -61,5 +79,12 @@ class ExampleDataResource {
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application));
+  }
+
+  @POST
+  @Path("/purge")
+  public void purgeDatabase() {
+    final Session session = sessionFactory.openSession();
+    session.purgeDatabase();
   }
 }
