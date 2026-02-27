@@ -3,9 +3,11 @@ package net.explorviz.persistence.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Function;
+import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -38,6 +40,40 @@ public class FunctionRepository {
       final String fqn) {
     final Session session = sessionFactory.openSession();
     return findFunctionByFqnAndLandscapeToken(session, fqn, tokenId);
+  }
+
+  /**
+   * Retrieve all Functions from static analysis along with their fully-qualified names for a given
+   * application at a particular commit.
+   *
+   * @return A map of each function's fqn to the corresponding Function object, separated by '/'.
+   *     Note that since the fqn is derived from the node path, it may not be compliant to any
+   *     standard notation (e.g. Java).
+   */
+  public Map<String, Function> findStaticFunctionsWithFqnForApplicationAndCommitAndLandscapeToken(
+      final Session session, final String applicationName, final String commitHash,
+      final String landscapeToken) {
+
+    final Map<String, Function> filePathToFunctionMap = new HashMap<>();
+
+    final Result result = session.query("""
+            MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS]->*(rd:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+            MATCH p = (rd)-[:CONTAINS]->*(f:FileRevision)-[:CONTAINS]->(fn:Function)
+            WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+            RETURN DISTINCT
+              fn AS function,
+              reduce(fqn = nodes(p)[1].name, n IN nodes(p)[2..] | fqn + '/' + n.name) AS fqn;
+            """,
+        Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
+
+    result.queryResults()
+        .forEach(queryResult -> filePathToFunctionMap.put((String) queryResult.get("fqn"),
+            (Function) queryResult.get("function")));
+
+    return filePathToFunctionMap;
   }
 
   public Function getOrCreateFunction(final Session session, final String fqn,

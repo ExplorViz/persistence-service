@@ -3,6 +3,7 @@ package net.explorviz.persistence.repository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -224,6 +225,38 @@ public class FileRevisionRepository {
         LIMIT 1;
         """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash,
         "pathSegments", pathSegments)));
+  }
+
+  /**
+   * Retrieve all FileRevisions from static analysis along with their file paths for a given
+   * application at a particular commit.
+   *
+   * @return A map of each file's path to the corresponding FileRevision object, separated by '/'.
+   */
+  public Map<String, FileRevision> findStaticFilesWithFqnForApplicationAndCommitAndLandscapeToken(
+      final Session session, final String applicationName, final String commitHash,
+      final String landscapeToken) {
+
+    final Map<String, FileRevision> filePathToFileRevisionMap = new HashMap<>();
+
+    final Result result = session.query("""
+            MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS]->*(rd:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+            MATCH p = (rd)-[:CONTAINS]->*(f:FileRevision)
+            WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+            RETURN DISTINCT
+              f AS file,
+              reduce(pth = nodes(p)[1].name, n IN nodes(p)[2..] | pth + '/' + n.name) AS filePath;
+            """,
+        Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
+
+    result.queryResults()
+        .forEach(queryResult -> filePathToFileRevisionMap.put((String) queryResult.get("filePath"),
+            (FileRevision) queryResult.get("file")));
+
+    return filePathToFileRevisionMap;
   }
 
   private void validateFqn(final String[] splitFqn) {

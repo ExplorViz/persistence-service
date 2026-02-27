@@ -7,9 +7,11 @@ import jakarta.ws.rs.Path;
 import java.util.List;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
+import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
+import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
 import org.neo4j.ogm.session.Session;
@@ -17,7 +19,7 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @IfBuildProfile("dev")
 @Path("/test")
-@SuppressWarnings("PMD.UseObjectForClearerAPI")
+@SuppressWarnings({"PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
 class ExampleDataResource {
 
   @Inject
@@ -67,6 +69,28 @@ class ExampleDataResource {
     final FileRevision fileB = new FileRevision("ClassB.java");
     final FileRevision fileC = new FileRevision("ClassC.java");
 
+    final Clazz classA = new Clazz("ClassA");
+    final Clazz classB = new Clazz("ClassB");
+    final Clazz classC = new Clazz("ClassC");
+
+    classA.addMetric("LCOM4", 1d);
+    classA.addMetric("loc", 120d);
+    classA.addMetric("cyclomatic_complexity", 7d);
+    classA.addMetric("cyclomatic_complexity_weighted", 5d);
+    classB.addMetric("LCOM4", 2d);
+    classC.addMetric("LCOM4", 3d);
+
+    fileA.addClass(classA);
+    fileB.addClass(classB);
+    fileC.addClass(classC);
+
+    fileA.addFunction(new Function("doSomethingA"));
+    fileA.addFunction(new Function("doSomethingDifferentA"));
+
+    fileB.addFunction(new Function("doSomethingB"));
+
+    classC.addFunction(new Function("doSomethingClassC"));
+
     currentDir.addFileRevision(fileA);
     currentDir.addFileRevision(fileB);
     final Directory packageDir = new Directory("innerpackage");
@@ -74,8 +98,12 @@ class ExampleDataResource {
     currentDir.addSubdirectory(packageDir);
 
     commit1.addFileRevision(fileA);
-    commit1.addFileRevision(fileB);
-    commit1.addFileRevision(fileC);
+
+    commit2.addFileRevision(fileA);
+    commit2.addFileRevision(fileB);
+
+    commit3.addFileRevision(fileB);
+    commit3.addFileRevision(fileC);
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application));

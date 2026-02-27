@@ -119,6 +119,14 @@ public class Clazz implements Visualizable {
     return functions;
   }
 
+  public void addMetric(final String metricName, final Double metricValue) {
+    metrics.put(metricName, metricValue);
+  }
+
+  public Map<String, Double> getMetrics() {
+    return metrics;
+  }
+
   @Override
   public VisualizationObject toVisualizationObject() {
     return new ClazzDto(id.toString(), name,
