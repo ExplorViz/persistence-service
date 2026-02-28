@@ -11,6 +11,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class ApplicationRepository {
 
   private static final String FIND_BY_NAME_AND_LANDSCAPE_TOKEN = """
@@ -35,6 +36,18 @@ public class ApplicationRepository {
         -[:HAS_ROOT]->(:Directory)
         -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(a:Application)
       RETURN DISTINCT a.name;
+      """;
+
+  private static final String FIND_APPLICATIONS_HYDRATED_FOR_TWO_COMMITS = """
+      MATCH (:Landscape {tokenId: $tokenId})
+        -[:CONTAINS]->(r:Repository)
+        -[:CONTAINS]->(c:Commit WHERE c.hash = $commitHash1 OR c.hash = $commitHash2)
+        -[:CONTAINS]->(f:FileRevision)
+      MATCH p = (a:Application {name: $appName})-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(f)
+      OPTIONAL MATCH (f)-[optRel:CONTAINS]->(opt:Function|Clazz)
+      UNWIND nodes(p) AS pathNode
+      UNWIND relationships(p) AS rel
+      RETURN DISTINCT pathNode, rel, optRel, opt;
       """;
 
   @Inject
@@ -62,6 +75,30 @@ public class ApplicationRepository {
       final String landscapeToken) {
     return Lists.newArrayList(session.query(Application.class, FIND_APPLICATIONS_WITH_FULL_TREE,
         Map.of("tokenId", landscapeToken)));
+  }
+
+  /**
+   * Fetch the specified Application object that is fully hydrated with respect to the file
+   * structure of two particular commits, including functions and classes. The commits are combined
+   * in the sense that any file which is included in either commit is returned, i.e. the union of
+   * the commit's file structures is fetched.
+   *
+   * @param session         OGM session object
+   * @param applicationName Name of the application for which to fetch structure data
+   * @param commitHash1     Hash of the first commit whose files to include
+   * @param commitHash2     Hash of the second commit whose files to include
+   * @param landscapeToken  Identifier of the software landscape
+   * @return An Optional containing the Application object, hydrated to include all files in the
+   *     given commits that are part of the application. Empty if no application is matched.
+   */
+  public Optional<Application> fetchApplicationHydratedForTwoCommits(final Session session,
+      final String applicationName,
+      final String commitHash1, final String commitHash2, final String landscapeToken) {
+    return Optional.ofNullable(
+        session.queryForObject(Application.class, FIND_APPLICATIONS_HYDRATED_FOR_TWO_COMMITS,
+            Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash1",
+                commitHash1, "commitHash2",
+                commitHash2)));
   }
 
   /**

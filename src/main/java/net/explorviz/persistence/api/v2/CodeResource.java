@@ -10,15 +10,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
 import net.explorviz.persistence.api.v2.model.BranchPointDto;
 import net.explorviz.persistence.api.v2.model.CommitTreeDto;
+import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
+import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
+import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
 import net.explorviz.persistence.api.v2.model.metrics.ApplicationMetricsCodeDto;
 import net.explorviz.persistence.api.v2.model.metrics.ClassMetricCodeDto;
 import net.explorviz.persistence.api.v2.model.metrics.FileMetricCodeDto;
 import net.explorviz.persistence.api.v2.model.metrics.MethodMetricCodeDto;
+import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -116,7 +121,7 @@ class CodeResource {
   @GET
   @Path("/metrics/{landscapeToken}/{applicationName}/{commitHash}")
   @Produces(MediaType.APPLICATION_JSON)
-  public ApplicationMetricsCodeDto getApplicationCodeMetricsForAppNameAndCommit(
+  public ApplicationMetricsCodeDto getStaticCodeMetricsForApplicationAndCommit(
       @RestPath final String landscapeToken, @RestPath final String applicationName,
       @RestPath final String commitHash) {
     final Session session = sessionFactory.openSession();
@@ -143,5 +148,32 @@ class CodeResource {
         .collect(Collectors.toMap(Map.Entry::getKey, e -> new MethodMetricCodeDto(e.getValue())));
 
     return new ApplicationMetricsCodeDto(fileMetricMap, classMetricMap, methodMetricMap);
+  }
+
+  @GET
+  @Path("/structure/{landscapeToken}/{applicationName}/{commitHash1}-{commitHash2}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public LandscapeDto getStaticStructureForApplicationAndTwoCommits(
+      @RestPath final String landscapeToken, @RestPath final String applicationName,
+      @RestPath final String commitHash1, @RestPath final String commitHash2) {
+    final Session session = sessionFactory.openSession();
+    final Optional<Application> applicationsForCommitsOptional =
+        applicationRepository.fetchApplicationHydratedForTwoCommits(session, applicationName,
+            commitHash1, commitHash2, landscapeToken);
+    final List<ApplicationDto> applicationDtoList =
+        applicationsForCommitsOptional.map(a -> List.of(new ApplicationDto(a))).orElse(List.of());
+    final NodeDto node = new NodeDto("", "", applicationDtoList);
+    return new LandscapeDto(landscapeToken, List.of(node), List.of());
+  }
+
+  @GET
+  @Path("/structure/{landscapeToken}/{applicationName}/{commitHash}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public LandscapeDto getStaticStructureForApplicationAndSingleCommit(
+      @RestPath final String landscapeToken, @RestPath final String applicationName,
+      @RestPath final String commitHash) {
+    // Re-use query for two-commit case by supplying same hash twice
+    return getStaticStructureForApplicationAndTwoCommits(landscapeToken, applicationName,
+        commitHash, commitHash);
   }
 }
