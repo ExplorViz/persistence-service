@@ -21,7 +21,7 @@ dependencies {
     implementation("io.quarkus:quarkus-grpc")
     implementation("io.quarkus:quarkus-arc")
     implementation("io.quarkus:quarkus-container-image-jib")
-    implementation("org.neo4j:neo4j-ogm-quarkus:4.2.0")
+    implementation("org.neo4j:neo4j-ogm-quarkus:4.2.3")
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.rest-assured:rest-assured")
 }
