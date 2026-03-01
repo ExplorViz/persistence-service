@@ -2,12 +2,15 @@ package net.explorviz.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.Timestamp;
 import io.quarkus.grpc.GrpcClient;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.explorviz.persistence.ogm.Application;
@@ -240,5 +243,59 @@ class StateDataServiceTest {
     assertNotNull(rootDirectory);
     assertNotNull(application);
     assertNotNull(branch);
+  }
+
+  @Test
+  void testGetStateDataForTwoDifferentReposInOneLandscape() {
+    String repoNameTwo = "repo2";
+    String appName = "testApp";
+    String appNameTwo = "app2";
+
+    StateDataRequest stateDataRequest =
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setBranchName(branchName).putAllApplicationPaths(Map.of(appName, "")).build();
+
+    StateData stateData = stateDataService.getStateData(stateDataRequest).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    StateDataRequest stateDataRequestTwo =
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken)
+            .setRepositoryName(repoNameTwo).setBranchName(branchName)
+            .putAllApplicationPaths(Map.of(appNameTwo, "")).build();
+
+    StateData stateDataTwo = stateDataService.getStateData(stateDataRequestTwo).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    Session session = sessionFactory.openSession();
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("landscapeToken", landscapeToken);
+    params.put("repoNameOne", repoName);
+    params.put("repoNameTwo", repoNameTwo);
+    params.put("appNameOne", appName);
+    params.put("appNameTwo", appNameTwo);
+    params.put("branchName", branchName);
+
+    Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+        RETURN EXISTS {
+        MATCH (l:Landscape {tokenId: $landscapeToken})
+          -[:CONTAINS]->(r1:Repository {name: $repoNameOne})
+          -[:HAS_ROOT]->(:Directory {name: $repoNameOne})
+          <-[:HAS_ROOT]-(:Application {name: $appNameOne})
+        MATCH (r1)-[:CONTAINS]->(b1:Branch {name: $branchName})
+        
+        MATCH (l)
+          -[:CONTAINS]->(r2:Repository {name: $repoNameTwo})
+          -[:HAS_ROOT]->(:Directory {name: $repoNameTwo})
+          <-[:HAS_ROOT]-(:Application {name: $appNameTwo})
+        MATCH (r2)-[:CONTAINS]->(b2:Branch {name: $branchName})
+        
+        WHERE b1 <> b2
+        } AS exists
+        """, params);
+
+    assertEquals("", stateData.getCommitId());
+    assertEquals("", stateDataTwo.getCommitId());
+    assertTrue(databaseIsCorrect);
   }
 }

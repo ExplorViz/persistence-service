@@ -277,7 +277,7 @@ class CommitServiceTest {
     params.put("tagName", tagName);
     params.put("branchName", branchName);
 
-    Boolean correctDatabase = session.queryForObject(Boolean.class, """
+    Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
         RETURN EXISTS {
         MATCH (:Landscape {tokenId: $landscapeToken})
           -[:CONTAINS]->(r:Repository {name: $repoName})
@@ -314,7 +314,7 @@ class CommitServiceTest {
         """, Map.of());
 
     assertEquals(13, dbSize);
-    assertTrue(correctDatabase);
+    assertTrue(databaseIsCorrect);
   }
 
   @Test
