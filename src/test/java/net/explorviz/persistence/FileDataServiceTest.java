@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.explorviz.persistence.ogm.FileRevision;
-import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
 import net.explorviz.persistence.proto.FileData;
@@ -20,7 +19,6 @@ import net.explorviz.persistence.proto.FileIdentifier;
 import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.neo4j.ogm.session.Session;
@@ -54,15 +52,6 @@ class FileDataServiceTest {
     landscapeToken = "mytokenvalue";
     repoName = "myrepo";
     branchName = "main";
-  }
-
-  @Test
-  void testAutomaticMappingOfMetric() {
-    Session session = sessionFactory.openSession();
-
-    String commitHash = "commit1";
-    String filePath = "myrepo/src/File1.java";
-    String fileHash = "1";
 
     StateDataRequest stateDataRequest =
         StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
@@ -70,6 +59,15 @@ class FileDataServiceTest {
 
     stateDataService.getStateData(stateDataRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+  }
+
+  @Test
+  void testPersistFileWithCorrectMetrics() {
+    Session session = sessionFactory.openSession();
+
+    String commitHash = "commit1";
+    String filePath = "myrepo/src/File1.java";
+    String fileHash = "1";
 
     CommitData commitDataOne =
         CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(repoName)
@@ -79,7 +77,8 @@ class FileDataServiceTest {
                 FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(filePath).build()))
             .build();
 
-    commitService.persistCommit(commitDataOne).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    commitService.persistCommit(commitDataOne).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     Map<String, Double> testMap = Map.of("count", 1d, "lines", 2d);
 
@@ -92,24 +91,19 @@ class FileDataServiceTest {
 
     fileDataService.persistFile(fileDataOne).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
-    Landscape landscape = session.queryForObject(Landscape.class, """
-        MATCH (l:Landscape {tokenId: $tokenId})
-        RETURN l;
-        """, Map.of("tokenId", landscapeToken));
-
     FileRevision file = session.queryForObject(FileRevision.class, """
         MATCH (f:FileRevision {hash: $fileHash})
         RETURN f;
         """, Map.of("fileHash", fileHash));
 
     for (String k : file.getMetrics().keySet()) {
-      assertEquals(file.getMetrics().get(k), testMap.get(k));
+      assertEquals(testMap.get(k), file.getMetrics().get(k));
     }
 
   }
 
   @Test
-  void testDuplicateFileOnDifferentPaths() {
+  void testPersistFileDuplicateFileOnDifferentPaths() {
     Session session = sessionFactory.openSession();
 
     String commitHash = "commit1";
@@ -117,24 +111,17 @@ class FileDataServiceTest {
     String filePathTwo = "myrepo/src/hollandaise/File1.java";
     String fileHash = "1";
 
-    StateDataRequest stateDataRequest =
-        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
-
-    stateDataService.getStateData(stateDataRequest).await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
     CommitData commitDataOne =
         CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(repoName)
             .setBranchName(branchName).setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
             .addAllAddedFiles(List.of(
-                FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(filePathOne)
-                    .build(),
-                FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(filePathTwo)
-                    .build())).build();
+                FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(filePathOne).build(),
+                FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(filePathTwo).build()))
+            .build();
 
-    commitService.persistCommit(commitDataOne).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    commitService.persistCommit(commitDataOne).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     Map<String, Double> testMap = Map.of("count", 1d, "lines", 2d);
 

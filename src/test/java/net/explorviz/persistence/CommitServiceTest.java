@@ -59,10 +59,19 @@ class CommitServiceTest {
     landscapeToken = "mytokenvalue";
     repoName = "myrepo";
     branchName = "main";
+
+    StateDataRequest stateDataRequest =
+        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setBranchName(branchName).build();
+
+    stateDataService.getStateData(stateDataRequest).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
   }
 
   @Test
   void testPersistCommit() {
+    Session session = sessionFactory.openSession();
+
     String commitHash = "commit1";
     String fileHashOne = "1";
     String fileNameOne = "File1.java";
@@ -71,13 +80,6 @@ class CommitServiceTest {
     String fileNameTwo = "File2.java";
     String filePathTwo = "src/" + fileNameTwo;
     String tagName = "tag";
-
-    StateDataRequest stateDataRequest =
-        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
-
-    stateDataService.getStateData(stateDataRequest).await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     CommitData commitDataOne =
         CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(repoName)
@@ -91,8 +93,6 @@ class CommitServiceTest {
 
     commitService.persistCommit(commitDataOne).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
-    Session session = sessionFactory.openSession();
 
     Commit commit = session.queryForObject(Commit.class, """
             MATCH (:Landscape {tokenId: $landscapeToken})
@@ -154,15 +154,10 @@ class CommitServiceTest {
 
   @Test
   void testPersistCommitWithParentCommit() {
+    Session session = sessionFactory.openSession();
+
     String commitHashOne = "commit1";
     String commitHashTwo = "commit2";
-
-    StateDataRequest stateDataRequest =
-        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
-
-    stateDataService.getStateData(stateDataRequest).await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     CommitData commitDataOne =
         CommitData.newBuilder().setCommitId(commitHashOne).setRepositoryName(repoName)
@@ -183,8 +178,6 @@ class CommitServiceTest {
     commitService.persistCommit(commitDataTwo).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
-    Session session = sessionFactory.openSession();
-
     Boolean correctDatabase = session.queryForObject(Boolean.class, """
         RETURN EXISTS {
         MATCH (:Landscape {tokenId: $landscapeToken})
@@ -203,6 +196,8 @@ class CommitServiceTest {
 
   @Test
   void testPersistCommitAddedModifiedDeletedUnchangedFiles() throws InterruptedException {
+    Session session = sessionFactory.openSession();
+
     String commitHashOne = "commit1";
     String commitHashTwo = "commit2";
     String fileHashOne = "1";
@@ -219,13 +214,6 @@ class CommitServiceTest {
     String fileNameDel = "FileDel.java";
     String filePathDel = "src/" + fileNameDel;
     String tagName = "tag";
-
-    StateDataRequest stateDataRequest =
-        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
-
-    stateDataService.getStateData(stateDataRequest).await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     CommitData commitDataOne =
         CommitData.newBuilder().setCommitId(commitHashOne).setRepositoryName(repoName)
@@ -257,8 +245,6 @@ class CommitServiceTest {
 
     commitService.persistCommit(commitDataTwo).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
-    Session session = sessionFactory.openSession();
 
     Map<String, Object> params = new HashMap<>();
     params.put("landscapeToken", landscapeToken);
@@ -321,13 +307,6 @@ class CommitServiceTest {
   void testPersistCommitWithUnknownRepo() {
     String wrongRepoName = "wrong_repo";
     String commitHash = "commit1";
-
-    StateDataRequest stateDataRequest =
-        StateDataRequest.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
-            .setBranchName(branchName).build();
-
-    stateDataService.getStateData(stateDataRequest).await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     CommitData commitDataOne =
         CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(wrongRepoName)

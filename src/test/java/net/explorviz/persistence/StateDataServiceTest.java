@@ -64,6 +64,8 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataOnEmptyDB() {
+    Session session = sessionFactory.openSession();
+
     String appName = "testApp";
 
     StateDataRequest stateDataRequest =
@@ -72,8 +74,6 @@ class StateDataServiceTest {
 
     StateData stateData = stateDataService.getStateData(stateDataRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
-    Session session = sessionFactory.openSession();
 
     Landscape landscape = session.queryForObject(Landscape.class, """
         MATCH (l:Landscape {tokenId: $tokenId})
@@ -118,6 +118,8 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataWithMultipleApplications() {
+    Session session = sessionFactory.openSession();
+
     String appNameOne = "testAppOne";
     String appPathOne = "src/" + appNameOne;
     String appNameTwo = "testAppTwo";
@@ -130,8 +132,6 @@ class StateDataServiceTest {
 
     StateData stateData = stateDataService.getStateData(stateDataRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
-    Session session = sessionFactory.openSession();
 
     Application applicationOne = session.queryForObject(Application.class, """
         MATCH (:Landscape {tokenId: $tokenId})
@@ -161,6 +161,8 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataWithExistingCommits() {
+    Session session = sessionFactory.openSession();
+
     String appName = "testApp";
     String commitHash = "commit1";
     String fileHash = "1";
@@ -172,8 +174,6 @@ class StateDataServiceTest {
 
     stateDataService.getStateData(stateDataPreparationRequest).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
-    Session session = sessionFactory.openSession();
 
     CommitData commitDataOne =
         CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(repoName)
@@ -247,6 +247,8 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataForTwoDifferentReposInOneLandscape() {
+    Session session = sessionFactory.openSession();
+
     String repoNameTwo = "repo2";
     String appName = "testApp";
     String appNameTwo = "app2";
@@ -265,8 +267,6 @@ class StateDataServiceTest {
 
     StateData stateDataTwo = stateDataService.getStateData(stateDataRequestTwo).await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
-    Session session = sessionFactory.openSession();
 
     Map<String, Object> params = new HashMap<>();
     params.put("landscapeToken", landscapeToken);
