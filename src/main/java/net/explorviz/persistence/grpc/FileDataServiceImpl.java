@@ -81,28 +81,61 @@ public class FileDataServiceImpl implements FileDataService {
 
   private Clazz createClazz(final Session session, final ClassData classData,
       final FileData request) {
-    return clazzRepository.findClassByLandscapeTokenAndRepositoryAndFileHash(session,
-            request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash())
-        .orElseGet(() -> {
-          final Clazz clazz = new Clazz(classData);
+    Clazz clazz =
+        clazzRepository.findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(session,
+            request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash(),
+            classData.getName()).orElse(null);
 
-          for (final FieldData f : classData.getFieldsList()) {
-            clazz.addField(new Field(f.getName(), f.getType(), f.getModifiersList()));
-          }
+    if (clazz != null) {
+      return clazz;
+    } else {
+      clazz = clazzRepository.findClassFromInheritingClass(session, request.getLandscapeToken(),
+          request.getRepositoryName(), classData.getName()).orElse(null);
+    }
 
-          for (final ClassData c : classData.getInnerClassesList()) {
-            clazz.addInnerClass(createClazz(session, c, request));
-          }
+    if (clazz != null && clazz.getType() == null) {
+      clazz.setType(classData.getType());
+      clazz.setModifiers(classData.getModifiersList());
+      clazz.setImplementedInterfaces(classData.getImplementedInterfacesList());
+      clazz.setAnnotations(classData.getAnnotationsList());
+      clazz.setEnumValues(classData.getEnumValuesList());
+      clazz.setMetrics(classData.getMetricsMap());
+    } else {
+      /*
+      If found clazz has a type, then it must be from another commit,
+      therefore we create a new Clazz object. Same for clazz is null.
+     */
+      clazz = new Clazz(classData);
+    }
 
-          for (final FunctionData f : classData.getFunctionsList()) {
-            final Function function = new Function(f);
-            function.addParameters(f.getParametersList());
-            clazz.addFunction(function);
-          }
+    for (final FieldData f : classData.getFieldsList()) {
+      clazz.addField(new Field(f.getName(), f.getType(), f.getModifiersList()));
+    }
 
-          session.save(clazz);
+    for (final ClassData c : classData.getInnerClassesList()) {
+      clazz.addInnerClass(createClazz(session, c, request));
+    }
 
-          return clazz;
-        });
+    for (final FunctionData f : classData.getFunctionsList()) {
+      final Function function = new Function(f);
+      function.addParameters(f.getParametersList());
+      clazz.addFunction(function);
+    }
+
+    for (final String superName : classData.getSuperclassesList()) {
+      Clazz superClass = clazzRepository.findClassByLandscapeTokenAndRepositoryAndClazzName(session,
+          request.getLandscapeToken(), request.getRepositoryName(), superName).orElse(null);
+
+      if (superClass == null) {
+        superClass = new Clazz(superName);
+      }
+
+      clazz.addSuperClass(superClass);
+    }
+
+    session.save(clazz);
+
+    return clazz;
   }
+
 }

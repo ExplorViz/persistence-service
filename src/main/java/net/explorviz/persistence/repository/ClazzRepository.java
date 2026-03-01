@@ -16,24 +16,50 @@ public class ClazzRepository {
   @Inject
   private SessionFactory sessionFactory;
 
-  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndFileHash(final Session session,
-      final String tokenId, final String repoName, final String fileHash) {
+  private static final String TOKENIDPLACEHOLDER = "tokenId";
+
+  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(
+      final Session session, final String tokenId, final String repoName, final String fileHash,
+      final String clazzName) {
     return Optional.ofNullable(session.queryForObject(Clazz.class, """
         MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(:Repository {name: $repoName})
           -[:CONTAINS]->(:Commit)
           -[:CONTAINS]->(f:FileRevision {hash: $fileHash})
-          -[:CONTAINS]->(cl:Clazz)
+          -[:CONTAINS]->(cl:Clazz {name: $clazzName})
         RETURN cl
         LIMIT 1;
-        """, Map.of("tokenId", tokenId, "repoName", repoName, "fileHash", fileHash)));
+        """, Map.of(TOKENIDPLACEHOLDER, tokenId, "repoName", repoName, "fileHash", fileHash,
+        "clazzName", clazzName)));
   }
 
-  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndFileHash(final String branchName,
-      final String repoName, final String tokenId) {
-    final Session session = sessionFactory.openSession();
-    return findClassByLandscapeTokenAndRepositoryAndFileHash(session, branchName, repoName,
-        tokenId);
+  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzName(final Session session,
+      final String tokenId, final String repoName, final String clazzName) {
+    return Optional.ofNullable(session.queryForObject(Clazz.class, """
+            MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(:Commit)
+              -[:CONTAINS]->(:FileRevision)
+              -[:CONTAINS]->(cl:Clazz {name: $clazzName})
+            RETURN cl
+            LIMIT 1;
+            """,
+        Map.of(TOKENIDPLACEHOLDER, tokenId, "repoName", repoName, "clazzName", clazzName)));
+  }
+
+  public Optional<Clazz> findClassFromInheritingClass(final Session session, final String tokenId,
+      final String repoName, final String clazzName) {
+    return Optional.ofNullable(session.queryForObject(Clazz.class, """
+            MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(:Commit)
+              -[:CONTAINS]->(:FileRevision)
+              -[:CONTAINS]->(:Clazz)
+              -[:INHERITS]->(cl:Clazz {name: $clazzName})
+            RETURN cl
+            LIMIT 1;
+            """,
+        Map.of(TOKENIDPLACEHOLDER, tokenId, "repoName", repoName, "clazzName", clazzName)));
   }
 
   /**
@@ -62,7 +88,8 @@ public class ClazzRepository {
               c AS clazz,
               reduce(fqn = nodes(p)[1].name, n IN nodes(p)[2..] | fqn + '/' + n.name) AS fqn;
             """,
-        Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
+        Map.of(TOKENIDPLACEHOLDER, landscapeToken, "appName", applicationName, "commitHash",
+            commitHash));
 
     result.queryResults().forEach(
         queryResult -> filePathToClazzMap.put((String) queryResult.get("fqn"),

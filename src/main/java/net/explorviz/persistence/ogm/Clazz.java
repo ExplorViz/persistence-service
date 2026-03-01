@@ -1,5 +1,6 @@
 package net.explorviz.persistence.ogm;
 
+import com.google.protobuf.ProtocolStringList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -25,19 +26,19 @@ public class Clazz implements Visualizable {
 
   private ClassType type;
 
-  private final Set<String> modifiers;
+  private Set<String> modifiers;
 
-  private final Set<String> implementedInterfaces;
+  private Set<String> implementedInterfaces;
 
-  // TODO: Might change to a relationship to Classes
-  private final Set<String> superClasses;
+  private Set<String> annotations;
 
-  private final Set<String> annotations;
-
-  private final Set<String> enumValues;
+  private Set<String> enumValues;
 
   @Properties
-  private final Map<String, Double> metrics;
+  private Map<String, Double> metrics;
+
+  @Relationship(type = "INHERITS", direction = Relationship.Direction.OUTGOING)
+  private Set<Clazz> superClasses = new HashSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Clazz> innerClasses = new HashSet<>();
@@ -51,7 +52,6 @@ public class Clazz implements Visualizable {
   public Clazz() {
     this.modifiers = new HashSet<>();
     this.implementedInterfaces = new HashSet<>();
-    this.superClasses = new HashSet<>();
     this.annotations = new HashSet<>();
     this.enumValues = new HashSet<>();
     this.metrics = new HashMap<>();
@@ -61,7 +61,6 @@ public class Clazz implements Visualizable {
     this.name = name;
     this.modifiers = new HashSet<>();
     this.implementedInterfaces = new HashSet<>();
-    this.superClasses = new HashSet<>();
     this.annotations = new HashSet<>();
     this.enumValues = new HashSet<>();
     this.metrics = new HashMap<>();
@@ -72,7 +71,6 @@ public class Clazz implements Visualizable {
     this.type = type;
     this.modifiers = new HashSet<>();
     this.implementedInterfaces = new HashSet<>();
-    this.superClasses = new HashSet<>();
     this.annotations = new HashSet<>();
     this.enumValues = new HashSet<>();
     this.metrics = new HashMap<>();
@@ -83,10 +81,15 @@ public class Clazz implements Visualizable {
     this.type = classData.getType();
     this.modifiers = new HashSet<>(classData.getModifiersList());
     this.implementedInterfaces = new HashSet<>(classData.getImplementedInterfacesList());
-    this.superClasses = new HashSet<>(classData.getSuperclassesList());
     this.annotations = new HashSet<>(classData.getAnnotationsList());
     this.enumValues = new HashSet<>(classData.getEnumValuesList());
     this.metrics = classData.getMetricsMap();
+  }
+
+  public void addSuperClass(final Clazz superClass) {
+    final Set<Clazz> newSuperClasses = new HashSet<>(superClasses);
+    newSuperClasses.add(superClass);
+    superClasses = Set.copyOf(newSuperClasses);
   }
 
   public void addInnerClass(final Clazz innerClass) {
@@ -115,8 +118,36 @@ public class Clazz implements Visualizable {
     return name;
   }
 
+  public ClassType getType() {
+    return type;
+  }
+
   public Set<Function> getFunctions() {
     return functions;
+  }
+
+  public void setType(final ClassType type) {
+    this.type = type;
+  }
+
+  public void setModifiers(final ProtocolStringList modifiers) {
+    this.modifiers = new HashSet<>(modifiers);
+  }
+
+  public void setImplementedInterfaces(final ProtocolStringList interfaces) {
+    this.implementedInterfaces = new HashSet<>(interfaces);
+  }
+
+  public void setAnnotations(final ProtocolStringList annotations) {
+    this.annotations = new HashSet<>(annotations);
+  }
+
+  public void setEnumValues(final ProtocolStringList enumValues) {
+    this.enumValues = new HashSet<>(enumValues);
+  }
+
+  public void setMetrics(final Map<String, Double> metrics) {
+    this.metrics = metrics;
   }
 
   public void addMetric(final String metricName, final Double metricValue) {
