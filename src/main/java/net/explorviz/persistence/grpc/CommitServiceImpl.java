@@ -92,9 +92,10 @@ public class CommitServiceImpl implements CommitService {
     }
 
     for (final FileIdentifier f : request.getUnchangedFilesList()) {
+      final String[] pathSegments = f.getFilePath().split("/");
       FileRevision unchangedFile =
-          fileRevisionRepository.getFileRevisionFromHash(session, f.getFileHash(),
-              request.getRepositoryName(), request.getLandscapeToken()).orElse(null);
+          fileRevisionRepository.getFileRevisionFromHashAndPath(session, f.getFileHash(),
+              request.getRepositoryName(), request.getLandscapeToken(), pathSegments).orElse(null);
 
       if (unchangedFile == null) {
         unchangedFile = fileRevisionRepository.createFileStructureFromStaticData(session, f,
