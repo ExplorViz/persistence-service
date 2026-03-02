@@ -11,12 +11,11 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ClazzRepository {
 
   @Inject
   private SessionFactory sessionFactory;
-
-  private static final String TOKENIDPLACEHOLDER = "tokenId";
 
   public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(
       final Session session, final String tokenId, final String repoName, final String fileHash,
@@ -29,7 +28,7 @@ public class ClazzRepository {
           -[:CONTAINS]->(cl:Clazz {name: $clazzName})
         RETURN cl
         LIMIT 1;
-        """, Map.of(TOKENIDPLACEHOLDER, tokenId, "repoName", repoName, "fileHash", fileHash,
+        """, Map.of("tokenId", tokenId, "repoName", repoName, "fileHash", fileHash,
         "clazzName", clazzName)));
   }
 
@@ -44,7 +43,7 @@ public class ClazzRepository {
             RETURN cl
             LIMIT 1;
             """,
-        Map.of(TOKENIDPLACEHOLDER, tokenId, "repoName", repoName, "clazzName", clazzName)));
+        Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName)));
   }
 
   public Optional<Clazz> findClassFromInheritingClass(final Session session, final String tokenId,
@@ -59,7 +58,7 @@ public class ClazzRepository {
             RETURN cl
             LIMIT 1;
             """,
-        Map.of(TOKENIDPLACEHOLDER, tokenId, "repoName", repoName, "clazzName", clazzName)));
+        Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName)));
   }
 
   /**
@@ -88,7 +87,7 @@ public class ClazzRepository {
               c AS clazz,
               reduce(fqn = nodes(p)[1].name, n IN nodes(p)[2..] | fqn + '/' + n.name) AS fqn;
             """,
-        Map.of(TOKENIDPLACEHOLDER, landscapeToken, "appName", applicationName, "commitHash",
+        Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash",
             commitHash));
 
     result.queryResults().forEach(
