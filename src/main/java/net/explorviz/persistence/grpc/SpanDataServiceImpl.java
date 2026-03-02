@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 import net.explorviz.persistence.ogm.Application;
-import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
@@ -86,39 +85,43 @@ public class SpanDataServiceImpl implements SpanDataService {
             spanData.getLandscapeTokenId());
     span.setFunction(function);
 
-    final Application application =
-        applicationRepository.getOrCreateApplication(session, spanData.getApplicationName(),
-            spanData.getLandscapeTokenId());
 
-    FileRevision fileRevision;
 
-    if (application.getRootDirectory() == null) {
-      // Application did not previously exist, build file structure from scratch
+    FileRevision fileRevision = null;
+
+    if (commitId != null) {
       fileRevision =
-          fileRevisionRepository.createFileStructureForNewApplicationFromFqn(session, application,
-              splitFileFqn);
-    } else {
-      // Create missing directories and file for existing Application
-      try {
+          fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
+                  spanData.getApplicationName(), commitId, splitFileFqn, spanData.getLandscapeTokenId())
+              .orElse(null);
+    }
+
+    if (fileRevision == null) {
+      final Application application =
+          applicationRepository.getOrCreateApplication(session, spanData.getApplicationName(),
+              spanData.getLandscapeTokenId());
+
+      if (application.getRootDirectory() == null) {
+        // Application did not previously exist, build file structure from scratch
         fileRevision =
-            fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(session,
-                splitFileFqn, application.getName(), landscape.getTokenId(), commitId);
-      } catch (NoSuchElementException | IllegalArgumentException e) {
-        if (LOGGER.isEnabled(Level.ERROR)) {
-          LOGGER.error("Error while creating file structure for span: " + e);
+            fileRevisionRepository.createFileStructureForNewApplicationFromFqn(session, application,
+                splitFileFqn);
+      } else {
+        // Create missing directories and file for existing Application
+        try {
+          fileRevision =
+              fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(session,
+                  splitFileFqn, application.getName(), landscape.getTokenId());
+        } catch (final NoSuchElementException | IllegalArgumentException e) {
+          if (LOGGER.isEnabled(Level.ERROR)) {
+            LOGGER.error("Error while creating file structure for span: " + e);
+          }
+          return Uni.createFrom().item(Empty.getDefaultInstance());
         }
-        return Uni.createFrom().item(Empty.getDefaultInstance());
       }
     }
 
     fileRevision.addFunction(function);
-
-    if (commitId != null) {
-      final Commit commit =
-          commitRepository.getOrCreateCommit(session, commitId, spanData.getLandscapeTokenId());
-      commit.addFileRevision(fileRevision);
-      session.save(commit);
-    }
 
     session.save(List.of(span, trace, landscape, fileRevision, function));
 

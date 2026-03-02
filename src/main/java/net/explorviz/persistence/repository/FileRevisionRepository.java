@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
@@ -27,7 +26,7 @@ public class FileRevisionRepository {
 
   private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT = """
       MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
-            <-[:HAS_ROOT]-(app:Application {name: $appName})
+            <-[:HAS_ROOT]-(app:Application  {name: $appName})
       OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
             -[:CONTAINS]->*(lastNode:Directory|FileRevision)
       WHERE
@@ -37,24 +36,6 @@ public class FileRevisionRepository {
         NOT EXISTS {
             (:Commit)-[:CONTAINS]->(lastNode)
           }
-      RETURN
-        coalesce(lastNode, appRootDir) AS existingNode,
-        $pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
-      ORDER BY length(p) DESC
-      LIMIT 1;""";
-
-  private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITH_COMMIT = """
-      MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
-            <-[:HAS_ROOT]-(app:Application {name: $appName})
-      OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
-            -[:CONTAINS]->*(lastNode:Directory|FileRevision)
-      WHERE
-        (appRootDir)-[:CONTAINS]->(fqnRoot) AND
-        all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
-        (length(p) + 1 < size($pathSegments) XOR ("FileRevision" IN labels(lastNode) AND
-          EXISTS {
-            (:Commit {hash: $commitHash})-[:CONTAINS]->(lastNode)
-          })
       RETURN
         coalesce(lastNode, appRootDir) AS existingNode,
         $pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
@@ -91,19 +72,10 @@ public class FileRevisionRepository {
   }
 
   private Map<String, Object> findLongestPathMatchForFqn(final Session session,
-      final String[] fileFqn, final String applicationName, final String landscapeToken,
-      @Nullable final String commitHash) {
+      final String[] fileFqn, final String applicationName, final String landscapeToken) {
 
-    Result result;
-
-    if (commitHash != null) {
-      result = session.query(FIND_LONGEST_PATH_MATCH_FOR_FQN_WITH_COMMIT,
-          Map.of("pathSegments", fileFqn, "appName", applicationName, "tokenId", landscapeToken,
-              "commitHash", commitHash));
-    } else {
-      result = session.query(FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT,
-          Map.of("pathSegments", fileFqn, "appName", applicationName, "tokenId", landscapeToken));
-    }
+    final Result result = session.query(FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT,
+        Map.of("pathSegments", fileFqn, "appName", applicationName, "tokenId", landscapeToken));
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
     if (!resultIterator.hasNext()) {
@@ -125,14 +97,12 @@ public class FileRevisionRepository {
    * @return The existing or newly created FileRevision according to the provided FQN
    */
   public FileRevision createFileStructureForExistingApplicationFromFileFqn(final Session session,
-      final String[] splitFileFqn, final String applicationName, final String landscapeToken,
-      @Nullable final String commitHash) {
+      final String[] splitFileFqn, final String applicationName, final String landscapeToken) {
 
     validateFqn(splitFileFqn);
 
     final Map<String, Object> resultMap =
-        findLongestPathMatchForFqn(session, splitFileFqn, applicationName, landscapeToken,
-            commitHash);
+        findLongestPathMatchForFqn(session, splitFileFqn, applicationName, landscapeToken);
 
     final String[] remainingPath =
         resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
@@ -228,6 +198,36 @@ public class FileRevisionRepository {
   }
 
   /**
+   * Retrieve the FileRevision matching the specified path starting in the given application. The
+   * file must additionally be part of a commit with the given hash, otherwise nothing is matched.
+   *
+   * @param session         OGM session object
+   * @param applicationName Name of the application in which to search
+   * @param commitHash      Hash of the git commit to which the file must belong
+   * @param pathSegments    List of directory names + the file name, beginning at the application's
+   *                        root directory
+   * @param landscapeToken  Token ID of the landscape in which to search
+   * @return An Optional describing the specified FileRevision. Empty if no FileRevision is matched.
+   */
+  public Optional<FileRevision> findFileRevisionFromAppNameAndCommitHashAndPath(
+      final Session session, final String applicationName, final String commitHash,
+      final String[] pathSegments, final String landscapeToken) {
+    return Optional.ofNullable(session.queryForObject(FileRevision.class, """
+            MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
+                  <-[:HAS_ROOT]-(:Application {name: $appName})
+            OPTIONAL MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
+            WHERE
+              length(p) = size($pathSegments) AND
+              all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
+              EXISTS {
+                (:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+              }
+            RETURN file;""",
+        Map.of("tokenId", landscapeToken, "appName", applicationName, "pathSegments", pathSegments,
+            "commitHash", commitHash)));
+  }
+
+  /**
    * Retrieve all FileRevisions from static analysis along with their file paths for a given
    * application at a particular commit.
    *
@@ -252,8 +252,8 @@ public class FileRevisionRepository {
             """,
         Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
 
-    result.queryResults()
-        .forEach(queryResult -> filePathToFileRevisionMap.put((String) queryResult.get("filePath"),
+    result.queryResults().forEach(
+        queryResult -> filePathToFileRevisionMap.put((String) queryResult.get("filePath"),
             (FileRevision) queryResult.get("file")));
 
     return filePathToFileRevisionMap;
