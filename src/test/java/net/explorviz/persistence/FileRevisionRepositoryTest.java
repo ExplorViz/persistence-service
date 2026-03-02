@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.util.Map;
+import java.util.Optional;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -28,6 +29,16 @@ class FileRevisionRepositoryTest {
   @Inject
   SessionFactory sessionFactory;
 
+  private Optional<FileRevision> getFileRevisionFromHash(final Session session,
+      final String fileHash, final String repoName, final String landscapeTokenId) {
+    return Optional.ofNullable(session.queryForObject(FileRevision.class, """
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $repoName})
+        MATCH (r)-[:CONTAINS]->(c:Commit)-[:CONTAINS]->(f:FileRevision {hash: $fileHash})
+        RETURN f
+        LIMIT 1;
+        """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash)));
+  }
+
   @BeforeEach
   void cleanup() {
     Session session = sessionFactory.openSession();
@@ -39,7 +50,7 @@ class FileRevisionRepositoryTest {
     Session session = sessionFactory.openSession();
 
     FileRevision file =
-        fileRevisionRepository.getFileRevisionFromHash(session, "hash1", "testRepo", "testToken")
+        getFileRevisionFromHash(session, "hash1", "testRepo", "testToken")
             .orElse(null);
 
     assertNull(file);
@@ -67,7 +78,7 @@ class FileRevisionRepositoryTest {
     session.save(landscape);
 
     FileRevision foundFile =
-        fileRevisionRepository.getFileRevisionFromHash(session, fileHash, repoName, token)
+        getFileRevisionFromHash(session, fileHash, repoName, token)
             .orElse(null);
 
     assertNotNull(foundFile);
@@ -136,7 +147,7 @@ class FileRevisionRepositoryTest {
             token, commit);
 
     FileRevision foundFile =
-        fileRevisionRepository.getFileRevisionFromHash(session, fileHash, repoName, token)
+        getFileRevisionFromHash(session, fileHash, repoName, token)
             .orElse(null);
 
     FileRevision file2 =

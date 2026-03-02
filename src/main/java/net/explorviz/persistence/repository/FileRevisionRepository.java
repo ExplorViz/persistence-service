@@ -172,16 +172,6 @@ public class FileRevisionRepository {
     return file;
   }
 
-  public Optional<FileRevision> getFileRevisionFromHash(final Session session,
-      final String fileHash, final String repoName, final String landscapeTokenId) {
-    return Optional.ofNullable(session.queryForObject(FileRevision.class, """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $repoName})
-        MATCH (r)-[:CONTAINS]->(c:Commit)-[:CONTAINS]->(f:FileRevision {hash: $fileHash})
-        RETURN f
-        LIMIT 1;
-        """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash)));
-  }
-
   public Optional<FileRevision> getFileRevisionFromHashAndPath(final Session session,
       final String fileHash, final String repoName, final String landscapeTokenId,
       final String[] pathSegments) {

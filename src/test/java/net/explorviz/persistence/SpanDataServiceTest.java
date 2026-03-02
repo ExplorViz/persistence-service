@@ -91,47 +91,6 @@ class SpanDataServiceTest {
     }
 
     /**
-     * If a commit hash is included in the span, the corresponding node should be connected /
-     * created.
-     */
-    @Test
-    void testPersistSpanWithCommit() {
-      SpanData testSpanData =
-          SpanData.newBuilder()
-              .setSpanId("mySpan")
-              .setTraceId("myTrace")
-              .setApplicationName("hello-world")
-              .setLandscapeTokenId("mytokenvalue")
-              .setFunctionFqn("net.explorviz.helloworld.MyClass.myMethod")
-              .setStartTime(1)
-              .setEndTime(5)
-              .setCommitId("commit1")
-              .build();
-
-      Empty reply = spanDataService.persistSpan(testSpanData).await()
-          .atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
-
-      Session session = sessionFactory.openSession();
-
-      Commit commit = session.queryForObject(Commit.class, """
-          MATCH (:Application {name: 'hello-world'})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: 'net'})
-                -[:CONTAINS]->(:Directory {name: 'explorviz'})
-                -[:CONTAINS]->(:Directory {name: 'helloworld'})
-                -[:CONTAINS]->(file:FileRevision {name: 'MyClass'})
-                -[:CONTAINS]->(:Function {name: 'myMethod'})
-                <-[:REPRESENTS]-(:Span {spanId: 'mySpan'})
-                <-[:CONTAINS]-(:Trace {traceId: 'myTrace'})
-                <-[:CONTAINS]-(:Landscape {tokenId: 'mytokenvalue'})
-          MATCH (commit:Commit {hash: 'commit1'})-[:CONTAINS]->(file)
-          RETURN commit;""", Map.of());
-
-      assertNotNull(commit);
-    }
-
-    /**
      * Persisting the same span twice should create no additional nodes.
      */
     @Test
@@ -170,76 +129,77 @@ class SpanDataServiceTest {
       assertEquals(1, (Long) countMap.get("spans"));
       assertEquals(1, (Long) countMap.get("traces"));
     }
-
   }
-  /**
-   * If a commit hash is included in the span and the corresponding commit, file and function nodes
-   * exist, then the span should be connected to the existing function node.
-   */
-  @Test
-  void testPersistSpanWithCommitAndStaticDataExists() {
-    Repository repository = new Repository("hello-world");
-    Landscape landscape = new Landscape("mytokenvalue");
-    landscape.addRepository(repository);
-    Application application = new Application("hello-world");
-    application.setRootDirectory(new Directory("hello-world"));
 
-    Directory currentDir = application.getRootDirectory();
-    repository.addRootDirectory(currentDir);
-    String[] dirNames = {"net", "explorviz", "helloworld"};
-    for (String dirName: dirNames) {
-      Directory newDir = new Directory(dirName);
-      currentDir.addSubdirectory(newDir);
-      currentDir = newDir;
-    }
-
-    FileRevision file = new FileRevision("MyClass");
-    currentDir.addFileRevision(file);
-    file.addFunction(new Function("myMethod"));
-    file.setHash("fileHash1");
-
-    Commit commit = new Commit("commit1");
-    repository.addCommit(commit);
-    commit.addFileRevision(file);
-    landscape.addRepository(repository);
-
-    Session session = sessionFactory.openSession();
-    session.save(List.of(landscape, application));
-
-    SpanData testSpanData =
-        SpanData.newBuilder()
-            .setSpanId("mySpan")
-            .setTraceId("myTrace")
-            .setApplicationName("hello-world")
-            .setLandscapeTokenId("mytokenvalue")
-            .setFunctionFqn("net.explorviz.helloworld.MyClass.myMethod")
-            .setStartTime(1)
-            .setEndTime(5)
-            .setCommitId("commit1")
-            .build();
-
-    Empty reply = spanDataService.persistSpan(testSpanData).await()
-        .atMost(Duration.ofSeconds(5));
-    assertNotNull(reply);
-
-    Commit foundCommit = session.queryForObject(Commit.class, """
-        MATCH (:Application {name: 'hello-world'})
-              -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->(:Directory {name: 'net'})
-              -[:CONTAINS]->(:Directory {name: 'explorviz'})
-              -[:CONTAINS]->(:Directory {name: 'helloworld'})
-              -[:CONTAINS]->(file:FileRevision {name: 'MyClass'})
-              -[:CONTAINS]->(:Function {name: 'myMethod'})
-              <-[:REPRESENTS]-(:Span {spanId: 'mySpan'})
-              <-[:CONTAINS]-(:Trace {traceId: 'myTrace'})
-              <-[:CONTAINS]-(:Landscape {tokenId: 'mytokenvalue'})
-        MATCH (commit:Commit {hash: 'commit1'})-[:CONTAINS]->(file)
-        RETURN commit;""", Map.of());
-
-    assertNotNull(foundCommit);
 
   @Nested
   class WithStaticData {
+    /**
+     * If a commit hash is included in the span and the corresponding commit, file and function
+     * nodes exist, then the span should be connected to the existing function node.
+     */
+    @Test
+    void testPersistSpanWithCommitAndStaticDataExists() {
+      Repository repository = new Repository("hello-world");
+      Landscape landscape = new Landscape("mytokenvalue");
+      landscape.addRepository(repository);
+      Application application = new Application("hello-world");
+      application.setRootDirectory(new Directory("hello-world"));
 
+      Directory currentDir = application.getRootDirectory();
+      repository.addRootDirectory(currentDir);
+      String[] dirNames = {"net", "explorviz", "helloworld"};
+      for (String dirName : dirNames) {
+        Directory newDir = new Directory(dirName);
+        currentDir.addSubdirectory(newDir);
+        currentDir = newDir;
+      }
+
+      FileRevision file = new FileRevision("MyClass");
+      currentDir.addFileRevision(file);
+      file.addFunction(new Function("myMethod"));
+      file.setHash("fileHash1");
+
+      Commit commit = new Commit("commit1");
+      repository.addCommit(commit);
+      commit.addFileRevision(file);
+      landscape.addRepository(repository);
+
+      Session session = sessionFactory.openSession();
+      session.save(List.of(landscape, application));
+
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setSpanId("mySpan")
+              .setTraceId("myTrace")
+              .setApplicationName("hello-world")
+              .setLandscapeTokenId("mytokenvalue")
+              .setFunctionFqn("net.explorviz.helloworld.MyClass.myMethod")
+              .setStartTime(1)
+              .setEndTime(5)
+              .setCommitId("commit1")
+              .build();
+
+      Empty reply = spanDataService.persistSpan(testSpanData).await()
+          .atMost(Duration.ofSeconds(5));
+      assertNotNull(reply);
+
+      Commit foundCommit = session.queryForObject(Commit.class, """
+          MATCH (:Application {name: 'hello-world'})
+                -[:HAS_ROOT]->(:Directory)
+                -[:CONTAINS]->(:Directory {name: 'net'})
+                -[:CONTAINS]->(:Directory {name: 'explorviz'})
+                -[:CONTAINS]->(:Directory {name: 'helloworld'})
+                -[:CONTAINS]->(file:FileRevision {name: 'MyClass'})
+                -[:CONTAINS]->(:Function {name: 'myMethod'})
+                <-[:REPRESENTS]-(:Span {spanId: 'mySpan'})
+                <-[:CONTAINS]-(:Trace {traceId: 'myTrace'})
+                <-[:CONTAINS]-(:Landscape {tokenId: 'mytokenvalue'})
+          MATCH (commit:Commit {hash: 'commit1'})-[:CONTAINS]->(file)
+          RETURN commit;""", Map.of());
+
+      assertNotNull(foundCommit);
+    }
   }
+
 }
