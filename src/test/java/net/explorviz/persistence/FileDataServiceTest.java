@@ -51,14 +51,16 @@ class FileDataServiceTest {
   @Inject
   SessionFactory sessionFactory;
 
+  private Session session;
   private String landscapeToken;
   private String repoName;
   private String branchName;
 
   @BeforeEach
   void init() {
-    Session session = sessionFactory.openSession();
+    session = sessionFactory.openSession();
     session.purgeDatabase();
+
     landscapeToken = "mytokenvalue";
     repoName = "myrepo";
     branchName = "main";
@@ -73,8 +75,6 @@ class FileDataServiceTest {
 
   @Test
   void testPersistFileWithCorrectMetrics() {
-    Session session = sessionFactory.openSession();
-
     String commitHash = "commit1";
     String filePath = "src/File1.java";
     String fileHash = "1";
@@ -114,8 +114,6 @@ class FileDataServiceTest {
 
   @Test
   void testPersistFileDuplicateFileOnDifferentPaths() {
-    Session session = sessionFactory.openSession();
-
     String commitHash = "commit1";
     String filePathOne = "src/File1.java";
     String filePathTwo = "src/hollandaise/File1.java";
@@ -165,8 +163,6 @@ class FileDataServiceTest {
 
   @Test
   void testPersistFileCorrectlyCreatesClazzNode() {
-    Session session = sessionFactory.openSession();
-
     String commitHash = "commit1";
     String fileNameSuper = "Superclass.java";
     String filePathSuper = "src/" + fileNameSuper;
@@ -297,8 +293,6 @@ class FileDataServiceTest {
 
   @Test
   void testPersistFileInheringClazzBeforeSuperClazz() {
-    Session session = sessionFactory.openSession();
-
     String commitHash = "commit1";
     String fileNameSuper = "Superclass.java";
     String filePathSuper = "src/" + fileNameSuper;
@@ -416,8 +410,6 @@ class FileDataServiceTest {
 
   @Test
   void testPersistFileCorrectlyCreatesFunctionNodes() {
-    Session session = sessionFactory.openSession();
-
     String commitHash = "commit1";
     String fileNameOne = "file1.java";
     String filePathOne = "src/" + fileNameOne;

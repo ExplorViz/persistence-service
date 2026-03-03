@@ -48,14 +48,16 @@ class CommitServiceTest {
   @Inject
   SessionFactory sessionFactory;
 
+  private Session session;
   private String landscapeToken;
   private String repoName;
   private String branchName;
 
   @BeforeEach
   void init() {
-    Session session = sessionFactory.openSession();
+    session = sessionFactory.openSession();
     session.purgeDatabase();
+
     landscapeToken = "mytokenvalue";
     repoName = "myrepo";
     branchName = "main";
@@ -70,8 +72,6 @@ class CommitServiceTest {
 
   @Test
   void testPersistCommit() {
-    Session session = sessionFactory.openSession();
-
     String commitHash = "commit1";
     String fileHashOne = "1";
     String fileNameOne = "File1.java";
@@ -154,8 +154,6 @@ class CommitServiceTest {
 
   @Test
   void testPersistCommitWithParentCommit() {
-    Session session = sessionFactory.openSession();
-
     String commitHashOne = "commit1";
     String commitHashTwo = "commit2";
 
@@ -196,8 +194,6 @@ class CommitServiceTest {
 
   @Test
   void testPersistCommitAddedModifiedDeletedUnchangedFiles() throws InterruptedException {
-    Session session = sessionFactory.openSession();
-
     String commitHashOne = "commit1";
     String commitHashTwo = "commit2";
     String fileHashOne = "1";

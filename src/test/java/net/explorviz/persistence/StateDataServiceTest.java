@@ -49,14 +49,16 @@ class StateDataServiceTest {
   @Inject
   SessionFactory sessionFactory;
 
+  private Session session;
   private String landscapeToken;
   private String repoName;
   private String branchName;
 
   @BeforeEach
   void init() {
-    Session session = sessionFactory.openSession();
+    session = sessionFactory.openSession();
     session.purgeDatabase();
+
     landscapeToken = "mytokenvalue";
     repoName = "myrepo";
     branchName = "main";
@@ -64,8 +66,6 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataOnEmptyDB() {
-    Session session = sessionFactory.openSession();
-
     String appName = "testApp";
 
     StateDataRequest stateDataRequest =
@@ -118,8 +118,6 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataWithMultipleApplications() {
-    Session session = sessionFactory.openSession();
-
     String appNameOne = "testAppOne";
     String appPathOne = "src/" + appNameOne;
     String appNameTwo = "testAppTwo";
@@ -161,8 +159,6 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataWithExistingCommits() {
-    Session session = sessionFactory.openSession();
-
     String appName = "testApp";
     String commitHash = "commit1";
     String fileHash = "1";
@@ -247,8 +243,6 @@ class StateDataServiceTest {
 
   @Test
   void testGetStateDataForTwoDifferentReposInOneLandscape() {
-    Session session = sessionFactory.openSession();
-
     String repoNameTwo = "repo2";
     String appName = "testApp";
     String appNameTwo = "app2";

@@ -8,9 +8,13 @@ import io.quarkus.grpc.GrpcClient;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.explorviz.persistence.ogm.Application;
+import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -46,46 +50,60 @@ class SpanDataServiceTest {
   @Inject
   SessionFactory sessionFactory;
 
+  private Session session;
+  private String landscapeToken;
+  private String baseTraceId;
+  private String baseSpanId;
+  private String baseAppName;
+
   @BeforeEach
   void cleanup() {
-    Session session = sessionFactory.openSession();
+    session = sessionFactory.openSession();
     session.purgeDatabase();
+
+    landscapeToken = "mytokenvalue";
+    baseTraceId = "myTrace";
+    baseSpanId = "mySpan";
+    baseAppName = "myApp";
   }
 
   @Nested
   class WithoutStaticData {
-
     @Test
     void testPersistSpan() {
-      SpanData testSpanData =
-          SpanData.newBuilder()
-              .setSpanId("mySpan")
-              .setTraceId("myTrace")
-              .setApplicationName("hello-world")
-              .setLandscapeTokenId("mytokenvalue")
-              .setFunctionFqn("net.explorviz.helloworld.MyClass.myMethod")
-              .setStartTime(1)
-              .setEndTime(5)
-              .build();
+      String functionName = "myMethod";
+      List<String> functionFqn = List.of("net", "explorviz", baseAppName, "MyClass", functionName);
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await()
-          .atMost(Duration.ofSeconds(5));
+      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
+          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
+          .setFunctionFqn(String.join(".", functionFqn)).setStartTime(1).setEndTime(5).build();
+
+      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
       assertNotNull(reply);
 
-      Session session = sessionFactory.openSession();
+      Map<String, Object> params = new HashMap<>();
+      params.put("landscapeToken", landscapeToken);
+      params.put("appName", baseAppName);
+      params.put("traceId", baseTraceId);
+      params.put("spanId", baseSpanId);
+      params.put("dirOne", functionFqn.get(0));
+      params.put("dirTwo", functionFqn.get(1));
+      params.put("dirThree", functionFqn.get(2));
+      params.put("dirFour", functionFqn.get(3));
+      params.put("funName", functionName);
 
       Application result = session.queryForObject(Application.class, """
-          MATCH (app:Application {name: 'hello-world'})
+          MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: 'net'})
-                -[:CONTAINS]->(:Directory {name: 'explorviz'})
-                -[:CONTAINS]->(:Directory {name: 'helloworld'})
-                -[:CONTAINS]->(:FileRevision {name: 'MyClass'})
-                -[:CONTAINS]->(:Function {name: 'myMethod'})
-                <-[:REPRESENTS]-(:Span {spanId: 'mySpan'})
-                <-[:CONTAINS]-(:Trace {traceId: 'myTrace'})
-                <-[:CONTAINS]-(:Landscape {tokenId: 'mytokenvalue'})
-          RETURN app;""", Map.of());
+                -[:CONTAINS]->(:Directory {name: $dirOne})
+                -[:CONTAINS]->(:Directory {name: $dirTwo})
+                -[:CONTAINS]->(:Directory {name: $dirThree})
+                -[:CONTAINS]->(:FileRevision {name: $dirFour})
+                -[:CONTAINS]->(:Function {name: $funName})
+                <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+          RETURN app;""", params);
 
       assertNotNull(result);
     }
@@ -95,26 +113,18 @@ class SpanDataServiceTest {
      */
     @Test
     void testPersistSpanIdempotent() {
-      SpanData testSpanData =
-          SpanData.newBuilder()
-              .setSpanId("mySpan")
-              .setTraceId("myTrace")
-              .setApplicationName("hello-world")
-              .setLandscapeTokenId("mytokenvalue")
-              .setFunctionFqn("net.explorviz.helloworld.MyClass.myMethod")
-              .setStartTime(1)
-              .setEndTime(5)
-              .build();
+      String functionName = "myMethod";
+      List<String> functionFqn = List.of("net", "explorviz", baseAppName, "MyClass", functionName);
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await()
-          .atMost(Duration.ofSeconds(5));
+      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
+          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
+          .setFunctionFqn(String.join(".", functionFqn)).setStartTime(1).setEndTime(5).build();
+
+      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
       assertNotNull(reply);
 
-      reply = spanDataService.persistSpan(testSpanData).await()
-          .atMost(Duration.ofSeconds(5));
+      reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
       assertNotNull(reply);
-
-      Session session = sessionFactory.openSession();
 
       Result result = session.query("""
           RETURN
@@ -134,69 +144,101 @@ class SpanDataServiceTest {
 
   @Nested
   class WithStaticData {
+    private String baseRepoName;
+    private String baseBranchName;
+    private String baseCommitHash;
+    private List<String> baseDirNames;
+    private String baseFileName;
+    private String baseFileHash;
+    private String baseFunctionName;
+
+    private void buildDefaultStaticData(Session session) {
+      Branch branch = new Branch(baseBranchName);
+      Repository repository = new Repository(baseRepoName);
+      repository.addBranch(branch);
+      Landscape landscape = new Landscape(landscapeToken);
+      landscape.addRepository(repository);
+      Application application = new Application(baseAppName);
+      application.setRootDirectory(new Directory(baseAppName));
+
+      Directory currentDir = application.getRootDirectory();
+      repository.addRootDirectory(currentDir);
+      for (String dirName : baseDirNames) {
+        Directory newDir = new Directory(dirName);
+        currentDir.addSubdirectory(newDir);
+        currentDir = newDir;
+      }
+
+      FileRevision file = new FileRevision(baseFileName);
+      currentDir.addFileRevision(file);
+      file.addFunction(new Function(baseFunctionName));
+      file.setHash(baseFileHash);
+
+      Commit commit = new Commit(baseCommitHash);
+      repository.addCommit(commit);
+      commit.addFileRevision(file);
+      commit.setBranch(branch);
+      landscape.addRepository(repository);
+
+      session.save(List.of(landscape, application));
+    }
+
+    @BeforeEach
+    void init() {
+      baseRepoName = "myrepo";
+      baseBranchName = "main";
+      baseCommitHash = "commit1";
+      baseDirNames = List.of("net", "explorviz", "helloworld");
+      baseFileName = "MyClass";
+      baseFileHash = "1";
+      baseFunctionName = "myMethod";
+
+      buildDefaultStaticData(session);
+    }
+
     /**
      * If a commit hash is included in the span and the corresponding commit, file and function
      * nodes exist, then the span should be connected to the existing function node.
      */
     @Test
     void testPersistSpanWithCommitAndStaticDataExists() {
-      Repository repository = new Repository("hello-world");
-      Landscape landscape = new Landscape("mytokenvalue");
-      landscape.addRepository(repository);
-      Application application = new Application("hello-world");
-      application.setRootDirectory(new Directory("hello-world"));
+      List<String> functionFqn = new ArrayList<>(baseDirNames);
+      Collections.addAll(functionFqn, baseFileName, baseFunctionName);
 
-      Directory currentDir = application.getRootDirectory();
-      repository.addRootDirectory(currentDir);
-      String[] dirNames = {"net", "explorviz", "helloworld"};
-      for (String dirName : dirNames) {
-        Directory newDir = new Directory(dirName);
-        currentDir.addSubdirectory(newDir);
-        currentDir = newDir;
-      }
+      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
+          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
+          .setFunctionFqn(String.join(".", functionFqn)).setStartTime(1).setEndTime(5)
+          .setCommitId(baseCommitHash).build();
 
-      FileRevision file = new FileRevision("MyClass");
-      currentDir.addFileRevision(file);
-      file.addFunction(new Function("myMethod"));
-      file.setHash("fileHash1");
-
-      Commit commit = new Commit("commit1");
-      repository.addCommit(commit);
-      commit.addFileRevision(file);
-      landscape.addRepository(repository);
-
-      Session session = sessionFactory.openSession();
-      session.save(List.of(landscape, application));
-
-      SpanData testSpanData =
-          SpanData.newBuilder()
-              .setSpanId("mySpan")
-              .setTraceId("myTrace")
-              .setApplicationName("hello-world")
-              .setLandscapeTokenId("mytokenvalue")
-              .setFunctionFqn("net.explorviz.helloworld.MyClass.myMethod")
-              .setStartTime(1)
-              .setEndTime(5)
-              .setCommitId("commit1")
-              .build();
-
-      Empty reply = spanDataService.persistSpan(testSpanData).await()
-          .atMost(Duration.ofSeconds(5));
+      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
       assertNotNull(reply);
 
+      Map<String, Object> params = new HashMap<>();
+      params.put("landscapeToken", landscapeToken);
+      params.put("appName", baseAppName);
+      params.put("traceId", baseTraceId);
+      params.put("spanId", baseSpanId);
+      params.put("dirOne", functionFqn.get(0));
+      params.put("dirTwo", functionFqn.get(1));
+      params.put("dirThree", functionFqn.get(2));
+      params.put("fileName", baseFileName);
+      params.put("fileHash", baseFileHash);
+      params.put("funName", baseFunctionName);
+      params.put("commitHash", baseCommitHash);
+
       Commit foundCommit = session.queryForObject(Commit.class, """
-          MATCH (:Application {name: 'hello-world'})
+          MATCH (:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: 'net'})
-                -[:CONTAINS]->(:Directory {name: 'explorviz'})
-                -[:CONTAINS]->(:Directory {name: 'helloworld'})
-                -[:CONTAINS]->(file:FileRevision {name: 'MyClass'})
-                -[:CONTAINS]->(:Function {name: 'myMethod'})
-                <-[:REPRESENTS]-(:Span {spanId: 'mySpan'})
-                <-[:CONTAINS]-(:Trace {traceId: 'myTrace'})
-                <-[:CONTAINS]-(:Landscape {tokenId: 'mytokenvalue'})
-          MATCH (commit:Commit {hash: 'commit1'})-[:CONTAINS]->(file)
-          RETURN commit;""", Map.of());
+                -[:CONTAINS]->(:Directory {name: $dirOne})
+                -[:CONTAINS]->(:Directory {name: $dirTwo})
+                -[:CONTAINS]->(:Directory {name: $dirThree})
+                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                -[:CONTAINS]->(:Function {name: $funName})
+                <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+          MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+          RETURN commit;""", params);
 
       assertNotNull(foundCommit);
     }
