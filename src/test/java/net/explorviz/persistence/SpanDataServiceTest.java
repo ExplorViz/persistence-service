@@ -2,6 +2,7 @@ package net.explorviz.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.Empty;
 import io.quarkus.grpc.GrpcClient;
@@ -138,6 +139,70 @@ class SpanDataServiceTest {
       assertEquals(1, (Long) countMap.get("apps"));
       assertEquals(1, (Long) countMap.get("spans"));
       assertEquals(1, (Long) countMap.get("traces"));
+    }
+
+    @Test
+    void testPersistSpanMultipleSpans() {
+      String spanIdTwo = "span2";
+      String functionName = "myMethod";
+      String functionNameTwo = "yourMethod";
+      List<String> functionFqn = List.of("net", "explorviz", baseAppName, "MyClass", functionName);
+      List<String> functionFqnTwo =
+          List.of("net", "explorviz", baseAppName, "MyClass", functionNameTwo);
+
+      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
+          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
+          .setFunctionFqn(String.join(".", functionFqn)).setStartTime(1).setEndTime(5).build();
+
+      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
+      assertNotNull(reply);
+
+      SpanData testSpanDataTwo =
+          SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(baseTraceId).setParentId(baseSpanId)
+              .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
+              .setFunctionFqn(String.join(".", functionFqnTwo)).setStartTime(2).setEndTime(4)
+              .build();
+
+      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
+      assertNotNull(reply);
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("landscapeToken", landscapeToken);
+      params.put("appName", baseAppName);
+      params.put("traceId", baseTraceId);
+      params.put("spanId", baseSpanId);
+      params.put("spanId2", spanIdTwo);
+      params.put("dirOne", functionFqn.get(0));
+      params.put("dirTwo", functionFqn.get(1));
+      params.put("dirThree", functionFqn.get(2));
+      params.put("dirFour", functionFqn.get(3));
+      params.put("funName", functionName);
+      params.put("funName2", functionNameTwo);
+
+
+      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+          RETURN EXISTS {
+          MATCH (app:Application {name: $appName})
+                -[:HAS_ROOT]->(:Directory)
+                -[:CONTAINS]->(:Directory {name: $dirOne})
+                -[:CONTAINS]->(:Directory {name: $dirTwo})
+                -[:CONTAINS]->(:Directory {name: $dirThree})
+                -[:CONTAINS]->(file:FileRevision {name: $dirFour})
+                -[:CONTAINS]->(fun1:Function {name: $funName})
+                <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
+                <-[:CONTAINS]-(t:Trace {traceId: $traceId})
+                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+          
+          MATCH (file)-[:CONTAINS]->(fun2:Function {name: $funName2})
+          MATCH (fun2)<-[:REPRESENTS]-(span2:Span {spanId: $spanId2})
+                <-[:CONTAINS]-(t)
+          MATCH (span2)-[:HAS_PARENT]->(span1)
+          
+          WHERE fun1 <> fun2
+          } AS exists
+          """, params);
+
+      assertTrue(databaseIsCorrect);
     }
   }
 
