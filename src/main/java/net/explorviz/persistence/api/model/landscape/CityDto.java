@@ -1,17 +1,38 @@
 package net.explorviz.persistence.api.model.landscape;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
-import net.explorviz.persistence.api.model.TypeOfAnalysis;
+import java.util.Objects;
 
+/**
+ * Outermost grouping container for all objects which are visualized inside a landscape. Cities
+ * represent cohesive systems that can operate independently, such as applications, where units work
+ * together for a larger purpose.
+ *
+ * @param flatBaseModel           Container for attributes shared by all flat data objects
+ * @param districtIds             ID values of all districts which are <strong>direct
+ *                                descendants</strong> of this city, i.e. with no subdistricts in
+ *                                between
+ * @param buildingIds             ID values of all buildings which are <strong>direct
+ *                                descendants</strong> of this city, i.e. with no subdistricts in
+ *                                between. These appear directly on the City model
+ * @param allContainedDistrictIds ID values for all districts which appear inside this City,
+ *                                <strong>even transitively</strong> (i.e. nested objects). This is
+ *                                required for faster lookups
+ * @param allContainedBuildingIds ID values for all buildings which appear inside this City,
+ *                                <strong>even transitively</strong> (i.e. nested objects). This is
+ *                                required for faster lookups
+ */
 @RegisterForReflection
-public record CityDto(String id, String name, TypeOfAnalysis originOfData, List<String> districtIds,
-                      List<String> buildingIds) implements VisualizationObject {
-  public String getId() {
-    return id;
-  }
-
-  public String getName() {
-    return name;
+public record CityDto(@JsonUnwrapped FlatBaseModel flatBaseModel, List<String> districtIds,
+                      List<String> buildingIds, List<String> allContainedDistrictIds,
+                      List<String> allContainedBuildingIds) {
+  public CityDto {
+    Objects.requireNonNull(flatBaseModel);
+    Objects.requireNonNull(districtIds);
+    Objects.requireNonNull(buildingIds);
+    Objects.requireNonNull(allContainedDistrictIds);
+    Objects.requireNonNull(allContainedBuildingIds);
   }
 }

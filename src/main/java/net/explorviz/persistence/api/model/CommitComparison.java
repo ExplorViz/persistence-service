@@ -1,12 +1,14 @@
 package net.explorviz.persistence.api.model;
 
-public enum TypeOfAnalysis {
-  DYNAMIC("dynamic"),
-  STATIC("static");
+public enum CommitComparison {
+  ADDED("added"),
+  MODIFIED("modified"),
+  REMOVED("removed"),
+  UNCHANGED("unchanged");
 
   private final String name;
 
-  TypeOfAnalysis(final String name) {
+  CommitComparison(final String name) {
     this.name = name;
   }
 

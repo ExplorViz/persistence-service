@@ -1,12 +1,12 @@
 package net.explorviz.persistence.api.model;
 
-public enum TypeOfAnalysis {
-  DYNAMIC("dynamic"),
-  STATIC("static");
+public enum EditingState {
+  ADDED("added"),
+  REMOVED("removed");
 
   private final String name;
 
-  TypeOfAnalysis(final String name) {
+  EditingState(final String name) {
     this.name = name;
   }
 

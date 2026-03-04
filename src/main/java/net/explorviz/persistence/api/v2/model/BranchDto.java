@@ -3,7 +3,7 @@ package net.explorviz.persistence.api.v2.model;
 import java.util.List;
 
 /**
- * Represents a git branch as used by the frontend API.
+ * Represents a git branch as used by the frontend.
  *
  * @param name Name of the branch
  * @param commits Hashes of commits in this branch
