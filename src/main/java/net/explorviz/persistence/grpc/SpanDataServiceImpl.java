@@ -1,6 +1,7 @@
 package net.explorviz.persistence.grpc;
 
 import com.google.protobuf.Empty;
+import io.grpc.Status;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
@@ -80,44 +81,31 @@ public class SpanDataServiceImpl implements SpanDataService {
         landscapeRepository.getOrCreateLandscape(session, spanData.getLandscapeTokenId());
     landscape.addTrace(trace);
 
-    final Function function =
-        functionRepository.getOrCreateFunction(session, splitFqn[splitFqn.length - 1],
-            spanData.getLandscapeTokenId());
-    span.setFunction(function);
-
-
-
+    Function function;
     FileRevision fileRevision = null;
 
     if (commitId != null) {
-      fileRevision =
-          fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
-                  spanData.getApplicationName(), commitId, splitFileFqn, spanData.getLandscapeTokenId())
-              .orElse(null);
+      function =
+          functionRepository.getOrCreateFunction(session, splitFqn, spanData.getLandscapeTokenId(),
+              commitId, spanData.getApplicationName());
+      fileRevision = fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
+              spanData.getApplicationName(), commitId, splitFileFqn, spanData.getLandscapeTokenId())
+          .orElse(null);
+    } else {
+      function =
+          functionRepository.getOrCreateFunction(session, splitFqn, spanData.getLandscapeTokenId());
     }
+    span.setFunction(function);
 
     if (fileRevision == null) {
-      final Application application =
-          applicationRepository.getOrCreateApplication(session, spanData.getApplicationName(),
-              spanData.getLandscapeTokenId());
-
-      if (application.getRootDirectory() == null) {
-        // Application did not previously exist, build file structure from scratch
-        fileRevision =
-            fileRevisionRepository.createFileStructureForNewApplicationFromFqn(session, application,
-                splitFileFqn);
-      } else {
-        // Create missing directories and file for existing Application
-        try {
-          fileRevision =
-              fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(session,
-                  splitFileFqn, application.getName(), landscape.getTokenId());
-        } catch (final NoSuchElementException | IllegalArgumentException e) {
-          if (LOGGER.isEnabled(Level.ERROR)) {
-            LOGGER.error("Error while creating file structure for span: " + e);
-          }
-          return Uni.createFrom().item(Empty.getDefaultInstance());
+      try {
+        fileRevision = resolveFileRevision(session, spanData, landscape, splitFileFqn);
+      } catch (final NoSuchElementException | IllegalArgumentException e) {
+        if (LOGGER.isEnabled(Level.ERROR)) {
+          LOGGER.error("Error while creating file structure for span: " + e);
         }
+        return Uni.createFrom()
+            .failure(Status.ABORTED.withDescription("Something went wrong!").asRuntimeException());
       }
     }
 
@@ -126,6 +114,29 @@ public class SpanDataServiceImpl implements SpanDataService {
     session.save(List.of(span, trace, landscape, fileRevision, function));
 
     return Uni.createFrom().item(Empty.getDefaultInstance());
+  }
+
+  private FileRevision resolveFileRevision(final Session session, final SpanData spanData,
+      final Landscape landscape, final String[] splitFileFqn) {
+    FileRevision fileRevision;
+
+    final Application application =
+        applicationRepository.getOrCreateApplication(session, spanData.getApplicationName(),
+            spanData.getLandscapeTokenId());
+
+    if (application.getRootDirectory() == null) {
+      // Application did not previously exist, build file structure from scratch
+      fileRevision =
+          fileRevisionRepository.createFileStructureForNewApplicationFromFqn(session, application,
+              splitFileFqn);
+    } else {
+      // Create missing directories and file for existing Application
+      fileRevision =
+          fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(session,
+              splitFileFqn, application.getName(), landscape.getTokenId());
+    }
+
+    return fileRevision;
   }
 
 }

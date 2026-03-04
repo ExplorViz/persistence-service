@@ -11,7 +11,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class ClazzRepository {
 
   @Inject
@@ -28,37 +28,35 @@ public class ClazzRepository {
           -[:CONTAINS]->(cl:Clazz {name: $clazzName})
         RETURN cl
         LIMIT 1;
-        """, Map.of("tokenId", tokenId, "repoName", repoName, "fileHash", fileHash,
-        "clazzName", clazzName)));
+        """, Map.of("tokenId", tokenId, "repoName", repoName, "fileHash", fileHash, "clazzName",
+        clazzName)));
   }
 
   public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzName(final Session session,
       final String tokenId, final String repoName, final String clazzName) {
     return Optional.ofNullable(session.queryForObject(Clazz.class, """
-            MATCH (:Landscape {tokenId: $tokenId})
-              -[:CONTAINS]->(:Repository {name: $repoName})
-              -[:CONTAINS]->(:Commit)
-              -[:CONTAINS]->(:FileRevision)
-              -[:CONTAINS]->(cl:Clazz {name: $clazzName})
-            RETURN cl
-            LIMIT 1;
-            """,
-        Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName)));
+        MATCH (:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(:Repository {name: $repoName})
+          -[:CONTAINS]->(:Commit)
+          -[:CONTAINS]->(:FileRevision)
+          -[:CONTAINS]->(cl:Clazz {name: $clazzName})
+        RETURN cl
+        LIMIT 1;
+        """, Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName)));
   }
 
   public Optional<Clazz> findClassFromInheritingClass(final Session session, final String tokenId,
       final String repoName, final String clazzName) {
     return Optional.ofNullable(session.queryForObject(Clazz.class, """
-            MATCH (:Landscape {tokenId: $tokenId})
-              -[:CONTAINS]->(:Repository {name: $repoName})
-              -[:CONTAINS]->(:Commit)
-              -[:CONTAINS]->(:FileRevision)
-              -[:CONTAINS]->(:Clazz)
-              -[:INHERITS]->(cl:Clazz {name: $clazzName})
-            RETURN cl
-            LIMIT 1;
-            """,
-        Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName)));
+        MATCH (:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(:Repository {name: $repoName})
+          -[:CONTAINS]->(:Commit)
+          -[:CONTAINS]->(:FileRevision)
+          -[:CONTAINS]->(:Clazz)
+          -[:INHERITS]->(cl:Clazz {name: $clazzName})
+        RETURN cl
+        LIMIT 1;
+        """, Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName)));
   }
 
   /**
@@ -87,8 +85,7 @@ public class ClazzRepository {
               c AS clazz,
               reduce(fqn = nodes(p)[1].name, n IN nodes(p)[2..] | fqn + '/' + n.name) AS fqn;
             """,
-        Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash",
-            commitHash));
+        Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
 
     result.queryResults().forEach(
         queryResult -> filePathToClazzMap.put((String) queryResult.get("fqn"),

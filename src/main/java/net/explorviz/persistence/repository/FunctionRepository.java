@@ -14,6 +14,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class FunctionRepository {
 
+  // TODO: Rework, such that whole path is checked
   private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT = """
       MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Trace)-[:CONTAINS]->
           (:Span)-[:REPRESENTS]->(f:Function {name: $name})
@@ -23,23 +24,40 @@ public class FunctionRepository {
       all(j IN range(0, length(p)-1) WHERE nodes(p)[j].name = pathSegments[j])
       RETURN f;""";
 
+  private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_AND_COMMIT_HASH_STATEMENT = """
+      MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Repository)
+            -[:HAS_ROOT]->(:Directory)
+            -[:CONTAINS]->*(:Directory)
+            <-[:HAS_ROOT]-(app:Application {name: $appName})
+      MATCH (app)-[:HAS_ROOT]->(appRoot:Directory)
+      WITH appRoot, $pathSegments AS pathSegments
+      MATCH p = (appRoot)-[:CONTAINS]->(:Directory)
+                -[:CONTAINS]->*(file:FileRevision)
+                -[:CONTAINS]->(f:Function)
+      WHERE
+      all(j IN range(1, length(p)-1) WHERE nodes(p)[j].name = pathSegments[j-1])
+        AND size(nodes(p))-1 = size(pathSegments)
+      MATCH (file)<-[:CONTAINS]-(:Commit {hash: $commitHash})
+      RETURN f;""";
+
   @Inject
   private SessionFactory sessionFactory;
 
   public Optional<Function> findFunctionByFqnAndLandscapeToken(final Session session,
-      final String fqn, final String tokenId) {
-    final String[] splitFqn = fqn.split("\\.");
-    final String[] functionPath = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
-    final String functionName = splitFqn[splitFqn.length - 1];
+      final String[] fqn, final String tokenId) {
+    final String[] functionPath = Arrays.copyOfRange(fqn, 0, fqn.length - 1);
+    final String functionName = fqn[fqn.length - 1];
     return Optional.ofNullable(
         session.queryForObject(Function.class, FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT,
             Map.of("tokenId", tokenId, "name", functionName, "pathSegments", functionPath)));
   }
 
-  public Optional<Function> findFunctionByFqnAndLandscapeToken(final String tokenId,
-      final String fqn) {
-    final Session session = sessionFactory.openSession();
-    return findFunctionByFqnAndLandscapeToken(session, fqn, tokenId);
+  public Optional<Function> findFunctionByFqnAndLandscapeTokenAndCommitHash(final Session session,
+      final String[] fqn, final String tokenId, final String commitHash, final String appName) {
+    return Optional.ofNullable(session.queryForObject(Function.class,
+        FIND_BY_FQN_AND_LANDSCAPE_TOKEN_AND_COMMIT_HASH_STATEMENT,
+        Map.of("tokenId", tokenId, "pathSegments", fqn, "commitHash", commitHash, "appName",
+            appName)));
   }
 
   /**
@@ -69,17 +87,22 @@ public class FunctionRepository {
             """,
         Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
 
-    result.queryResults()
-        .forEach(queryResult -> filePathToFunctionMap.put((String) queryResult.get("fqn"),
+    result.queryResults().forEach(
+        queryResult -> filePathToFunctionMap.put((String) queryResult.get("fqn"),
             (Function) queryResult.get("function")));
 
     return filePathToFunctionMap;
   }
 
-  public Function getOrCreateFunction(final Session session, final String fqn,
+  public Function getOrCreateFunction(final Session session, final String[] fqn,
       final String tokenId) {
-    final String[] splitFqn = fqn.split("\\.");
     return findFunctionByFqnAndLandscapeToken(session, fqn, tokenId).orElse(
-        new Function(splitFqn[splitFqn.length - 1]));
+        new Function(fqn[fqn.length - 1]));
+  }
+
+  public Function getOrCreateFunction(final Session session, final String[] fqn,
+      final String tokenId, final String commitHash, final String appName) {
+    return findFunctionByFqnAndLandscapeTokenAndCommitHash(session, fqn, tokenId, commitHash,
+        appName).orElse(new Function(fqn[fqn.length - 1]));
   }
 }
