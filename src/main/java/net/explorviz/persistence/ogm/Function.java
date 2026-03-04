@@ -5,9 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
-import net.explorviz.persistence.api.model.landscape.FunctionDto;
-import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import net.explorviz.persistence.proto.FunctionData;
 import net.explorviz.persistence.proto.ParameterData;
 import org.neo4j.ogm.annotation.GeneratedValue;
@@ -17,7 +14,7 @@ import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Function implements Visualizable {
+public class Function {
   @Id
   @GeneratedValue
   private Long id;
@@ -93,15 +90,5 @@ public class Function implements Visualizable {
     for (final ParameterData p : parameterDataList) {
       addParameter(new Parameter(p.getName(), p.getType(), p.getModifiersList()));
     }
-  }
-
-  @Override
-  public VisualizationObject toVisualizationObject() {
-    return new FunctionDto(id.toString(), name, metrics);
-  }
-
-  @Override
-  public Stream<Visualizable> getVisualizableChildren() {
-    return Stream.empty();
   }
 }

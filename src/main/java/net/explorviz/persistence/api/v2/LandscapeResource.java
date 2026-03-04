@@ -2,17 +2,14 @@ package net.explorviz.persistence.api.v2;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
-import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
 import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
 import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
 import net.explorviz.persistence.ogm.Application;
-import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.RepositoryRepository;
@@ -51,18 +48,18 @@ class LandscapeResource {
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
   }
 
-  @GET
-  @Path("/{commitHash}")
-  @Produces(MediaType.APPLICATION_JSON)
-  public List<VisualizationObject> getLandscapeStructureForCommit(
-      @RestPath final String landscapeToken,
-      @RestPath final String commitHash) {
-    final Session session = sessionFactory.openSession();
-
-    final Repository hydratedRepo =
-        repositoryRepository.getFullyHydratedRepositoryForCommit(session, landscapeToken,
-            commitHash).orElseThrow(NotFoundException::new);
-
-    return hydratedRepo.flatten().toList();
-  }
+  //  @GET
+  //  @Path("/{commitHash}")
+  //  @Produces(MediaType.APPLICATION_JSON)
+  //  public LandscapeDto getLandscapeStructureForCommit(
+  //      @RestPath final String landscapeToken,
+  //      @RestPath final String commitHash) {
+  //    final Session session = sessionFactory.openSession();
+  //
+  //    final Repository hydratedRepo =
+  //        repositoryRepository.getFullyHydratedRepositoryForCommit(session, landscapeToken,
+  //            commitHash).orElseThrow(NotFoundException::new);
+  //
+  //    return ???;
+  //  }
 }

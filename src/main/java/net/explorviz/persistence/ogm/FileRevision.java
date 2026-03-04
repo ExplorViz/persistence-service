@@ -4,9 +4,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
-import net.explorviz.persistence.api.model.landscape.BuildingDto;
-import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import net.explorviz.persistence.proto.Language;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
@@ -15,7 +12,7 @@ import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class FileRevision implements Visualizable {
+public class FileRevision {
   @Id
   @GeneratedValue
   private Long id;
@@ -95,6 +92,10 @@ public class FileRevision implements Visualizable {
 
   public String getName() {
     return this.name;
+  }
+
+  public Set<Clazz> getClasses() {
+    return this.classes;
   }
 
   public Set<Function> getFunctions() {
@@ -179,17 +180,5 @@ public class FileRevision implements Visualizable {
 
   public Map<String, Double> getMetrics() {
     return this.metrics;
-  }
-
-  @Override
-  public VisualizationObject toVisualizationObject() {
-    return new BuildingDto(id.toString(), name,
-        classes.stream().map(c -> c.getId().toString()).toList(),
-        functions.stream().map(f -> f.getId().toString()).toList());
-  }
-
-  @Override
-  public Stream<Visualizable> getVisualizableChildren() {
-    return Stream.concat(classes.stream(), functions.stream());
   }
 }

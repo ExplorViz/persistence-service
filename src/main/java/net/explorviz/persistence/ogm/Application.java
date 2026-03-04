@@ -1,17 +1,12 @@
 package net.explorviz.persistence.ogm;
 
-import java.util.List;
-import java.util.stream.Stream;
-import net.explorviz.persistence.api.model.TypeOfAnalysis;
-import net.explorviz.persistence.api.model.landscape.CityDto;
-import net.explorviz.persistence.api.model.landscape.VisualizationObject;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Application implements Visualizable {
+public class Application {
   @Id
   @GeneratedValue
   private Long id;
@@ -43,16 +38,5 @@ public class Application implements Visualizable {
 
   public String getName() {
     return name;
-  }
-
-  @Override
-  public VisualizationObject toVisualizationObject() {
-    return new CityDto(id.toString(), name, TypeOfAnalysis.DYNAMIC,
-        List.of(rootDirectory.getId().toString()), List.of());
-  }
-
-  @Override
-  public Stream<Visualizable> getVisualizableChildren() {
-    return Stream.of(rootDirectory);
   }
 }
