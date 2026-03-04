@@ -86,14 +86,15 @@ public class SpanDataServiceImpl implements SpanDataService {
 
     if (commitId != null) {
       function =
-          functionRepository.getOrCreateFunction(session, splitFqn, spanData.getLandscapeTokenId(),
-              commitId, spanData.getApplicationName());
+          functionRepository.getOrCreateFunction(session, spanData.getApplicationName(), splitFqn,
+              commitId, spanData.getLandscapeTokenId());
       fileRevision = fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
               spanData.getApplicationName(), commitId, splitFileFqn, spanData.getLandscapeTokenId())
           .orElse(null);
     } else {
       function =
-          functionRepository.getOrCreateFunction(session, splitFqn, spanData.getLandscapeTokenId());
+          functionRepository.getOrCreateFunction(session, spanData.getApplicationName(), splitFqn,
+              spanData.getLandscapeTokenId());
     }
     span.setFunction(function);
 
