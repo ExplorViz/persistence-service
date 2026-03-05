@@ -19,7 +19,6 @@ import net.explorviz.persistence.proto.SpanData;
 import net.explorviz.persistence.proto.SpanDataService;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.CommitRepository;
-import net.explorviz.persistence.repository.DirectoryRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
@@ -52,9 +51,6 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   @Inject
   private SpanRepository spanRepository;
-
-  @Inject
-  private DirectoryRepository directoryRepository;
 
   @Inject
   private TraceRepository traceRepository;
