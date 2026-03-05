@@ -32,17 +32,32 @@ public class ClazzRepository {
         clazzName)));
   }
 
-  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzName(final Session session,
-      final String tokenId, final String repoName, final String clazzName) {
+  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzFqn(final Session session,
+      final String tokenId, final String repoName, final String[] splitFqn, final String fileExt) {
+    final String clazzName = splitFqn[splitFqn.length - 1];
+    final String fileName = clazzName + fileExt;
+    String[] fullFqn = new String[splitFqn.length + 1];
+    System.arraycopy(splitFqn, 0, fullFqn, 0, splitFqn.length - 1);
+    fullFqn[splitFqn.length - 1] = fileName;
+    fullFqn[splitFqn.length] = clazzName;
+
     return Optional.ofNullable(session.queryForObject(Clazz.class, """
         MATCH (:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(:Repository {name: $repoName})
+          -[:CONTAINS]->(r:Repository {name: $repoName})
           -[:CONTAINS]->(:Commit)
-          -[:CONTAINS]->(:FileRevision)
+          -[:CONTAINS]->(file:FileRevision {name: $fileName})
           -[:CONTAINS]->(cl:Clazz {name: $clazzName})
-        RETURN cl
-        LIMIT 1;
-        """, Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName)));
+        MATCH (r)-[:HAS_ROOT]->(root:Directory {name: $repoName})
+        WITH root, $pathSegments AS pathSegments
+        MATCH p = (root)-[:CONTAINS]->(:Directory)
+                  -[:CONTAINS]->*(file)
+                  -[:CONTAINS]->(cl)
+        WHERE
+        all(j IN range(1, length(p)-1) WHERE nodes(p)[j].name = pathSegments[j-1])
+          AND size(nodes(p))-1 = size(pathSegments)
+        RETURN cl;
+        """, Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", clazzName, "fileName",
+        fileName, "pathSegments", fullFqn)));
   }
 
   public Optional<Clazz> findClassFromInheritingClass(final Session session, final String tokenId,

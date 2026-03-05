@@ -6,6 +6,7 @@ import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
+import java.util.Map;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Field;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -15,6 +16,7 @@ import net.explorviz.persistence.proto.FieldData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.proto.FunctionData;
+import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
@@ -35,6 +37,11 @@ public class FileDataServiceImpl implements FileDataService {
 
   @Inject
   private SessionFactory sessionFactory;
+
+  // TODO: Mapping file extensions to Language values is not very good
+  private static final Map<Language, String> LANGUAGE_EXTENSION_MAP =
+      Map.of(Language.LANGUAGE_UNSPECIFIED, "", Language.JAVA, ".java", Language.JAVASCRIPT, ".js",
+          Language.TYPESCRIPT, ".ts", Language.PYTHON, ".py", Language.PLAINTEXT, ".txt");
 
   @Blocking
   @Override
@@ -122,12 +129,14 @@ public class FileDataServiceImpl implements FileDataService {
       clazz.addFunction(function);
     }
 
-    for (final String superName : classData.getSuperclassesList()) {
-      Clazz superClass = clazzRepository.findClassByLandscapeTokenAndRepositoryAndClazzName(session,
-          request.getLandscapeToken(), request.getRepositoryName(), superName).orElse(null);
+    for (final String superFqn : classData.getSuperclassesList()) {
+      final String[] splitFqn = superFqn.split("\\.");
+      Clazz superClass = clazzRepository.findClassByLandscapeTokenAndRepositoryAndClazzFqn(session,
+          request.getLandscapeToken(), request.getRepositoryName(), splitFqn,
+          LANGUAGE_EXTENSION_MAP.get(request.getLanguage())).orElse(null);
 
       if (superClass == null) {
-        superClass = new Clazz(superName);
+        superClass = new Clazz(splitFqn[splitFqn.length - 1]);
       }
 
       clazz.addSuperClass(superClass);

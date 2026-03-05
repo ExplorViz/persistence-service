@@ -164,15 +164,16 @@ class FileDataServiceTest {
   @Test
   void testPersistFileCorrectlyCreatesClazzNode() {
     String commitHash = "commit1";
-    String fileNameSuper = "Superclass.java";
+    String superclassName = "Class1";
+    String superclassFqn = "src." + superclassName;
+    String fileNameSuper = superclassName + ".java";
     String filePathSuper = "src/" + fileNameSuper;
-    String fileNameClass = "Class.java";
-    String filePathClass = "src/" + fileNameClass;
     String fileHashSuper = "1";
+    String className = "Class2";
+    String fileNameClass = className + ".java";
+    String filePathClass = "src/" + fileNameClass;
     String fileHashClass = "2";
-    String superclassName = "class1";
-    String innerclassName = "inner";
-    String className = "class2";
+    String innerclassName = "Inner";
     String fieldNameSuper = "field1";
     String fieldNameClass = "field2";
     String fieldType = "String";
@@ -222,7 +223,7 @@ class FileDataServiceTest {
 
     ClassData classData = ClassData.newBuilder().setName(className).setType(ClassType.CLASS)
         .addAllModifiers(List.of()).addAllImplementedInterfaces(List.of())
-        .addAllSuperclasses(List.of(superclassName)).addAllAnnotations(List.of())
+        .addAllSuperclasses(List.of(superclassFqn)).addAllAnnotations(List.of())
         .addAllFields(List.of(fieldDataClass)).addAllInnerClasses(List.of())
         .addAllFunctions(List.of()).addAllEnumValues(List.of()).build();
 
@@ -294,15 +295,16 @@ class FileDataServiceTest {
   @Test
   void testPersistFileInheringClazzBeforeSuperClazz() {
     String commitHash = "commit1";
-    String fileNameSuper = "Superclass.java";
+    String superclassName = "Class1";
+    String superclassFqn = "src." + superclassName;
+    String fileNameSuper = superclassName + ".java";
     String filePathSuper = "src/" + fileNameSuper;
-    String fileNameClass = "Class.java";
-    String filePathClass = "src/" + fileNameClass;
     String fileHashSuper = "1";
+    String className = "Class2";
+    String fileNameClass = className + ".java";
+    String filePathClass = "src/" + fileNameClass;
     String fileHashClass = "2";
-    String superclassName = "class1";
-    String innerclassName = "inner";
-    String className = "class2";
+    String innerclassName = "Inner";
     String fieldNameSuper = "field1";
     String fieldType = "String";
     String functionNameSuper = "superFunction";
@@ -347,7 +349,7 @@ class FileDataServiceTest {
 
     ClassData classData = ClassData.newBuilder().setName(className).setType(ClassType.CLASS)
         .addAllModifiers(List.of()).addAllImplementedInterfaces(List.of())
-        .addAllSuperclasses(List.of(superclassName)).addAllAnnotations(List.of())
+        .addAllSuperclasses(List.of(superclassFqn)).addAllAnnotations(List.of())
         .addAllFields(List.of()).addAllInnerClasses(List.of()).addAllFunctions(List.of())
         .addAllEnumValues(List.of()).build();
 
