@@ -1,5 +1,6 @@
 package net.explorviz.persistence.ogm;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import org.neo4j.ogm.annotation.Id;
@@ -10,6 +11,8 @@ import org.neo4j.ogm.annotation.Relationship;
 public class Landscape {
   @Id
   private String tokenId;
+
+  private long createdAt;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Trace> traces = new HashSet<>();
@@ -24,10 +27,12 @@ public class Landscape {
   public Landscape(final String tokenId, final Set<Trace> traces) {
     this.tokenId = tokenId;
     this.traces = traces;
+    this.createdAt = Instant.now().toEpochMilli();
   }
 
   public Landscape(final String tokenId) {
     this.tokenId = tokenId;
+    this.createdAt = Instant.now().toEpochMilli();
   }
 
   public void addTrace(final Trace trace) {
@@ -44,5 +49,9 @@ public class Landscape {
 
   public String getTokenId() {
     return this.tokenId;
+  }
+
+  public long getCreatedAt() {
+    return this.createdAt;
   }
 }

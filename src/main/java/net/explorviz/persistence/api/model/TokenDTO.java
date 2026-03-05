@@ -20,6 +20,10 @@ public class TokenDTO {
    */
   public String alias;
   /**
+   * Creation time as epoch milliseconds.
+   */
+  public long created;
+  /**
    * The IDs of users this token is shared with.
    */
   public List<String> sharedUsersIds = new ArrayList<>();
@@ -32,5 +36,13 @@ public class TokenDTO {
     this.value = value;
     this.ownerId = ownerId;
     this.alias = alias;
+  }
+
+  public TokenDTO(final String value, final String ownerId, final String alias,
+      final long created) {
+    this.value = value;
+    this.ownerId = ownerId;
+    this.alias = alias;
+    this.created = created;
   }
 }

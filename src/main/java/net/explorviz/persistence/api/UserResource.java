@@ -42,7 +42,8 @@ public class UserResource {
     final Collection<Landscape> landscapes = landscapeRepository.findAllLandscapes();
 
     return landscapes.stream()
-        .map(l -> new TokenDTO(l.getTokenId(), HARDCODED_OWNER_ID, l.getTokenId()))
+        .map(l -> new TokenDTO(
+            l.getTokenId(), HARDCODED_OWNER_ID, l.getTokenId(), l.getCreatedAt()))
         .collect(Collectors.toList());
   }
 }
