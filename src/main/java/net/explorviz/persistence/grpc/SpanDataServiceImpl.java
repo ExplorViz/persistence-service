@@ -19,6 +19,7 @@ import net.explorviz.persistence.proto.SpanData;
 import net.explorviz.persistence.proto.SpanDataService;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.CommitRepository;
+import net.explorviz.persistence.repository.DirectoryRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
@@ -53,10 +54,17 @@ public class SpanDataServiceImpl implements SpanDataService {
   private SpanRepository spanRepository;
 
   @Inject
+  private DirectoryRepository directoryRepository;
+
+  @Inject
   private TraceRepository traceRepository;
 
   @Inject
   private SessionFactory sessionFactory;
+
+
+  public record Pair<A, B>(A first, B second) {
+  }
 
   @Blocking
   @Override
@@ -85,16 +93,13 @@ public class SpanDataServiceImpl implements SpanDataService {
     FileRevision fileRevision = null;
 
     if (commitId != null) {
-      function =
-          functionRepository.getOrCreateFunction(session, spanData.getApplicationName(), splitFqn,
-              commitId, spanData.getLandscapeTokenId());
-      fileRevision = fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
-              spanData.getApplicationName(), commitId, splitFileFqn, spanData.getLandscapeTokenId())
-          .orElse(null);
+      final Pair<FileRevision, Function> result =
+          resolveSpanWithCommitId(session, spanData, splitFqn, splitFileFqn, landscape);
+      fileRevision = result.first();
+      function = result.second();
     } else {
-      function =
-          functionRepository.getOrCreateFunction(session, spanData.getApplicationName(), splitFqn,
-              spanData.getLandscapeTokenId());
+      function = functionRepository.findFunction(session, spanData.getApplicationName(), splitFqn,
+          spanData.getLandscapeTokenId()).orElse(new Function(splitFqn[splitFqn.length - 1]));
     }
     span.setFunction(function);
 
@@ -117,13 +122,40 @@ public class SpanDataServiceImpl implements SpanDataService {
     return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
+  private Pair<FileRevision, Function> resolveSpanWithCommitId(final Session session,
+      final SpanData spanData, final String[] splitFqn, final String[] splitFileFqn,
+      final Landscape landscape) {
+    FileRevision fileRevision;
+    Function function =
+        functionRepository.findFunction(session, spanData.getApplicationName(), splitFqn,
+            spanData.getCommitId(), spanData.getLandscapeTokenId()).orElse(null);
+
+    if (function != null) {
+      fileRevision = fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
+          spanData.getApplicationName(), spanData.getCommitId(), splitFileFqn,
+          spanData.getLandscapeTokenId()).orElse(null);
+    } else {
+      fileRevision = fileRevisionRepository.findFileRevisionFromAppNameAndPathWithoutCommit(session,
+          spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId()).orElse(null);
+
+      if (fileRevision == null) {
+        fileRevision = resolveFileRevision(session, spanData, landscape, splitFileFqn);
+      }
+
+      function = new Function(splitFqn[splitFqn.length - 1]);
+    }
+
+    return new Pair<>(fileRevision, function);
+  }
+
   private FileRevision resolveFileRevision(final Session session, final SpanData spanData,
       final Landscape landscape, final String[] splitFileFqn) {
     FileRevision fileRevision;
 
     final Application application =
-        applicationRepository.getOrCreateApplication(session, spanData.getApplicationName(),
-            spanData.getLandscapeTokenId());
+        applicationRepository.findApplicationByNameAndLandscapeToken(session,
+                spanData.getApplicationName(), spanData.getLandscapeTokenId())
+            .orElse(new Application(spanData.getApplicationName()));
 
     if (application.getRootDirectory() == null) {
       // Application did not previously exist, build file structure from scratch

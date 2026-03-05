@@ -205,7 +205,7 @@ public class FileRevisionRepository {
     return Optional.ofNullable(session.queryForObject(FileRevision.class, """
             MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
                   <-[:HAS_ROOT]-(:Application {name: $appName})
-            OPTIONAL MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
+            MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               length(p) = size($pathSegments) AND
               all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
@@ -215,6 +215,24 @@ public class FileRevisionRepository {
             RETURN file;""",
         Map.of("tokenId", landscapeToken, "appName", applicationName, "pathSegments", pathSegments,
             "commitHash", commitHash)));
+  }
+
+  public Optional<FileRevision> findFileRevisionFromAppNameAndPathWithoutCommit(
+      final Session session, final String applicationName, final String[] pathSegments,
+      final String landscapeToken) {
+    return Optional.ofNullable(session.queryForObject(FileRevision.class, """
+            MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
+                  <-[:HAS_ROOT]-(:Application {name: $appName})
+            MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
+            WHERE
+              length(p) = size($pathSegments) AND
+              all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
+              NOT EXISTS {
+                (:Commit)-[:CONTAINS]->(file)
+              }
+            RETURN file;""",
+        Map.of("tokenId", landscapeToken, "appName", applicationName, "pathSegments",
+            pathSegments)));
   }
 
   /**

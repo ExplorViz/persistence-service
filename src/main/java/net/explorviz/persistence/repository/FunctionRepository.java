@@ -96,15 +96,15 @@ public class FunctionRepository {
     return filePathToFunctionMap;
   }
 
-  public Function getOrCreateFunction(final Session session, final String applicationName,
+  public Optional<Function> findFunction(final Session session, final String applicationName,
       final String[] fqn, final String landscapeToken) {
     return findFunctionByApplicationNameAndFqnAndLandscapeToken(session, applicationName, fqn,
-        landscapeToken).orElse(new Function(fqn[fqn.length - 1]));
+        landscapeToken);
   }
 
-  public Function getOrCreateFunction(final Session session, final String applicationName,
+  public Optional<Function> findFunction(final Session session, final String applicationName,
       final String[] fqn, final String commitHash, final String landscapeToken) {
     return findFunctionByApplicationNameAndFqnAndCommitHashAndLandscapeToken(session,
-        applicationName, fqn, commitHash, landscapeToken).orElse(new Function(fqn[fqn.length - 1]));
+        applicationName, fqn, commitHash, landscapeToken);
   }
 }
