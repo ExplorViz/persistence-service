@@ -440,6 +440,7 @@ class SpanDataServiceTest {
       session.save(List.of(landscape, application));
     }
 
+    // TODO: Replace old file name with commented after correct file extension handling is integrated
     @BeforeEach
     void init() {
       baseRepoName = "myrepo";
@@ -447,6 +448,7 @@ class SpanDataServiceTest {
       baseCommitHash = "commit1";
       baseDirNames = List.of("net", "explorviz", baseAppName);
       baseFileName = "MyClass";
+      // baseFileName = "MyClass.java";
       baseFileHash = "1";
       baseFunctionName = "myMethod";
 
@@ -547,17 +549,95 @@ class SpanDataServiceTest {
           MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
           RETURN commit;""", params);
 
-      Integer functionCount = session.queryForObject(Integer.class,"""
+      Result result = session.query("""
           RETURN
-            COUNT {(:Function)} AS function""", params);
+            COUNT {(:Function)} AS function,
+            COUNT {(:Directory)} AS directories""", params);
 
-      assertEquals(1, functionCount);
+      Map<String, Object> countMap = result.queryResults().iterator().next();
+      assertEquals(1, (Long) countMap.get("function"));
+      assertEquals(4, (Long) countMap.get("directories"));
       assertNotNull(foundCommit);
     }
 
     @Test
-    void testPersistSpanMultipleFunctionsFromOneFileRevisionWithDifferentCommitIds() {
+    void testPersistSpanWithCommitIdForNonExistingFile() {
+      String unknownFunctionName = "unknownFunction";
+      String unknownFileName = "unknownFile";
+      List<String> functionFqn = new ArrayList<>(baseDirNames);
+      Collections.addAll(functionFqn, baseFileName, unknownFunctionName);
+      List<String> functionFqnTwo = new ArrayList<>(baseDirNames);
+      Collections.addAll(functionFqnTwo, unknownFileName, baseFunctionName);
 
+      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
+          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
+          .setFunctionFqn(String.join(".", functionFqn)).setStartTime(1).setEndTime(5)
+          .setCommitId(baseCommitHash).build();
+
+      SpanData testSpanDataTwo = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
+          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
+          .setFunctionFqn(String.join(".", functionFqnTwo)).setStartTime(1).setEndTime(5)
+          .setCommitId(baseCommitHash).build();
+
+      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
+      assertNotNull(reply);
+      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
+      assertNotNull(reply);
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("landscapeToken", landscapeToken);
+      params.put("appName", baseAppName);
+      params.put("traceId", baseTraceId);
+      params.put("spanId", baseSpanId);
+      params.put("dirOne", functionFqn.get(0));
+      params.put("dirTwo", functionFqn.get(1));
+      params.put("dirThree", functionFqn.get(2));
+      params.put("fileName", baseFileName);
+      params.put("fileHash", baseFileHash);
+      params.put("funName", baseFunctionName);
+      params.put("commitHash", baseCommitHash);
+      params.put("unknownFunName", unknownFunctionName);
+      params.put("unknownFileName", unknownFileName);
+
+      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+          RETURN EXISTS {
+          MATCH (:Application {name: $appName})
+                -[:HAS_ROOT]->(:Directory)
+                -[:CONTAINS]->(:Directory {name: $dirOne})
+                -[:CONTAINS]->(:Directory {name: $dirTwo})
+                -[:CONTAINS]->(dir:Directory {name: $dirThree})
+                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                -[:CONTAINS]->(fun1:Function {name: $funName})
+          MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+          
+          MATCH (dir)-[:CONTAINS]->(file2:FileRevision {name: $fileName})
+                <-[:REPRESENTS]-(span:Span {spanId: $spanId})
+                <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+          MATCH (file2)-[:CONTAINS]->(fun2:Function {name: $unknownFunName})
+          
+          MATCH (dir)-[:CONTAINS]->(file3:FileRevision {name: $unknownFileName})
+                <-[:REPRESENTS]-(span)
+          MATCH (file3)-[:CONTAINS]->(fun3:Function {name: $funName})
+          
+          WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file2) }
+            AND NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file3) }
+            AND fun1 <> fun2
+            AND fun1 <> fun3
+            AND fun2 <> fun3
+            AND file2.hash IS NULL
+            AND file <> file2
+          } as exists;""", params);
+
+      Result result = session.query("""
+          RETURN
+            COUNT {(:Function)} AS functions,
+            COUNT {(:FileRevision)} AS files""", params);
+
+      assertNotNull(databaseIsCorrect);
+      Map<String, Object> countMap = result.queryResults().iterator().next();
+      assertEquals(3, (Long) countMap.get("functions"));
+      assertEquals(3, (Long) countMap.get("files"));
     }
   }
 
