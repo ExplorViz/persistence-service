@@ -22,6 +22,7 @@ public class FunctionRepository {
       WHERE
         (appRoot)-[:CONTAINS]->(fqnRoot) AND
         (file)-[:CONTAINS]->(func) AND
+        NOT (:Commit)-[:CONTAINS]->(file) AND
         all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
         size(nodes(p)) = size($pathSegments)
       RETURN func;""";
