@@ -24,6 +24,7 @@ import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.SpanRepository;
 import net.explorviz.persistence.repository.TraceRepository;
+import net.explorviz.persistence.util.Pair;
 import org.jboss.logging.Logger;
 import org.jboss.logging.Logger.Level;
 import org.neo4j.ogm.session.Session;
@@ -58,13 +59,10 @@ public class SpanDataServiceImpl implements SpanDataService {
   @Inject
   private SessionFactory sessionFactory;
 
-
-  public record Pair<A, B>(A first, B second) {
-  }
-
   @Blocking
   @Override
   public Uni<Empty> persistSpan(final SpanData spanData) {
+
     final String[] splitFqn = spanData.getFunctionFqn().split("\\.");
     final String[] splitFileFqn = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
     final String commitId = spanData.hasCommitId() ? spanData.getCommitId() : null;
@@ -85,7 +83,7 @@ public class SpanDataServiceImpl implements SpanDataService {
         landscapeRepository.getOrCreateLandscape(session, spanData.getLandscapeTokenId());
     landscape.addTrace(trace);
 
-    Function function;
+    final Function function;
     FileRevision fileRevision = null;
 
     if (commitId != null) {
@@ -146,7 +144,7 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   private FileRevision resolveFileRevision(final Session session, final SpanData spanData,
       final Landscape landscape, final String[] splitFileFqn) {
-    FileRevision fileRevision;
+    final FileRevision fileRevision;
 
     final Application application =
         applicationRepository.findApplicationByNameAndLandscapeToken(session,
