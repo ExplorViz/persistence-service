@@ -19,10 +19,10 @@ services:
 
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  NEO4J_AUTH: none
-  NEO4J_db_query_default__language: CYPHER_25
-  NEO4J_PLUGINS: ["apoc", "apoc-extended"]
-  NEO4J_dbms_usage__report_enabled: false
+  NEO4J_AUTH: "none"
+  NEO4J_db_query_default__language: "CYPHER_25"
+  NEO4J_PLUGINS: '["apoc", "apoc-extended"]'
+  NEO4J_dbms_usage__report_enabled: "false"
 
 workflow:
   rules:
