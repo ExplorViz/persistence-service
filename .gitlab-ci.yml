@@ -13,10 +13,6 @@ default:
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
 
-services:
-  - name: neo4j:2025.10.1
-    alias: neo4j
-
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
   NEO4J_AUTH: "none"
@@ -58,22 +54,24 @@ checkstyle:
     paths:
       - build
 
-unit-test:
+.db-test:
   stage: test
-  script:
-    - ./gradlew test -Dquarkus.test.profile=ci
+  services:
+    - name: neo4j:2025.10.1
+      alias: neo4j
   artifacts:
     paths:
       - build
 
+unit-test:
+  extends: .db-test
+  script:
+    - ./gradlew test -Dquarkus.test.profile=ci
+
 integration-test:
-  stage: test
+  extends: .db-test
   script:
     - ./gradlew integrationTest
-  allow_failure: true
-  artifacts:
-    paths:
-      - build
 
 push-dockerhub-native-mr:
   extends: .build-and-deploy-quarkus-native
