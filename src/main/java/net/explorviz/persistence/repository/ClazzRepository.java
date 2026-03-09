@@ -17,6 +17,30 @@ public class ClazzRepository {
   @Inject
   private SessionFactory sessionFactory;
 
+  public Optional<Clazz> findClassDynamicData(final Session session, final String landscapeToken,
+      final String applicationName, final String[] filePathSegments,
+      final String classNameSegments) {
+    return Optional.ofNullable(session.queryForObject(Clazz.class, """
+        MATCH (:Landscape {tokenId: $tokenId})--*(app:Application {name: $appName})
+        MATCH (app)-[:HAS_ROOT]->(appRoot:Directory)
+        MATCH p = (pathRoot:Directory|FileRevision)-[:CONTAINS]->*(file:FileRevision)
+        WHERE
+          (appRoot)-[:CONTAINS]->(pathRoot) AND
+          NOT (:Commit)-[:CONTAINS]->(file)) AND
+          all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $filePathSegments[j]) AND
+          size(nodes(p)) = size($filePathSegments)
+        MATCH p = (:Clazz)-[:CONTAINS]->*(class:Clazz)
+        WHERE
+          (file)-[:CONTAINS]->(class) AND
+          all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $classNameSegments[j]) AND
+          size(nodes(p)) = size($classNameSegments)
+        OPTIONAL MATCH (class)-[r]->(other)
+        RETURN DISTINCT class, r, other;
+        """, Map.of("tokenId", landscapeToken, "appName", applicationName, "filePathSegments",
+        filePathSegments, "classNameSegments", classNameSegments)));
+  }
+
+
   public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(
       final Session session, final String tokenId, final String repoName, final String fileHash,
       final String clazzName) {
