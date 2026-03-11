@@ -1,11 +1,11 @@
-package net.explorviz.persistence.api.model.landscape;
+package net.explorviz.persistence.api.v3.model.landscape;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Objects;
-import net.explorviz.persistence.api.model.CommitComparison;
-import net.explorviz.persistence.api.model.TypeOfAnalysis;
+import net.explorviz.persistence.api.v3.model.CommitComparison;
+import net.explorviz.persistence.api.v3.model.TypeOfAnalysis;
 
 /**
  * Contains base attributes shared by all visualization objects in the flat landscape model.

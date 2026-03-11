@@ -1,4 +1,4 @@
-package net.explorviz.persistence.api;
+package net.explorviz.persistence.api.v3;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;

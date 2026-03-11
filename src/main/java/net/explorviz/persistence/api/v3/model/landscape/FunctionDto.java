@@ -1,4 +1,4 @@
-package net.explorviz.persistence.api.model.landscape;
+package net.explorviz.persistence.api.v3.model.landscape;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.quarkus.runtime.annotations.RegisterForReflection;

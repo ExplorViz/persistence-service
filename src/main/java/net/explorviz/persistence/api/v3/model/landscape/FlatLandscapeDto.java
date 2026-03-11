@@ -1,4 +1,4 @@
-package net.explorviz.persistence.api.model.landscape;
+package net.explorviz.persistence.api.v3.model.landscape;
 
 import java.util.Map;
 import java.util.Objects;

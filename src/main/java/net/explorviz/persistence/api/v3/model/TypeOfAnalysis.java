@@ -1,4 +1,4 @@
-package net.explorviz.persistence.api.model;
+package net.explorviz.persistence.api.v3.model;
 
 public enum TypeOfAnalysis {
   DYNAMIC("dynamic"),
