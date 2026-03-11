@@ -9,7 +9,7 @@ public record ClazzDto(
     List<FunctionDto> methods // Naming due to compatibility with v2 API
 ) {
   public ClazzDto(final FileRevision ogmFile, final int level) {
-    this(ogmFile.getName(), level + 1,
+    this(ogmFile.getName(), level,
         ogmFile.getFunctions().stream().map(FunctionDto::new).toList());
   }
 }
