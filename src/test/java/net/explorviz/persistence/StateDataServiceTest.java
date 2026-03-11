@@ -1,8 +1,8 @@
 package net.explorviz.persistence;
 
+import static net.explorviz.persistence.util.TestUtils.assertNodeCounts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.Timestamp;
@@ -27,6 +27,7 @@ import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.StateData;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
+import net.explorviz.persistence.util.ExpectedCounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.neo4j.ogm.session.Session;
@@ -114,6 +115,9 @@ class StateDataServiceTest {
     assertNotNull(rootDirectory);
     assertNotNull(application);
     assertNotNull(branch);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).applications(1)
+            .directories(1).build());
   }
 
   @Test
@@ -155,6 +159,9 @@ class StateDataServiceTest {
     assertEquals("", stateData.getCommitId());
     assertNotNull(applicationOne);
     assertNotNull(applicationTwo);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).applications(2)
+            .directories(5).build());
   }
 
   @Test
@@ -239,6 +246,9 @@ class StateDataServiceTest {
     assertNotNull(rootDirectory);
     assertNotNull(application);
     assertNotNull(branch);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).applications(1)
+            .directories(2).files(1).commits(1).build());
   }
 
   @Test
@@ -291,5 +301,8 @@ class StateDataServiceTest {
     assertEquals("", stateData.getCommitId());
     assertEquals("", stateDataTwo.getCommitId());
     assertTrue(databaseIsCorrect);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(2).branches(2).applications(2)
+            .directories(2).build());
   }
 }

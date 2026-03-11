@@ -1,5 +1,6 @@
 package net.explorviz.persistence;
 
+import static net.explorviz.persistence.util.TestUtils.assertNodeCounts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +29,7 @@ import net.explorviz.persistence.proto.FileIdentifier;
 import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
+import net.explorviz.persistence.util.ExpectedCounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.neo4j.ogm.model.Result;
@@ -150,6 +152,9 @@ class CommitServiceTest {
     assertEquals(fileNameOne, it.next().getName());
     assertEquals(fileNameTwo, it.next().getName());
     assertTrue(correctRepoPath);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).directories(2).files(2)
+            .commits(1).tags(1).build());
   }
 
   @Test
@@ -190,6 +195,9 @@ class CommitServiceTest {
         commitHashOne, "commitHashTwo", commitHashTwo));
 
     assertTrue(correctDatabase);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).directories(1).commits(2)
+            .build());
   }
 
   @Test
@@ -297,6 +305,9 @@ class CommitServiceTest {
 
     assertEquals(13, dbSize);
     assertTrue(databaseIsCorrect);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).directories(2).files(5)
+            .commits(2).tags(1).build());
   }
 
   @Test
@@ -317,6 +328,5 @@ class CommitServiceTest {
     assertEquals(Status.FAILED_PRECONDITION.getCode(), ex.getStatus().getCode());
 
     assertEquals("No corresponding state data was sent before.", ex.getStatus().getDescription());
-
   }
 }

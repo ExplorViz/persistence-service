@@ -1,5 +1,6 @@
 package net.explorviz.persistence;
 
+import static net.explorviz.persistence.util.TestUtils.assertNodeCounts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,6 +30,7 @@ import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.ParameterData;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
+import net.explorviz.persistence.util.ExpectedCounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.neo4j.ogm.session.Session;
@@ -109,7 +111,6 @@ class FileDataServiceTest {
     for (String k : file.getMetrics().keySet()) {
       assertEquals(testMap.get(k), file.getMetrics().get(k));
     }
-
   }
 
   @Test
@@ -159,6 +160,9 @@ class FileDataServiceTest {
     files.forEach(fileList::add);
 
     assertEquals(2, fileList.size());
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).directories(3).files(2)
+            .commits(1).build());
   }
 
   @Test
@@ -290,10 +294,13 @@ class FileDataServiceTest {
         """, params);
 
     assertTrue(databaseIsCorrect);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).directories(2).files(2)
+            .commits(1).classes(3).fields(2).functions(1).build());
   }
 
   @Test
-  void testPersistFileInheringClazzBeforeSuperClazz() {
+  void testPersistFileInheritingClazzBeforeSuperClazz() {
     String commitHash = "commit1";
     String superclassName = "Class1";
     String superclassFqn = "src." + superclassName;
@@ -408,6 +415,9 @@ class FileDataServiceTest {
         """, params);
 
     assertTrue(databaseIsCorrect);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).directories(2).files(2)
+            .commits(1).classes(3).fields(1).functions(1).build());
   }
 
   @Test
@@ -473,10 +483,8 @@ class FileDataServiceTest {
             .addAllFunctions(List.of(functionDataTwo)).setLastEditor("Testi").setAddedLines(24)
             .setModifiedLines(0).setDeletedLines(0).build();
 
-    fileDataService.persistFile(fileDataOne).await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-    fileDataService.persistFile(fileDataTwo).await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    fileDataService.persistFile(fileDataOne).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+    fileDataService.persistFile(fileDataTwo).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     Map<String, Object> params = new HashMap<>();
     params.put("landscapeToken", landscapeToken);
@@ -518,6 +526,9 @@ class FileDataServiceTest {
         """, params);
 
     assertTrue(databaseIsCorrect);
+    assertNodeCounts(session,
+        ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).directories(2).files(2)
+            .commits(1).parameters(3).functions(2).build());
   }
 
   @Test

@@ -13,21 +13,12 @@ default:
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
 
-# DinD service is required for Testcontainers
-services:
-  - name: docker:dind
-    # explicitly disable tls to avoid docker startup interruption
-    command: ["--tls=false"]
-
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  # Instruct Testcontainers to use the daemon of DinD, use port 2375 for non-tls connections.
-  DOCKER_HOST: "tcp://docker:2375"
-  # Instruct Docker not to start over TLS.
-  DOCKER_TLS_CERTDIR: ""
-  # Improve performance with overlayfs.
-  DOCKER_DRIVER: overlay2
-  TESTCONTAINERS_HOST_OVERRIDE: docker
+  NEO4J_AUTH: "none"
+  NEO4J_db_query_default__language: "CYPHER_25"
+  NEO4J_PLUGINS: '["apoc", "apoc-extended"]'
+  NEO4J_dbms_usage__report_enabled: "false"
 
 workflow:
   rules:
@@ -63,22 +54,24 @@ checkstyle:
     paths:
       - build
 
-unit-test:
+.db-test:
   stage: test
-  script:
-    - ./gradlew test
+  services:
+    - name: neo4j:2025.10.1
+      alias: neo4j
   artifacts:
     paths:
       - build
 
+unit-test:
+  extends: .db-test
+  script:
+    - ./gradlew test -Dquarkus.test.profile=ci
+
 integration-test:
-  stage: test
+  extends: .db-test
   script:
     - ./gradlew integrationTest
-  allow_failure: true
-  artifacts:
-    paths:
-      - build
 
 push-dockerhub-native-mr:
   extends: .build-and-deploy-quarkus-native
