@@ -2,7 +2,7 @@ package net.explorviz.persistence.api;
 
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.POST;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import java.util.List;
 import net.explorviz.persistence.ogm.Application;
@@ -25,7 +25,7 @@ class ExampleDataResource {
   @Inject
   private SessionFactory sessionFactory;
 
-  @POST
+  @GET
   @Path("/repo")
   public void createTestingRepository() {
     final Branch branch1 = new Branch("main");
@@ -109,7 +109,7 @@ class ExampleDataResource {
     session.save(List.of(landscape, application));
   }
 
-  @POST
+  @GET
   @Path("/purge")
   public void purgeDatabase() {
     final Session session = sessionFactory.openSession();
