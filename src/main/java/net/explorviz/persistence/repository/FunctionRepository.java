@@ -1,16 +1,23 @@
 package net.explorviz.persistence.repository;
 
+import com.google.common.collect.ObjectArrays;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
+import jakarta.inject.Inject;
+import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 
 @ApplicationScoped
 public class FunctionRepository {
+
+  @Inject
+  private FileRevisionRepository fileRevisionRepository;
 
   private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT = """
       MATCH (:Landscape {tokenId: $tokenId})
@@ -63,6 +70,34 @@ public class FunctionRepository {
             applicationName)));
   }
 
+  public Optional<Function> findFunctionByApplicationNameAndFqnAndLandscapeTokenAndClassPath(
+      final Session session, final String applicationName, final String[] fqn,
+      final String landscapeToken, final String[] classPath) {
+
+    FileRevision fileRevision =
+        fileRevisionRepository.findFileRevisionFromAppNameAndPathWithoutCommit(session,
+            applicationName, Arrays.copyOf(fqn, fqn.length - 1), landscapeToken).orElse(null);
+
+    if (fileRevision == null) {
+      return Optional.empty();
+    }
+
+    return Optional.ofNullable(session.queryForObject(Function.class, """
+        MATCH (file:FileRevision)
+        WHERE id(file) = $fileId
+        
+        MATCH p = (file)-[:CONTAINS]->(:Clazz)
+                  -[:CONTAINS]->*(:Clazz)
+                  -[:CONTAINS]->(func:Function)
+        WHERE
+        all(j IN range(0, length(p)) WHERE nodes(p)[j+1].name = $pathSegments[j]) AND
+        size(nodes(p))-1 = size($pathSegments)
+        
+        RETURN func;
+        """, Map.of("fileId", fileRevision.getId(), "pathSegments",
+        ObjectArrays.concat(classPath, fqn[fqn.length - 1]))));
+  }
+
   /**
    * Retrieve all Functions from static analysis along with their fully-qualified names for a given
    * application at a particular commit.
@@ -101,6 +136,12 @@ public class FunctionRepository {
       final String[] fqn, final String landscapeToken) {
     return findFunctionByApplicationNameAndFqnAndLandscapeToken(session, applicationName, fqn,
         landscapeToken);
+  }
+
+  public Optional<Function> findFunction(final Session session, final String applicationName,
+      final String[] fqn, final String landscapeToken, String[] classPath) {
+    return findFunctionByApplicationNameAndFqnAndLandscapeTokenAndClassPath(session,
+        applicationName, fqn, landscapeToken, classPath);
   }
 
   public Optional<Function> findFunction(final Session session, final String applicationName,
