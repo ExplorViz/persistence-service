@@ -47,11 +47,17 @@ tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
 }
 
-tasks.register<Copy>("registerPreCommitHook") {
-    from("code-analysis/pre-commit")
-    into(".git/hooks")
-}
+fun registerGitHook(taskName: String, hookFile: String, targetHook: String) =
+    tasks.register<Copy>(taskName) {
+        from("code-analysis/$hookFile")
+        into(".git/hooks")
+        rename { "$targetHook" }
+    }
+
+registerGitHook("registerPreCommitHook", "pre-commit", "pre-commit")
+registerGitHook("registerPreMergeCommitHook", "pre-commit", "pre-merge-commit")
 
 tasks.named("quarkusGenerateCode") {
     dependsOn("registerPreCommitHook")
+    dependsOn("registerPreMergeCommitHook")
 }
