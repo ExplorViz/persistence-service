@@ -21,4 +21,15 @@ public record FunctionDto(@JsonUnwrapped FlatBaseModel flatBaseModel, String par
     Objects.requireNonNull(parentId);
     Objects.requireNonNull(metrics);
   }
+
+  /**
+   * Must be implemented by any object which can be represented as a function during flattening.
+   */
+  public interface FunctionConvertible {
+    String getId();
+
+    String getName();
+
+    Map<String, Double> getMetrics();
+  }
 }

@@ -123,6 +123,10 @@ public class Clazz {
     return functions;
   }
 
+  public Set<Clazz> getInnerClasses() {
+    return innerClasses;
+  }
+
   public void setType(final ClassType type) {
     this.type = type;
   }

@@ -8,10 +8,9 @@ import java.util.Objects;
  * specific landscape under some condition, i.e. for some particular git commit or containing only
  * dynamic data from a particular timestamp.
  * 
- * <p>Uses a flat data model, meaning that visualization
- * objects do not contain their children directly (leading to deeply nested objects), instead
- * referencing them only via their ID. The lookup can then be performed using the maps provided by
- * this object.
+ * <p>Uses a flat data model, meaning that visualization objects do not contain their children
+ * directly (leading to deeply nested objects), instead referencing them only via their ID. The
+ * lookup can then be performed using the maps provided by this object.
  *
  * @param landscapeToken String identifier of the visualization landscape
  * @param cities         All city model objects in the landscape, indexed by their ID

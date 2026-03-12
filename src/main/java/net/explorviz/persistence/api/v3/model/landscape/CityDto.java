@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
+import net.explorviz.persistence.api.v3.model.landscape.BuildingDto.BuildingConvertible;
+import net.explorviz.persistence.api.v3.model.landscape.DistrictDto.DistrictConvertible;
 
 /**
  * Outermost grouping container for all objects which are visualized inside a landscape. Cities
@@ -34,5 +37,18 @@ public record CityDto(@JsonUnwrapped FlatBaseModel flatBaseModel, List<String> d
     Objects.requireNonNull(buildingIds);
     Objects.requireNonNull(allContainedDistrictIds);
     Objects.requireNonNull(allContainedBuildingIds);
+  }
+
+  /**
+   * Must be implemented by any object which can be represented as a city during flattening.
+   */
+  public interface CityConvertible {
+    String getId();
+
+    String getName();
+
+    Stream<DistrictConvertible> getDistricts();
+
+    Stream<BuildingConvertible> getBuildings();
   }
 }
