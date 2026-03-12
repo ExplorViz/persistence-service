@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
@@ -151,17 +150,21 @@ class CodeResource {
   }
 
   @GET
-  @Path("/structure/{landscapeToken}/{applicationName}/{commitHash1}-{commitHash2}")
+  @Path("/structure/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}")
   @Produces(MediaType.APPLICATION_JSON)
   public LandscapeDto getStaticStructureForApplicationAndTwoCommits(
       @RestPath final String landscapeToken, @RestPath final String applicationName,
-      @RestPath final String commitHash1, @RestPath final String commitHash2) {
+      @RestPath final String firstCommitHash, @RestPath final String secondCommitHash) {
     final Session session = sessionFactory.openSession();
-    final Optional<Application> applicationsForCommitsOptional =
-        applicationRepository.fetchApplicationHydratedForTwoCommits(session, applicationName,
-            commitHash1, commitHash2, landscapeToken);
+
+    final List<Application> applications =
+        applicationRepository.fetchApplicationsHydratedForTwoCommits(session, landscapeToken,
+            firstCommitHash, secondCommitHash);
+
     final List<ApplicationDto> applicationDtoList =
-        applicationsForCommitsOptional.map(a -> List.of(new ApplicationDto(a))).orElse(List.of());
+        applications.stream().filter(a -> applicationName.equals(a.getName()))
+            .map(ApplicationDto::new).toList();
+
     final NodeDto node = new NodeDto("", "", applicationDtoList);
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
   }

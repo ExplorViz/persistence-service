@@ -35,10 +35,7 @@ class LandscapeResource {
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public LandscapeDto getLatestCommit(@RestPath final String landscapeToken,
-      @RestPath final String repositoryName,
-      @RestPath final String appName,
-      @RestPath final String commitHash) {
+  public LandscapeDto getStructureData(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
 
     final List<Application> ogmApps =
