@@ -97,7 +97,7 @@ class FileRevisionRepositoryTest {
     Landscape landscape = new Landscape(token);
     Directory dir = new Directory(repoName);
     Repository repo = new Repository(repoName);
-    repo.addRootDirectory(dir);
+    repo.setRootDirectory(dir);
     Commit commit = new Commit(commitHash);
     repo.addCommit(commit);
     landscape.addRepository(repo);
@@ -132,7 +132,7 @@ class FileRevisionRepositoryTest {
     Landscape landscape = new Landscape(token);
     Directory dir = new Directory(repoName);
     Repository repo = new Repository(repoName);
-    repo.addRootDirectory(dir);
+    repo.setRootDirectory(dir);
     Commit commit = new Commit(commitHash);
     repo.addCommit(commit);
     landscape.addRepository(repo);

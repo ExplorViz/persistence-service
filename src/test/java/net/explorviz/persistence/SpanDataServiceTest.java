@@ -487,7 +487,7 @@ class SpanDataServiceTest {
       application.setRootDirectory(new Directory(baseRepoName));
 
       Directory currentDir = application.getRootDirectory();
-      repository.addRootDirectory(currentDir);
+      repository.setRootDirectory(currentDir);
       for (String dirName : baseDirNames) {
         Directory newDir = new Directory(dirName);
         currentDir.addSubdirectory(newDir);

@@ -67,7 +67,7 @@ public class StateDataServiceImpl implements StateDataService {
 
     if (repository.getRootDirectory() == null) {
       final Directory repoRootDirectory = new Directory(request.getRepositoryName());
-      repository.addRootDirectory(repoRootDirectory);
+      repository.setRootDirectory(repoRootDirectory);
     }
 
     session.save(List.of(repository, landscape));
