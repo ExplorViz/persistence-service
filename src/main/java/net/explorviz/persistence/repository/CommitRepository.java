@@ -31,8 +31,8 @@ public class CommitRepository {
    * Find latest commit for which we have seen a CommitData message and also a FileData message for
    * every file included in the commit.
    */
-  public Optional<Commit> findLatestFullyPersistedCommit(
-      final Session session, final String repoName, final String tokenId, final String branchName) {
+  public Optional<Commit> findLatestFullyPersistedCommit(final Session session,
+      final String repoName, final String tokenId, final String branchName) {
     return Optional.ofNullable(session.queryForObject(Commit.class, """
         MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
@@ -77,6 +77,16 @@ public class CommitRepository {
         OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
         RETURN DISTINCT c, r, b, h;
         """, Map.of("tokenId", landscapeToken, "appName", applicationName)));
+  }
+
+  public Optional<Commit> findCommitByFileRevisionId(final Session session,
+      final String fileRevisionId) {
+    return Optional.ofNullable(session.queryForObject(Commit.class, """
+        MATCH (file:FileRevision)
+        WHERE id(file)=$fileId
+        MATCH (file)<-[:CONTAINS]-(c:Commit)
+        RETURN c;
+        """, Map.of("fileId", fileRevisionId)));
   }
 
   public Commit getOrCreateCommit(final Session session, final String commitHash,

@@ -2,10 +2,13 @@ package net.explorviz.persistence.repository;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Clazz;
+import net.explorviz.persistence.ogm.FileRevision;
 import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -40,6 +43,89 @@ public class ClazzRepository {
         filePathSegments, "classNameSegments", classNameSegments)));
   }
 
+  public Optional<Clazz> findClassByClassPathAndFileRevisionId(final Session session,
+      final String[] classPath, final Long fileRevisionId) {
+    return Optional.ofNullable(session.queryForObject(Clazz.class, """
+        MATCH (file:FileRevision)
+        WHERE id(file) = $fileId
+        
+        MATCH p = (file)-[:CONTAINS]->(:Clazz)
+                  -[:INHERITS|CONTAINS]-*(:Clazz)
+        WHERE
+        all(j IN range(0, length(p)) WHERE nodes(p)[j+1].name = $pathSegments[j]) AND
+        size(nodes(p))-1 = size($pathSegments)
+        
+        RETURN last(nodes(p));
+        """, Map.of("pathSegments", classPath, "fileId", fileRevisionId)));
+  }
+
+  // TODO: Not sure about the length(p) in coalesce in second Return
+  public Optional<Map<String, Object>> findLongestMatchingClassPathByFileRevisionsId(
+      final Session session, final String[] classPath, final Long fileRevisionId) {
+    final Result result = session.query("""
+        MATCH (file:FileRevision)
+        WHERE id(file) = $fileId
+        
+        OPTIONAL MATCH p = (file)-[:CONTAINS]->(:Clazz)
+          -[:INHERITS|CONTAINS]-*(:Clazz)
+        WHERE all(
+          j IN range(0, length(p))
+          WHERE nodes(p)[j+1].name = $pathSegments[j]
+        )
+        RETURN coalesce(last(nodes(p)) AS existingClass,
+               $pathSegments[coalesce(length(p), 0)..} AS remainingPath
+        ORDER BY size(nodes(p)) DESC
+        LIMIT 1;
+        """, Map.of("pathSegments", classPath, "fileId", fileRevisionId));
+
+    final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
+    if (!resultIterator.hasNext()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(resultIterator.next());
+  }
+
+  // TODO: Clarify whether not existing clazzes should have CONTAINS or INHERITS relationships
+  /*
+   The fileId is a fallback. If findLongestMatchingClassPathByFileRevisionsId doesn't find any
+   existing clazz, then the whole clazz path will be created and the first one will be added to
+   the corresponding FileRevision
+   */
+  public Clazz createClazzPathAndReturnLastClazz(final Session session, final String[] classPath,
+      final Long fileRevisionId) {
+    final Map<String, Object> resultMap =
+        findLongestMatchingClassPathByFileRevisionsId(session, classPath, fileRevisionId).orElse(
+            null);
+
+    final Clazz existingClazz;
+    final String[] remainingPath;
+
+    if (resultMap == null || resultMap.get("existingClass") instanceof Clazz) {
+      final FileRevision fileRevision = session.queryForObject(FileRevision.class, """
+          MATCH (f:FileRevision)
+          WHERE id(f)=$fileId
+          RETURN f;
+          """, Map.of("fileId", fileRevisionId));
+      existingClazz = new Clazz(classPath[0]);
+      fileRevision.addClass(existingClazz);
+      session.save(fileRevision);
+      remainingPath = Arrays.copyOfRange(classPath, 1, classPath.length);
+    } else {
+      existingClazz = (Clazz) resultMap.get("existingDir");
+      remainingPath = (String[]) resultMap.get("remainingPath");
+    }
+
+    Clazz lastClazz = existingClazz;
+    for (final String clazzName : remainingPath) {
+      final Clazz newClazz = new Clazz(clazzName);
+      lastClazz.addInnerClass(newClazz); // TODO: Clarify stuff mentioned above
+      lastClazz = newClazz;
+    }
+    session.save(existingClazz);
+
+    return lastClazz;
+  }
 
   public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(
       final Session session, final String tokenId, final String repoName, final String fileHash,

@@ -2,12 +2,11 @@ package net.explorviz.persistence.repository;
 
 import com.google.common.collect.ObjectArrays;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
-import jakarta.inject.Inject;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import org.neo4j.ogm.model.Result;
@@ -70,11 +69,39 @@ public class FunctionRepository {
             applicationName)));
   }
 
+  public Optional<Function> findFunctionByFunctionNameAndFileIdAndClassPath(final Session session,
+      final String functionName, final Long fileId, final String[] classPath) {
+    return Optional.ofNullable(session.queryForObject(Function.class, """
+            MATCH (file:FileRevision)
+            WHERE id(file) = $fileId
+            
+            MATCH p = (file)-[:CONTAINS]->(:Clazz)
+                      -[:CONTAINS]->*(:Clazz)
+                      -[:CONTAINS]->(func:Function)
+            WHERE
+            all(j IN range(0, length(p)) WHERE nodes(p)[j+1].name = $pathSegments[j]) AND
+            size(nodes(p))-1 = size($pathSegments)
+            
+            RETURN func;
+            """,
+        Map.of("fileId", fileId, "pathSegments", ObjectArrays.concat(classPath, functionName))));
+  }
+
+  public Optional<Function> findFunctionByFunctionNameAndClazzId(final Session session,
+      final String functionName, final Long clazzId) {
+    return Optional.ofNullable(session.queryForObject(Function.class, """
+        MATCH (cl:Clazz)
+        WHERE id(cl)=$clazzId
+        MATCH (cl)-[:CONTAINS]->(f:Function {name: $functionName})
+        RETURN f;
+        """, Map.of("functionName", functionName, "clazzId", clazzId)));
+  }
+
   public Optional<Function> findFunctionByApplicationNameAndFqnAndLandscapeTokenAndClassPath(
       final Session session, final String applicationName, final String[] fqn,
       final String landscapeToken, final String[] classPath) {
 
-    FileRevision fileRevision =
+    final FileRevision fileRevision =
         fileRevisionRepository.findFileRevisionFromAppNameAndPathWithoutCommit(session,
             applicationName, Arrays.copyOf(fqn, fqn.length - 1), landscapeToken).orElse(null);
 
@@ -82,20 +109,24 @@ public class FunctionRepository {
       return Optional.empty();
     }
 
-    return Optional.ofNullable(session.queryForObject(Function.class, """
-        MATCH (file:FileRevision)
-        WHERE id(file) = $fileId
-        
-        MATCH p = (file)-[:CONTAINS]->(:Clazz)
-                  -[:CONTAINS]->*(:Clazz)
-                  -[:CONTAINS]->(func:Function)
-        WHERE
-        all(j IN range(0, length(p)) WHERE nodes(p)[j+1].name = $pathSegments[j]) AND
-        size(nodes(p))-1 = size($pathSegments)
-        
-        RETURN func;
-        """, Map.of("fileId", fileRevision.getId(), "pathSegments",
-        ObjectArrays.concat(classPath, fqn[fqn.length - 1]))));
+    return findFunctionByFunctionNameAndFileIdAndClassPath(session, fqn[fqn.length - 1],
+        fileRevision.getId(), classPath);
+  }
+
+  public Optional<Function> findFunctionByAppNameAndFqnAndLandscapeTokenAndCommitHashAndClassPath(
+      final Session session, final String applicationName, final String[] fqn,
+      final String landscapeToken, final String commitHash, final String[] classPath) {
+    final FileRevision fileRevision =
+        fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
+                applicationName, commitHash, Arrays.copyOf(fqn, fqn.length - 1), landscapeToken)
+            .orElse(null);
+
+    if (fileRevision == null) {
+      return Optional.empty();
+    }
+
+    return findFunctionByFunctionNameAndFileIdAndClassPath(session, fqn[fqn.length - 1],
+        fileRevision.getId(), classPath);
   }
 
   /**
@@ -132,21 +163,26 @@ public class FunctionRepository {
     return filePathToFunctionMap;
   }
 
-  public Optional<Function> findFunction(final Session session, final String applicationName,
-      final String[] fqn, final String landscapeToken) {
-    return findFunctionByApplicationNameAndFqnAndLandscapeToken(session, applicationName, fqn,
-        landscapeToken);
-  }
-
-  public Optional<Function> findFunction(final Session session, final String applicationName,
-      final String[] fqn, final String landscapeToken, String[] classPath) {
-    return findFunctionByApplicationNameAndFqnAndLandscapeTokenAndClassPath(session,
-        applicationName, fqn, landscapeToken, classPath);
+  public Optional<Function> findFunctionWithFunctionNameAndFileRevisionId(final Session session,
+      final String functionName, final Long fileRevisionId) {
+    return Optional.ofNullable(session.queryForObject(Function.class, """
+        MATCH (file:FileRevision)
+        WHERE id(file)=$fileId
+        MATCH (file)-[:CONTAINS]->(f:Function {name: $functionName})
+        RETURN f;
+        """, Map.of("functionName", functionName, "fileId", fileRevisionId)));
   }
 
   public Optional<Function> findFunction(final Session session, final String applicationName,
       final String[] fqn, final String commitHash, final String landscapeToken) {
     return findFunctionByApplicationNameAndFqnAndCommitHashAndLandscapeToken(session,
         applicationName, fqn, commitHash, landscapeToken);
+  }
+
+  public Optional<Function> findFunction(final Session session, final String applicationName,
+      final String[] fqn, final String landscapeToken, final String commitHash,
+      final String[] classPath) {
+    return findFunctionByAppNameAndFqnAndLandscapeTokenAndCommitHashAndClassPath(session,
+        applicationName, fqn, landscapeToken, commitHash, classPath);
   }
 }
