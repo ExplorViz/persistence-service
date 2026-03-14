@@ -34,8 +34,20 @@ public class Span {
     this.spanId = spanId;
   }
 
+  public String getSpanId() {
+    return spanId;
+  }
+
+  public Span getParentSpan() {
+    return parentSpan;
+  }
+
   public void setParentSpan(final Span span) {
     this.parentSpan = span;
+  }
+
+  public Function getFunction() {
+    return function;
   }
 
   public void setFunction(final Function function) {
