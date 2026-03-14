@@ -264,9 +264,9 @@ public class CommitRepository {
         MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(:Repository)
           -[:CONTAINS]->(c:Commit)
-        WHERE c.commitDate <= $newest AND c.commitDate >= $oldest
-        RETURN c.commitDate AS timestamp
-        ORDER BY c.commitDate DESC;
+        WHERE c.date <= $newest AND c.date >= $oldest
+        RETURN c.date AS timestamp
+        ORDER BY c.date DESC;
         """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest),
         TimestampDto.class);
   }
@@ -282,9 +282,9 @@ public class CommitRepository {
         MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(:Repository)
           -[:CONTAINS]->(c:Commit {hash: $commitHash})
-        WHERE c.commitDate <= $newest AND c.commitDate >= $oldest
-        RETURN c.commitDate AS timestamp
-        ORDER BY c.commitDate DESC;
+        WHERE c.date <= $newest AND c.date >= $oldest
+        RETURN c.date AS timestamp
+        ORDER BY c.date DESC;
         """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest,
         "commitHash", commitHash), TimestampDto.class);
   }
