@@ -31,7 +31,7 @@ public class TraceRepository {
 
   public void deleteTraceData(final Session session, final String landscapeToken) {
     // TODO: maybe different matching and/or edgecases checking
-    session.query("MATCH (t:Trace {landscapeToken: $landscapeToken}) DELETE t;",
+    session.query("MATCH (t:Trace {landscapeToken: $landscapeToken}) DETACH DELETE t;",
         Map.of("landscapeToken", landscapeToken));
   }
 }
