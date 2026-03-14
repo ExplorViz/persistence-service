@@ -254,38 +254,4 @@ public class CommitRepository {
     return findCommitByHashAndLandscapeToken(session, commitHash, tokenId).orElse(
         new Commit(commitHash));
   }
-
-  /**
-   * Finds all timestamps for the given landscape token within the specified time range.
-   */
-  public List<TimestampDto> findTimestampsForLandscapeTokenAndTimeRange(final Session session,
-      final String landscapeToken, final long newest, final long oldest) {
-    return session.queryDto("""
-        MATCH (:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(:Repository)
-          -[:CONTAINS]->(c:Commit)
-        WHERE c.date <= $newest AND c.date >= $oldest
-        RETURN c.date AS timestamp
-        ORDER BY c.date DESC;
-        """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest),
-        TimestampDto.class);
-  }
-
-  /**
-   * Finds the timestamp for the given landscape token and commit hash, if it falls
-   * within the specified time range.
-   */
-  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(final Session session,
-      final String landscapeToken, final long newest, final long oldest,
-      final String commitHash) {
-    return session.queryDto("""
-        MATCH (:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(:Repository)
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
-        WHERE c.date <= $newest AND c.date >= $oldest
-        RETURN c.date AS timestamp
-        ORDER BY c.date DESC;
-        """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest,
-        "commitHash", commitHash), TimestampDto.class);
-  }
 }

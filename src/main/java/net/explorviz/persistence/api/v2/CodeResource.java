@@ -191,11 +191,7 @@ class CodeResource {
       @QueryParam("commit") final Optional<String> commit) {
     final Session session = sessionFactory.openSession();
 
-    final List<TimestampDto> timestamps = commit.isPresent()
-        ? commitRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session,
-        landscapeToken, newest, oldest, commit.get())
-        : commitRepository.findTimestampsForLandscapeTokenAndTimeRange(session,
-            landscapeToken, newest, oldest);
+    final List<TimestampDto> timestamps = traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken, newest, oldest, commit.get());
 
     return Multi.createFrom().iterable(timestamps);
   }
