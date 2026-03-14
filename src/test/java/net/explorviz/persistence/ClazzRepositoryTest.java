@@ -124,6 +124,40 @@ public class ClazzRepositoryTest {
   }
 
   @Test
+  void testFindLongestClassPathMatchOnDBWithLongerClassPath() {
+    String[] classPath = {"A", "B", "C"};
+
+    FileRevision file1 = new FileRevision("File1.java");
+    file1.setHasFileData(true);
+
+    Clazz upperClazz = new Clazz(classPath[0]);
+    file1.addClass(upperClazz);
+    Clazz lastClazz = upperClazz;
+    for (int i = 1; i < classPath.length; i++) {
+      Clazz newClazz = new Clazz(classPath[i]);
+      lastClazz.addInnerClass(newClazz);
+      lastClazz = newClazz;
+    }
+    lastClazz.addInnerClass(new Clazz("D"));
+
+    session.save(file1);
+
+    Map<String, Object> resultMap =
+        clazzRepository.findLongestMatchingClassPathByFileRevisionsId(session, classPath,
+            file1.getId()).orElse(null);
+
+    assert resultMap != null;
+
+    Clazz clazz = resultMap.get("existingClass") instanceof Clazz cl ? cl : null;
+    String[] remainingPath =
+        resultMap.get("remainingPath") instanceof String[] rp ? rp : new String[0];
+
+    assertNotNull(clazz);
+    assertEquals(classPath[classPath.length - 1], clazz.getName());
+    assertEquals(0, remainingPath.length);
+  }
+
+  @Test
   void testCreateClazzPathForDBWithoutClazzNodes() {
     String[] classPath = {"A", "B", "C"};
 
@@ -238,6 +272,4 @@ public class ClazzRepositoryTest {
     assertTrue(databaseIsCorrect);
     assertNodeCounts(session, ExpectedCounts.builder().files(1).classes(3).build());
   }
-
-  // TODO: Test for DB with longer classPath as input classPath
 }
