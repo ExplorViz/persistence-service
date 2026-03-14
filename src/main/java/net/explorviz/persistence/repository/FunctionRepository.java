@@ -78,9 +78,11 @@ public class FunctionRepository {
             MATCH p = (file)-[:CONTAINS]->(:Clazz)
                       -[:CONTAINS]->*(:Clazz)
                       -[:CONTAINS]->(func:Function)
-            WHERE
-            all(j IN range(0, length(p)) WHERE nodes(p)[j+1].name = $pathSegments[j]) AND
-            size(nodes(p))-1 = size($pathSegments)
+           
+            WITH p, func, nodes(p)[1..] AS cf
+            WHERE size(cf) = size($pathSegments)
+              AND all(i IN range(0, size($pathSegments)-1)
+                  WHERE cf[i].name = $pathSegments[i])
             
             RETURN func;
             """,
