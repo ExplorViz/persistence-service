@@ -30,8 +30,21 @@ public class TraceRepository {
   }
 
   public void deleteTraceData(final Session session, final String landscapeToken) {
-    // TODO: maybe different matching and/or edgecases checking
-    session.query("MATCH (t:Trace {landscapeToken: $landscapeToken}) DETACH DELETE t;",
-        Map.of("landscapeToken", landscapeToken));
+    session.query("""
+        MATCH (:Landscape {landscapeToken: $landscapeToken})
+          -[:CONTAINS]->(t:Trace)
+          -[:CONTAINS]->(s:Span)
+        MATCH (fr:FileRevision)
+          -[:CONTAINS]->(f:Function)
+        WHERE
+          (s)-[:REPRESENTS]->(f) AND
+          NOT (:Commit)-[:CONTAINS]->(fr)
+        CALL apoc.path.subgraphAll(fr, {
+          relationshipFilter: "CONTAINS>"
+        })
+        YIELD nodes
+        UNWIND nodes as n
+        DETACH DELETE n, t, s, f, fr;
+        """, Map.of("landscapeToken", landscapeToken));
   }
 }
