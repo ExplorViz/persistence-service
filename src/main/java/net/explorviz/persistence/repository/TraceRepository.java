@@ -33,40 +33,52 @@ public class TraceRepository {
 
   public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(final Session session,
       final String landscapeToken, final long newest, final long oldest, final String commitHash) {
-    if (commitHash == null) {
-      return session.queryDto("""
-          MATCH (:Landscape {token: $token})
-            -[:CONTAINS]->(t:Trace)
-            -[:CONTAINS]->(s:Span)
-          WHERE
-            s.start_time >= $oldest AND s.start_time <= $newest
-          WITH
-            (s.start_time / 10000000000) * 10000000000 AS bucket, COUNT(s) AS spanCount
-          RETURN bucket AS epochNano, spanCount
-          ORDER BY epochNano ASC;
-          """, Map.of("token", landscapeToken, "newest", newest, "oldest", oldest),
-              TimestampDto.class);
-    }
-
     return session.queryDto("""
-        MATCH (:Landscape {token: $token})
-          -[:CONTAINS]->(:Repository)
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
-          -[:CONTAINS]->(fr:FileRevision)
-          -[:CONTAINS]->(f:Function)
-          <-[:CONTAINS]-(s:Span)
-          <-[:CONTAINS]-(t:Trace)
-        WHERE s.start_time >= $oldest AND s.start_time <= $newest
-        WITH (s.start_time / 10000000000) * 10000000000 AS bucket, COUNT(s) AS spanCount
-        RETURN bucket AS epochNano, spanCount
-        ORDER BY epochNano ASC;
-        """, Map.of("token", landscapeToken, "newest", newest, "oldest", oldest, "commitHash",
+        MATCH (l:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(t:Trace)
+          -[:CONTAINS]->(s:Span)
+        WHERE
+          (s)-[:REPRESENT]->(:Function)
+            <-[:CONTAINS]-(:FileRevision)
+            <-[:CONTAINS]-(:Commit {hash: $commitHash) AND
+          s.start_time >= $oldest AND s.start_time <= $newest
+        WITH
+          (toInteger(s.start_time / 1000000000)) AS bucket
+        MATCH (l)
+          -[:CONTAINS]->(:Trace)
+          -[:CONTAINS]->(s2:Span)
+        WHERE
+          toInteger(s2.start_time / 1000000000) = bucket
+        RETURN DISTINCT bucket AS epochNano, COUNT(s2) AS spanCount
+        ORDER BY bucket ASC;
+        """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest, "commitHash",
         commitHash), TimestampDto.class);
+  }
+
+  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(final Session session,
+      final String landscapeToken, final long newest, final long oldest) {
+    return session.queryDto("""
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(t:Trace)
+              -[:CONTAINS]->(s:Span)
+            WHERE
+              s.start_time >= $oldest AND s.start_time <= $newest
+            WITH
+              (toInteger(s.start_time / 1000000000)) AS bucket
+            MATCH (l)
+              -[:CONTAINS]->(:Trace)
+              -[:CONTAINS]->(s2:Span)
+            WHERE
+              toInteger(s2.start_time / 1000000000) = bucket
+            RETURN DISTINCT bucket AS epochNano, COUNT(s2) AS spanCount
+            ORDER BY bucket ASC;
+            """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest),
+        TimestampDto.class);
   }
 
   public void deleteTraceData(final Session session, final String landscapeToken) {
     session.query("""
-        MATCH (:Landscape {landscapeToken: $landscapeToken})
+        MATCH (:Landscape {tokenId: tokenId})
           -[:CONTAINS]->(t:Trace)
           -[:CONTAINS]->(s:Span)
         MATCH (fr:FileRevision)
@@ -80,6 +92,6 @@ public class TraceRepository {
         YIELD nodes
         UNWIND nodes as n
         DETACH DELETE n, t, s, f, fr;
-        """, Map.of("landscapeToken", landscapeToken));
+        """, Map.of("tokenId", landscapeToken));
   }
 }

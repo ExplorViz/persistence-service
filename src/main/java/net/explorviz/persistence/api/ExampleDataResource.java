@@ -14,8 +14,12 @@ import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
+import net.explorviz.persistence.ogm.Span;
+import net.explorviz.persistence.ogm.Trace;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+
+import static com.sun.jndi.ldap.LdapPoolManager.trace;
 
 @IfBuildProfile("dev")
 @Path("/test")
@@ -217,4 +221,30 @@ class ExampleDataResource {
     clazz.addMetric("cyclomatic_complexity", Math.floor(Math.random() * 10));
     clazz.addMetric("cyclomatic_complexity_weighted", Math.floor(Math.random() * 10));
   }
+
+  private void addRandomSpan(final Trace trace, final String name) {
+    final Span span = new Span(name);
+    final long randNumb = (long)(Math.random() * 100000000000.0) + 1000000000000000000L;
+    span.setStartTime(randNumb);
+    span.setEndTime(randNumb + 1);
+    trace.addChildSpan(span);
+  }
+
+  @GET
+  @Path("/timestamp")
+  public void createTestingTimestamps(){
+    final Landscape landscape = new Landscape("mytokenvalue");
+
+    final Trace trace1 = new Trace("trace1");
+    final Trace trace2 = new Trace("trace2");
+
+    for(int i = 0; i < 5; i++){
+      addRandomSpan(trace1, "span" + i);
+      addRandomSpan(trace2, "span" + i);
+    }
+
+    final Session session = sessionFactory.openSession();
+    session.save(List.of(landscape));
+  }
 }
+
