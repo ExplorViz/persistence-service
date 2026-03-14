@@ -6,7 +6,6 @@ import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import java.util.Map;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Field;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -16,7 +15,6 @@ import net.explorviz.persistence.proto.FieldData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.proto.FunctionData;
-import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
@@ -37,11 +35,6 @@ public class FileDataServiceImpl implements FileDataService {
 
   @Inject
   private SessionFactory sessionFactory;
-
-  // TODO: Mapping file extensions to Language values is not very good
-  private static final Map<Language, String> LANGUAGE_EXTENSION_MAP =
-      Map.of(Language.LANGUAGE_UNSPECIFIED, "", Language.JAVA, ".java", Language.JAVASCRIPT, ".js",
-          Language.TYPESCRIPT, ".ts", Language.PYTHON, ".py", Language.PLAINTEXT, ".txt");
 
   @Blocking
   @Override
@@ -70,7 +63,12 @@ public class FileDataServiceImpl implements FileDataService {
     file.setDeletedLines(request.getDeletedLines());
 
     for (final ClassData c : request.getClassesList()) {
-      file.addClass(createClazz(session, c, request));
+      try {
+        file.addClass(createClazz(session, c, request));
+      } catch (IllegalArgumentException e) {
+        return Uni.createFrom()
+            .failure(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+      }
     }
 
     for (final FunctionData f : request.getFunctionsList()) {
@@ -130,13 +128,13 @@ public class FileDataServiceImpl implements FileDataService {
     }
 
     for (final String superFqn : classData.getSuperclassesList()) {
-      final String[] splitFqn = superFqn.split("\\.");
+      final String[] splitSuperFqn = superFqn.split("::");
       Clazz superClass = clazzRepository.findClassByLandscapeTokenAndRepositoryAndClazzFqn(session,
-          request.getLandscapeToken(), request.getRepositoryName(), splitFqn,
-          LANGUAGE_EXTENSION_MAP.get(request.getLanguage())).orElse(null);
+              request.getLandscapeToken(), request.getRepositoryName(), splitSuperFqn)
+          .orElse(null);
 
       if (superClass == null) {
-        superClass = new Clazz(splitFqn[splitFqn.length - 1]);
+        superClass = new Clazz(splitSuperFqn[1]);
       }
 
       clazz.addSuperClass(superClass);
