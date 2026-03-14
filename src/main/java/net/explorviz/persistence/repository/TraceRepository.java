@@ -28,4 +28,10 @@ public class TraceRepository {
   public Trace getOrCreateTrace(final Session session, final String traceId) {
     return findTraceById(session, traceId).orElse(new Trace(traceId));
   }
+
+  public void deleteTraceData(final Session session, final String landscapeToken) {
+    // TODO: maybe different matching and/or edgecases checking
+    session.query("MATCH (t:Trace {landscapeToken: $landscapeToken}) DELETE t;",
+        Map.of("landscapeToken", landscapeToken));
+  }
 }
