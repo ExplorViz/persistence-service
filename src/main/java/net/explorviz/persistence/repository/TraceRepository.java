@@ -41,15 +41,10 @@ public class TraceRepository {
           (s)-[:REPRESENT]->(:Function)
             <-[:CONTAINS]-(:FileRevision)
             <-[:CONTAINS]-(:Commit {hash: $commitHash) AND
-          s.start_time >= $oldest AND s.start_time <= $newest
+          s.startTime >= $oldest AND s.startTime <= $newest
         WITH
-          (toInteger(s.start_time / 1000000000)) AS bucket
-        MATCH (l)
-          -[:CONTAINS]->(:Trace)
-          -[:CONTAINS]->(s2:Span)
-        WHERE
-          toInteger(s2.start_time / 1000000000) = bucket
-        RETURN DISTINCT bucket AS epochNano, COUNT(s2) AS spanCount
+          (toInteger(s.startTime / 1000000000)) AS bucket
+        RETURN bucket AS epochNano, COUNT(s) AS spanCount
         ORDER BY bucket ASC;
         """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest, "commitHash",
         commitHash), TimestampDto.class);
@@ -62,15 +57,10 @@ public class TraceRepository {
               -[:CONTAINS]->(t:Trace)
               -[:CONTAINS]->(s:Span)
             WHERE
-              s.start_time >= $oldest AND s.start_time <= $newest
+              s.startTime >= $oldest AND s.startTime <= $newest
             WITH
-              (toInteger(s.start_time / 1000000000)) AS bucket
-            MATCH (l)
-              -[:CONTAINS]->(:Trace)
-              -[:CONTAINS]->(s2:Span)
-            WHERE
-              toInteger(s2.start_time / 1000000000) = bucket
-            RETURN DISTINCT bucket AS epochNano, COUNT(s2) AS spanCount
+              (toInteger(s.startTime / 1000000000)) AS bucket
+            RETURN bucket AS epochNano, COUNT(s) AS spanCount
             ORDER BY bucket ASC;
             """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest),
         TimestampDto.class);

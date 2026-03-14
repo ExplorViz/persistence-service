@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
@@ -185,13 +184,30 @@ class CodeResource {
   @GET
   @Path("landscapes/{landscapeToken}/timestamps")
   @Produces(MediaType.APPLICATION_JSON)
-  public Multi<TimestampDto> getTimestamps(
-      @RestPath final String landscapeToken,
-      @QueryParam("newest") final long newest, @QueryParam("oldest") final long oldest,
-      @QueryParam("commit") final Optional<String> commit) {
+  public Multi<TimestampDto> getTimestamps(@RestPath final String landscapeToken,
+      @QueryParam("newest") Long newest, @QueryParam("oldest") Long oldest,
+      @QueryParam("commit") final String commit) {
     final Session session = sessionFactory.openSession();
 
-    final List<TimestampDto> timestamps = traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken, newest, oldest, commit.get());
+    final List<TimestampDto> timestamps;
+
+    if (newest == null) {
+      newest = Long.MAX_VALUE;
+    }
+
+    if (oldest == null) {
+      oldest = 0L;
+    }
+
+    if (commit != null) {
+      timestamps =
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
+              newest, oldest, commit);
+    } else {
+      timestamps =
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
+              newest, oldest);
+    }
 
     return Multi.createFrom().iterable(timestamps);
   }
@@ -199,12 +215,10 @@ class CodeResource {
   @DELETE
   @Path("landscapes/{landscapeToken}/trace-data")
   @Produces(MediaType.APPLICATION_JSON)
-  public void deleteTraceData(
-      @RestPath final String landscapeToken
-  ) {
+  public void deleteTraceData(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
 
-    traceRepository.deleteTraceData( session, landscapeToken);
+    traceRepository.deleteTraceData(session, landscapeToken);
   }
 
   @GET

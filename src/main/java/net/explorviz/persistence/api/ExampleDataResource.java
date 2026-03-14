@@ -19,8 +19,6 @@ import net.explorviz.persistence.ogm.Trace;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
-import static com.sun.jndi.ldap.LdapPoolManager.trace;
-
 @IfBuildProfile("dev")
 @Path("/test")
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
@@ -239,9 +237,12 @@ class ExampleDataResource {
     final Trace trace2 = new Trace("trace2");
 
     for(int i = 0; i < 5; i++){
-      addRandomSpan(trace1, "span" + i);
-      addRandomSpan(trace2, "span" + i);
+      addRandomSpan(trace1, "trace1_span" + i);
+      addRandomSpan(trace2, "trace2_span" + i);
     }
+
+    landscape.addTrace(trace1);
+    landscape.addTrace(trace2);
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape));
