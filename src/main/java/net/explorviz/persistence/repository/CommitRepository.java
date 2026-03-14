@@ -10,6 +10,7 @@ import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.FileRevision;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import net.explorviz.persistence.api.v2.model.TimestampDto;
 
 @ApplicationScoped
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
@@ -252,5 +253,39 @@ public class CommitRepository {
       final String tokenId) {
     return findCommitByHashAndLandscapeToken(session, commitHash, tokenId).orElse(
         new Commit(commitHash));
+  }
+
+  /**
+   * Finds all timestamps for the given landscape token within the specified time range.
+   */
+  public List<TimestampDto> findTimestampsForLandscapeTokenAndTimeRange(final Session session,
+      final String landscapeToken, final long newest, final long oldest) {
+    return session.queryDto("""
+        MATCH (:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(:Repository)
+          -[:CONTAINS]->(c:Commit)
+        WHERE c.commitDate <= $newest AND c.commitDate >= $oldest
+        RETURN c.commitDate AS timestamp
+        ORDER BY c.commitDate DESC;
+        """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest),
+        TimestampDto.class);
+  }
+
+  /**
+   * Finds the timestamp for the given landscape token and commit hash, if it falls
+   * within the specified time range.
+   */
+  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(final Session session,
+      final String landscapeToken, final long newest, final long oldest,
+      final String commitHash) {
+    return session.queryDto("""
+        MATCH (:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(:Repository)
+          -[:CONTAINS]->(c:Commit {hash: $commitHash})
+        WHERE c.commitDate <= $newest AND c.commitDate >= $oldest
+        RETURN c.commitDate AS timestamp
+        ORDER BY c.commitDate DESC;
+        """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest,
+        "commitHash", commitHash), TimestampDto.class);
   }
 }

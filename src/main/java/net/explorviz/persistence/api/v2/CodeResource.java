@@ -1,16 +1,19 @@
 package net.explorviz.persistence.api.v2;
 
+import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
@@ -19,6 +22,7 @@ import net.explorviz.persistence.api.v2.model.CommitComparison;
 import net.explorviz.persistence.api.v2.model.CommitTreeDto;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison.ValueComparison;
+import net.explorviz.persistence.api.v2.model.TimestampDto;
 import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
 import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
 import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
@@ -175,6 +179,24 @@ class CodeResource {
   }
 
   @GET
+  @Path("landscapes/{landscapeToken}/timestamps")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Multi<TimestampDto> getTimestamps(
+      @RestPath final String landscapeToken,
+      @QueryParam("newest") final long newest, @QueryParam("oldest") final long oldest,
+      @QueryParam("commit") final Optional<String> commit) {
+    final Session session = sessionFactory.openSession();
+
+    final List<TimestampDto> timestamps = commit.isPresent()
+        ? commitRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session,
+        landscapeToken, newest, oldest, commit.get())
+        : commitRepository.findTimestampsForLandscapeTokenAndTimeRange(session,
+            landscapeToken, newest, oldest);
+
+    return Multi.createFrom().iterable(timestamps);
+  }
+
+  @GET
   @Path("/structure/{landscapeToken}/{applicationName}/{commitHash}")
   @Produces(MediaType.APPLICATION_JSON)
   public LandscapeDto getStaticStructureForApplicationAndSingleCommit(
@@ -184,6 +206,7 @@ class CodeResource {
     return getStaticStructureForApplicationAndTwoCommits(landscapeToken, applicationName,
         commitHash, commitHash);
   }
+
 
   @GET
   @Path(
