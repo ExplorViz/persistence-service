@@ -59,7 +59,6 @@ public class ClazzRepository {
         """, Map.of("pathSegments", classPath, "fileId", fileRevisionId)));
   }
 
-  // TODO: Not sure about the length(p) in coalesce in second Return
   public Optional<Map<String, Object>> findLongestMatchingClassPathByFileRevisionsId(
       final Session session, final String[] classPath, final Long fileRevisionId) {
     final Result result = session.query("""
@@ -67,15 +66,22 @@ public class ClazzRepository {
         WHERE id(file) = $fileId
         
         OPTIONAL MATCH p = (file)-[:CONTAINS]->(:Clazz)
-          -[:INHERITS|CONTAINS]-*(:Clazz)
-        WHERE all(
-          j IN range(0, length(p))
-          WHERE nodes(p)[j+1].name = $pathSegments[j]
-        )
-        RETURN coalesce(last(nodes(p)) AS existingClass,
-               $pathSegments[coalesce(length(p), 0)..} AS remainingPath
-        ORDER BY size(nodes(p)) DESC
-        LIMIT 1;
+          -[:CONTAINS]->*(:Clazz)
+        
+        WITH p, nodes(p)[1..] AS classes
+        WHERE classes IS NULL
+          OR  all(i IN range(0, size(classes)-1)
+            WHERE classes[i].name = $pathSegments[i])
+        
+        ORDER BY size(classes) DESC
+        LIMIT 1
+        
+        RETURN
+        CASE
+          WHEN classes IS NULL or size(classes) = 0 THEN null
+          ELSE classes[-1]
+        END AS existingClass,
+        $pathSegments[coalesce(size(classes),0)..] AS remainingPath
         """, Map.of("pathSegments", classPath, "fileId", fileRevisionId));
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
@@ -86,22 +92,26 @@ public class ClazzRepository {
     return Optional.of(resultIterator.next());
   }
 
-  // TODO: Clarify whether not existing clazzes should have CONTAINS or INHERITS relationships
   /*
    The fileId is a fallback. If findLongestMatchingClassPathByFileRevisionsId doesn't find any
    existing clazz, then the whole clazz path will be created and the first one will be added to
    the corresponding FileRevision
    */
+  @SuppressWarnings("PMD.NullAssignment")
   public Clazz createClazzPathAndReturnLastClazz(final Session session, final String[] classPath,
       final Long fileRevisionId) {
     final Map<String, Object> resultMap =
         findLongestMatchingClassPathByFileRevisionsId(session, classPath, fileRevisionId).orElse(
             null);
 
-    final Clazz existingClazz;
+    Clazz existingClazz = null;
+
+    if (resultMap != null) {
+      existingClazz = resultMap.get("existingClass") instanceof Clazz cl ? cl : null;
+    }
     final String[] remainingPath;
 
-    if (resultMap == null || resultMap.get("existingClass") instanceof Clazz) {
+    if (existingClazz == null) {
       final FileRevision fileRevision = session.queryForObject(FileRevision.class, """
           MATCH (f:FileRevision)
           WHERE id(f)=$fileId
@@ -112,14 +122,13 @@ public class ClazzRepository {
       session.save(fileRevision);
       remainingPath = Arrays.copyOfRange(classPath, 1, classPath.length);
     } else {
-      existingClazz = (Clazz) resultMap.get("existingDir");
-      remainingPath = (String[]) resultMap.get("remainingPath");
+      remainingPath = resultMap.get("remainingPath") instanceof String[] rp ? rp : new String[0];
     }
 
     Clazz lastClazz = existingClazz;
     for (final String clazzName : remainingPath) {
       final Clazz newClazz = new Clazz(clazzName);
-      lastClazz.addInnerClass(newClazz); // TODO: Clarify stuff mentioned above
+      lastClazz.addInnerClass(newClazz);
       lastClazz = newClazz;
     }
     session.save(existingClazz);
