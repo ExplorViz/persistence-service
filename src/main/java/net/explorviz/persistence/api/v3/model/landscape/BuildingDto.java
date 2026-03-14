@@ -7,6 +7,9 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
+import net.explorviz.persistence.api.v3.model.landscape.ClazzDto.ClassConvertible;
+import net.explorviz.persistence.api.v3.model.landscape.FunctionDto.FunctionConvertible;
 import net.explorviz.persistence.proto.Language;
 
 /**
@@ -21,8 +24,7 @@ import net.explorviz.persistence.proto.Language;
  * @param language         Can be used to specify a programming language if applicable, such as with
  *                         files. Can be set to {@link Language#LANGUAGE_UNSPECIFIED} if the
  *                         language cannot be uniquely determined
- * @param classIds         IDs of all classes which are contained in this building
- *                         TODO does this include inner classes?
+ * @param classIds         IDs of all classes which are directly contained in this building
  * @param functionIds      IDs of all top-level functions which are contained in this building
  * @param metrics          Metrics for this unit, i.e. numerical measurements gathered through
  *                         analysis, such as cyclomatic complexity or lines of code
@@ -32,11 +34,32 @@ public record BuildingDto(@JsonUnwrapped FlatBaseModel flatBaseModel, String par
                           @JsonInclude(Include.NON_NULL) String parentDistrictId,
                           @JsonInclude(Include.NON_NULL) Language language, List<String> classIds,
                           List<String> functionIds,
-                          @JsonInclude(Include.NON_NULL) Map<String, Double> metrics) {
+                          @JsonInclude(Include.NON_EMPTY) Map<String, Double> metrics) {
   public BuildingDto {
     Objects.requireNonNull(flatBaseModel);
     Objects.requireNonNull(parentCityId);
     Objects.requireNonNull(classIds);
     Objects.requireNonNull(functionIds);
+  }
+
+  /**
+   * Must be implemented by any object which can be represented as a building during flattening.
+   */
+  public interface BuildingConvertible {
+    String getId();
+
+    String getName();
+
+    Stream<ClassConvertible> getClasses();
+
+    Stream<FunctionConvertible> getFunctions();
+
+    default Language getLanguage() {
+      return null;
+    }
+
+    default Map<String, Double> getMetrics() {
+      return Map.of();
+    }
   }
 }

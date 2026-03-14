@@ -31,5 +31,9 @@ public record FlatBaseModel(String id, String name, @JsonInclude(Include.NON_NUL
   public FlatBaseModel(final String id, final String name) {
     this(id, name, null, null, null);
   }
+
+  public FlatBaseModel(final String id, final String name, final String fqn) {
+    this(id, name, fqn, null, null);
+  }
 }
 

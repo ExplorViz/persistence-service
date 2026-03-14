@@ -35,10 +35,7 @@ class LandscapeResource {
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public LandscapeDto getLatestCommit(@RestPath final String landscapeToken,
-      @RestPath final String repositoryName,
-      @RestPath final String appName,
-      @RestPath final String commitHash) {
+  public LandscapeDto getStructureData(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
 
     final List<Application> ogmApps =
@@ -47,19 +44,4 @@ class LandscapeResource {
     final NodeDto node = new NodeDto("", "", ogmApps.stream().map(ApplicationDto::new).toList());
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
   }
-
-  //  @GET
-  //  @Path("/{commitHash}")
-  //  @Produces(MediaType.APPLICATION_JSON)
-  //  public LandscapeDto getLandscapeStructureForCommit(
-  //      @RestPath final String landscapeToken,
-  //      @RestPath final String commitHash) {
-  //    final Session session = sessionFactory.openSession();
-  //
-  //    final Repository hydratedRepo =
-  //        repositoryRepository.getFullyHydratedRepositoryForCommit(session, landscapeToken,
-  //            commitHash).orElseThrow(NotFoundException::new);
-  //
-  //    return ???;
-  //  }
 }

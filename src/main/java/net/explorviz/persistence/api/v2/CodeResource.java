@@ -10,12 +10,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
 import net.explorviz.persistence.api.v2.model.BranchPointDto;
+import net.explorviz.persistence.api.v2.model.CommitComparison;
 import net.explorviz.persistence.api.v2.model.CommitTreeDto;
+import net.explorviz.persistence.api.v2.model.EntityMetricsComparison;
+import net.explorviz.persistence.api.v2.model.EntityMetricsComparison.ValueComparison;
 import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
 import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
 import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
@@ -31,6 +34,7 @@ import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.CommitRepository;
+import net.explorviz.persistence.repository.CommitRepository.FileComparison;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import org.jboss.resteasy.reactive.RestPath;
@@ -151,17 +155,21 @@ class CodeResource {
   }
 
   @GET
-  @Path("/structure/{landscapeToken}/{applicationName}/{commitHash1}-{commitHash2}")
+  @Path("/structure/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}")
   @Produces(MediaType.APPLICATION_JSON)
   public LandscapeDto getStaticStructureForApplicationAndTwoCommits(
       @RestPath final String landscapeToken, @RestPath final String applicationName,
-      @RestPath final String commitHash1, @RestPath final String commitHash2) {
+      @RestPath final String firstCommitHash, @RestPath final String secondCommitHash) {
     final Session session = sessionFactory.openSession();
-    final Optional<Application> applicationsForCommitsOptional =
-        applicationRepository.fetchApplicationHydratedForTwoCommits(session, applicationName,
-            commitHash1, commitHash2, landscapeToken);
+
+    final List<Application> applications =
+        applicationRepository.fetchApplicationsHydratedForTwoCommits(session, landscapeToken,
+            firstCommitHash, secondCommitHash);
+
     final List<ApplicationDto> applicationDtoList =
-        applicationsForCommitsOptional.map(a -> List.of(new ApplicationDto(a))).orElse(List.of());
+        applications.stream().filter(a -> applicationName.equals(a.getName()))
+            .map(ApplicationDto::new).toList();
+
     final NodeDto node = new NodeDto("", "", applicationDtoList);
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
   }
@@ -175,5 +183,60 @@ class CodeResource {
     // Re-use query for two-commit case by supplying same hash twice
     return getStaticStructureForApplicationAndTwoCommits(landscapeToken, applicationName,
         commitHash, commitHash);
+  }
+
+  @GET
+  @Path(
+      "/commit-comparison/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public CommitComparison getCommitComparison(@RestPath final String landscapeToken,
+      @RestPath final String applicationName, @RestPath final String firstCommitHash,
+      @RestPath final String secondCommitHash) {
+    final Session session = sessionFactory.openSession();
+
+    final List<String> modifiedFiles =
+        commitRepository.findModifiedFileFqns(session, landscapeToken, applicationName,
+            firstCommitHash, secondCommitHash);
+
+    final List<String> addedFiles =
+        commitRepository.findAddedFileFqns(session, landscapeToken, applicationName,
+            firstCommitHash, secondCommitHash);
+
+    final List<String> deletedFiles =
+        commitRepository.findDeletedFileFqns(session, landscapeToken, applicationName,
+            firstCommitHash, secondCommitHash);
+
+    final List<String> addedPackages =
+        commitRepository.findAddedDirectoryFqns(session, landscapeToken, applicationName,
+            firstCommitHash, secondCommitHash);
+
+    final List<String> deletedPackages =
+        commitRepository.findDeletedDirectoryFqns(session, landscapeToken, applicationName,
+            firstCommitHash, secondCommitHash);
+
+    final List<FileComparison> metricResults =
+        commitRepository.findFilesWithCounterpart(session, landscapeToken, applicationName,
+            firstCommitHash, secondCommitHash);
+
+    final List<EntityMetricsComparison> entityMetricsComparisons =
+        metricResults.stream().map(result -> {
+
+          final Map<String, Double> newMetrics = result.fileFirstCommit().getMetrics();
+          final Map<String, Double> oldMetrics = (result.fileSecondCommit() != null)
+              ? result.fileSecondCommit().getMetrics()
+              : Map.of();
+
+          final Map<String, ValueComparison> metricComparisons =
+              newMetrics.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+                final String oldValue = Objects.toString(oldMetrics.get(entry.getKey()), null);
+                final String newValue = entry.getValue().toString();
+                return new ValueComparison(oldValue, newValue);
+              }));
+
+          return new EntityMetricsComparison(result.fileFqn(), metricComparisons);
+        }).toList();
+
+    return new CommitComparison(modifiedFiles, addedFiles, deletedFiles, addedPackages,
+        deletedPackages, entityMetricsComparisons);
   }
 }

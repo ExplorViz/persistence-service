@@ -19,7 +19,7 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @IfBuildProfile("dev")
 @Path("/test")
-@SuppressWarnings({"PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
 class ExampleDataResource {
 
   @Inject
@@ -28,35 +28,33 @@ class ExampleDataResource {
   @GET
   @Path("/repo")
   public void createTestingRepository() {
+    final Landscape landscape = new Landscape("mytokenvalue");
+
+    final Repository repository = new Repository("hello-world");
+    landscape.addRepository(repository);
+
     final Branch branch1 = new Branch("main");
     final Branch branch2 = new Branch("feature-a");
+    repository.addBranch(branch1);
+    repository.addBranch(branch2);
 
     final Commit commit1 = new Commit("commit1");
     final Commit commit2 = new Commit("commit2");
     final Commit commit3 = new Commit("commit3");
-
-    commit2.addParent(commit1);
-    commit3.addParent(commit1);
-
     commit1.setBranch(branch1);
     commit2.setBranch(branch1);
+    commit2.addParent(commit1);
     commit3.setBranch(branch2);
-
-    Directory currentDir = new Directory("hello-world");
-
-    final Repository repository = new Repository("hello-world");
-    repository.addRootDirectory(currentDir);
+    commit3.addParent(commit1);
     repository.addCommit(commit1);
     repository.addCommit(commit2);
     repository.addCommit(commit3);
-    repository.addBranch(branch1);
-    repository.addBranch(branch2);
 
     final Application application = new Application("hello-world");
-    application.setRootDirectory(currentDir);
 
-    final Landscape landscape = new Landscape("mytokenvalue");
-    landscape.addRepository(repository);
+    Directory currentDir = new Directory("hello-world");
+    repository.setRootDirectory(currentDir);
+    application.setRootDirectory(currentDir);
 
     final String[] dirNames = {"net", "explorviz", "helloworld"};
     for (final String dirName : dirNames) {
@@ -64,49 +62,127 @@ class ExampleDataResource {
       currentDir.addSubdirectory(newDir);
       currentDir = newDir;
     }
+    final Directory innerDir = new Directory("innerpackage");
+    currentDir.addSubdirectory(innerDir);
 
     final FileRevision fileA = new FileRevision("ClassA.java");
     final FileRevision fileB = new FileRevision("ClassB.java");
     final FileRevision fileC = new FileRevision("ClassC.java");
+    final FileRevision fileD = new FileRevision("ClassD.java");
+    final FileRevision fileModified = new FileRevision("ClassD.java");
+    currentDir.addFileRevision(fileA);
+    currentDir.addFileRevision(fileB);
+    innerDir.addFileRevision(fileC);
+    innerDir.addFileRevision(fileD);
+    innerDir.addFileRevision(fileModified);
+    commit1.addFileRevision(fileA);
+    commit2.addFileRevision(fileA);
+    commit2.addFileRevision(fileB);
+    commit2.addFileRevision(fileD);
+    commit3.addFileRevision(fileB);
+    commit3.addFileRevision(fileC);
+    commit3.addFileRevision(fileModified);
+    List.of(fileA, fileB, fileC, fileD, fileModified).forEach(f -> {
+      addFunctionsToFile(f);
+      addRandomFileMetrics(f);
+    });
 
     final Clazz classA = new Clazz("ClassA");
     final Clazz classB = new Clazz("ClassB");
     final Clazz classC = new Clazz("ClassC");
-
-    classA.addMetric("LCOM4", 1d);
-    classA.addMetric("loc", 120d);
-    classA.addMetric("cyclomatic_complexity", 7d);
-    classA.addMetric("cyclomatic_complexity_weighted", 5d);
-    classB.addMetric("LCOM4", 2d);
-    classC.addMetric("LCOM4", 3d);
-
+    final Clazz classD = new Clazz("ClassD");
+    final Clazz classModified = new Clazz("ClassD");
     fileA.addClass(classA);
     fileB.addClass(classB);
     fileC.addClass(classC);
-
-    fileA.addFunction(new Function("doSomethingA"));
-    fileA.addFunction(new Function("doSomethingDifferentA"));
-
-    fileB.addFunction(new Function("doSomethingB"));
-
-    classC.addFunction(new Function("doSomethingClassC"));
-
-    currentDir.addFileRevision(fileA);
-    currentDir.addFileRevision(fileB);
-    final Directory packageDir = new Directory("innerpackage");
-    packageDir.addFileRevision(fileC);
-    currentDir.addSubdirectory(packageDir);
-
-    commit1.addFileRevision(fileA);
-
-    commit2.addFileRevision(fileA);
-    commit2.addFileRevision(fileB);
-
-    commit3.addFileRevision(fileB);
-    commit3.addFileRevision(fileC);
+    fileD.addClass(classD);
+    fileModified.addClass(classModified);
+    List.of(classA, classB, classC, classD, classModified).forEach(c -> {
+      addFunctionsToClass(c);
+      addRandomClassMetrics(c);
+    });
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application));
+  }
+
+  @GET
+  @Path("/monorepo")
+  public void createTestingMonorepo() {
+    final Landscape landscape = new Landscape("mytokenvalue");
+
+    final Repository repository = new Repository("monorepo");
+    landscape.addRepository(repository);
+
+    final Branch branch1 = new Branch("main");
+    final Branch branch2 = new Branch("feature-a");
+    repository.addBranch(branch1);
+    repository.addBranch(branch2);
+
+    final Commit commit1 = new Commit("commit1");
+    final Commit commit2 = new Commit("commit2");
+    final Commit commit3 = new Commit("commit3");
+    commit1.setBranch(branch1);
+    commit2.setBranch(branch1);
+    commit2.addParent(commit1);
+    commit3.setBranch(branch2);
+    commit3.addParent(commit1);
+    repository.addCommit(commit1);
+    repository.addCommit(commit2);
+    repository.addCommit(commit3);
+
+    final Application application1 = new Application("app-one");
+    final Application application2 = new Application("app-two");
+
+    final Directory repoRoot = new Directory("monorepo");
+    repository.setRootDirectory(repoRoot);
+    repoRoot.addFileRevision(new FileRevision("README.md"));
+
+    Directory appOneDir = new Directory("app-one");
+    Directory appTwoDir = new Directory("app-two");
+
+    final String[] appOneDirNames = {"net", "explorviz", "appone"};
+    final String[] appTwoDirNames = {"net", "explorviz", "apptwo"};
+
+    for (final String dirName : appOneDirNames) {
+      final Directory newDir = new Directory(dirName);
+      appOneDir.addSubdirectory(newDir);
+      appOneDir = newDir;
+    }
+
+    for (final String dirName : appTwoDirNames) {
+      final Directory newDir = new Directory(dirName);
+      appTwoDir.addSubdirectory(newDir);
+      appTwoDir = newDir;
+    }
+
+    final FileRevision fileA1 = new FileRevision("ClassA.java");
+    final FileRevision fileB1 = new FileRevision("ClassB.java");
+    final FileRevision fileB1Modified = new FileRevision("ClassB.java");
+    final FileRevision fileA2 = new FileRevision("ClassA.java");
+    final FileRevision fileB2 = new FileRevision("ClassB.java");
+    appOneDir.addFileRevision(fileA1);
+    appOneDir.addFileRevision(fileB1);
+    appOneDir.addFileRevision(fileB1Modified);
+    appTwoDir.addFileRevision(fileA2);
+    appTwoDir.addFileRevision(fileB2);
+    commit1.addFileRevision(fileA1);
+    commit1.addFileRevision(fileA2);
+    commit1.addFileRevision(fileB1);
+    commit1.addFileRevision(fileB2);
+    commit2.addFileRevision(fileA1);
+    commit2.addFileRevision(fileA2);
+    commit3.addFileRevision(fileA1);
+    commit3.addFileRevision(fileB1Modified);
+    commit3.addFileRevision(fileA2);
+    commit3.addFileRevision(fileB2);
+    List.of(fileA1, fileA2, fileB1, fileB2).forEach(f -> {
+      addFunctionsToFile(f);
+      addRandomFileMetrics(f);
+    });
+
+    final Session session = sessionFactory.openSession();
+    session.save(List.of(landscape, application1, application2));
   }
 
   @GET
@@ -114,5 +190,31 @@ class ExampleDataResource {
   public void purgeDatabase() {
     final Session session = sessionFactory.openSession();
     session.purgeDatabase();
+  }
+
+  private void addFunctionsToFile(final FileRevision fileRevision) {
+    fileRevision.addFunction(new Function("doSomething"));
+    fileRevision.addFunction(new Function("findObject"));
+    fileRevision.addFunction(new Function("tryMyBest"));
+  }
+
+  private void addFunctionsToClass(final Clazz clazz) {
+    clazz.addFunction(new Function("performClassMethod"));
+    clazz.addFunction(new Function("encapsulateParent"));
+    clazz.addFunction(new Function("inheritInterface"));
+  }
+
+  private void addRandomFileMetrics(final FileRevision fileRevision) {
+    fileRevision.addMetric("LCOM4", Math.floor(Math.random() * 5));
+    fileRevision.addMetric("loc", Math.floor(Math.random() * 250));
+    fileRevision.addMetric("cyclomatic_complexity", Math.floor(Math.random() * 10));
+    fileRevision.addMetric("cyclomatic_complexity_weighted", Math.floor(Math.random() * 10));
+  }
+
+  private void addRandomClassMetrics(final Clazz clazz) {
+    clazz.addMetric("LCOM4", Math.floor(Math.random() * 5));
+    clazz.addMetric("loc", Math.floor(Math.random() * 250));
+    clazz.addMetric("cyclomatic_complexity", Math.floor(Math.random() * 10));
+    clazz.addMetric("cyclomatic_complexity_weighted", Math.floor(Math.random() * 10));
   }
 }

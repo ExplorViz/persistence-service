@@ -52,7 +52,7 @@ public class Repository {
     branches = Set.copyOf(newBranches);
   }
 
-  public void addRootDirectory(final Directory directory) {
+  public void setRootDirectory(final Directory directory) {
     this.rootDirectory = directory;
   }
 
