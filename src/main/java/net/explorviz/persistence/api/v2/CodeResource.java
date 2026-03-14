@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
 import net.explorviz.persistence.api.v2.model.BranchPointDto;
-import net.explorviz.persistence.api.v2.model.CommitComparison;
+import net.explorviz.persistence.api.v2.model.CommitComparisonDto;
 import net.explorviz.persistence.api.v2.model.CommitTreeDto;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison.ValueComparison;
@@ -189,7 +189,7 @@ class CodeResource {
   @Path(
       "/commit-comparison/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}")
   @Produces(MediaType.APPLICATION_JSON)
-  public CommitComparison getCommitComparison(@RestPath final String landscapeToken,
+  public CommitComparisonDto getCommitComparison(@RestPath final String landscapeToken,
       @RestPath final String applicationName, @RestPath final String firstCommitHash,
       @RestPath final String secondCommitHash) {
     final Session session = sessionFactory.openSession();
@@ -236,7 +236,7 @@ class CodeResource {
           return new EntityMetricsComparison(result.fileFqn(), metricComparisons);
         }).toList();
 
-    return new CommitComparison(modifiedFiles, addedFiles, deletedFiles, addedPackages,
+    return new CommitComparisonDto(modifiedFiles, addedFiles, deletedFiles, addedPackages,
         deletedPackages, entityMetricsComparisons);
   }
 }
