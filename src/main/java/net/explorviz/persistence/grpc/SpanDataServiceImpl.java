@@ -82,9 +82,9 @@ public class SpanDataServiceImpl implements SpanDataService {
 
     final Function function;
     if (commitHash != null) {
-      function = resolveFunctionFqnWithCommit(session, spanData, commitHash);
+      function = resolveFunctionFqn(session, spanData, commitHash);
     } else {
-      function = resolveFunctionFqnWithoutCommit(session, spanData);
+      function = resolveFunctionFqn(session, spanData);
     }
 
     span.setFunction(function);
@@ -94,7 +94,7 @@ public class SpanDataServiceImpl implements SpanDataService {
     return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
-  private Function resolveFunctionFqnWithoutCommit(final Session session, final SpanData spanData) {
+  private Function resolveFunctionFqn(final Session session, final SpanData spanData) {
     final String[] splitFilePath = spanData.getFilePath().split("/");
     final String functionName = spanData.getFunctionName();
 
@@ -124,7 +124,7 @@ public class SpanDataServiceImpl implements SpanDataService {
     return function;
   }
 
-  private Function resolveFunctionFqnWithCommit(final Session session, final SpanData spanData,
+  private Function resolveFunctionFqn(final Session session, final SpanData spanData,
       final String commitHash) {
     final String[] splitFilePath = spanData.getFilePath().split("/");
     final String functionName = spanData.getFunctionName();
@@ -141,7 +141,7 @@ public class SpanDataServiceImpl implements SpanDataService {
     }
 
     if (function == null) {
-      return resolveFunctionFqnWithoutCommit(session, spanData);
+      return resolveFunctionFqn(session, spanData);
     }
 
     return function;
