@@ -827,15 +827,13 @@ class SpanDataServiceTest {
       session.save(List.of(landscape, application));
     }
 
-    // TODO: Replace old file name with commented after correct file extension handling is integrated
     @BeforeEach
     void init() {
       baseRepoName = "myrepo";
       baseBranchName = "main";
       baseCommitHash = "commit1";
       baseDirNames = List.of("net", "explorviz", baseAppName);
-      baseFileName = "MyClass";
-      // baseFileName = "MyClass.java";
+      baseFileName = "MyClass.java";
       baseFileHash = "1";
       baseFunctionName = "myMethod";
 
