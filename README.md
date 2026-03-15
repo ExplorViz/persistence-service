@@ -71,3 +71,30 @@ Create your first gRPC service
 Easily start your REST Web Services
 
 [Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+
+# Ab hier ist eigenes
+### TODO: Mal schauen, was von der default übernommen werden kann
+
+# Development
+
+## Code Style
+We recommend to use the IntelliJ IDEA IDE.    
+To not get into checkstyle problems, we also recommend to use the ```google-java-format``` plugin.
+
+Follow these steps to use it:
+1. Under `File -> Settings -> Plugins -> Marketplace` search for `google-java-format`
+2. Install the plugin and press the `Restart IDE` button
+3. Under `File -> Settings -> google-java-format Settings` check `Enable google-java-format`
+   (The value of `Code style` should be set to `Default Google Java style`)
+4. Under `Help -> Edit Custom VM Options...` add the following lines from the [documentation](https://github.com/google/google-java-format/blob/master/README.md#intellij-jre-config):
+```
+--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+```
+5. Restart the IDE
+
+Pressing `CTRL + ALT + L` (default auto-format configuration of IntelliJ IDEA) should now reformat the code using the google java style guide.
