@@ -50,7 +50,7 @@ public class ClazzRepository {
         WHERE id(file) = $fileId
         
         MATCH p = (file)-[:CONTAINS]->(:Clazz)
-                  -[:INHERITS|CONTAINS]-*(:Clazz)
+                  -[:CONTAINS]->*(:Clazz)
         WHERE
         all(j IN range(0, length(p)) WHERE nodes(p)[j+1].name = $pathSegments[j]) AND
         size(nodes(p))-1 = size($pathSegments)

@@ -33,32 +33,23 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   private static final Logger LOGGER = Logger.getLogger(SpanDataServiceImpl.class);
 
-  @Inject
-  private ApplicationRepository applicationRepository;
+  @Inject private ApplicationRepository applicationRepository;
 
-  @Inject
-  private ClazzRepository clazzRepository;
+  @Inject private ClazzRepository clazzRepository;
 
-  @Inject
-  private CommitRepository commitRepository;
+  @Inject private CommitRepository commitRepository;
 
-  @Inject
-  private FileRevisionRepository fileRevisionRepository;
+  @Inject private FileRevisionRepository fileRevisionRepository;
 
-  @Inject
-  private FunctionRepository functionRepository;
+  @Inject private FunctionRepository functionRepository;
 
-  @Inject
-  private LandscapeRepository landscapeRepository;
+  @Inject private LandscapeRepository landscapeRepository;
 
-  @Inject
-  private SpanRepository spanRepository;
+  @Inject private SpanRepository spanRepository;
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  @Inject
-  private TraceRepository traceRepository;
+  @Inject private TraceRepository traceRepository;
 
   @Blocking
   @Override
@@ -102,21 +93,27 @@ public class SpanDataServiceImpl implements SpanDataService {
     final Function function;
 
     if (spanData.hasClassName()) {
-      Clazz clazz = clazzRepository.findClassByClassPathAndFileRevisionId(session,
-          spanData.getClassName().split("\\."), fileRevision.getId()).orElse(null);
+      final Clazz clazz =
+          clazzRepository
+              .findClassByClassPathAndFileRevisionId(
+                  session, spanData.getClassName().split("\\."), fileRevision.getId())
+              .orElseGet(
+                  () ->
+                      clazzRepository.createClazzPathAndReturnLastClazz(
+                          session, spanData.getClassName().split("\\."), fileRevision.getId()));
 
-      if (clazz == null) {
-        clazz = clazzRepository.createClazzPathAndReturnLastClazz(session,
-            spanData.getClassName().split("\\."), fileRevision.getId());
-      }
-      function = functionRepository.findFunctionByFunctionNameAndClazzId(session, functionName,
-          clazz.getId()).orElse(new Function(functionName));
+      function =
+          functionRepository
+              .findFunctionByFunctionNameAndClazzId(session, functionName, clazz.getId())
+              .orElse(new Function(functionName));
       clazz.addFunction(function);
       session.save(clazz);
     } else {
       function =
-          functionRepository.findFunctionWithFunctionNameAndFileRevisionId(session, functionName,
-              fileRevision.getId()).orElse(new Function(functionName));
+          functionRepository
+              .findFunctionWithFunctionNameAndFileRevisionId(
+                  session, functionName, fileRevision.getId())
+              .orElse(new Function(functionName));
       fileRevision.addFunction(function);
       session.save(fileRevision);
     }
@@ -124,57 +121,64 @@ public class SpanDataServiceImpl implements SpanDataService {
     return function;
   }
 
-  private Function resolveFunctionFqn(final Session session, final SpanData spanData,
-      final String commitHash) {
+  private Function resolveFunctionFqn(
+      final Session session, final SpanData spanData, final String commitHash) {
     final String[] splitFilePath = spanData.getFilePath().split("/");
     final String functionName = spanData.getFunctionName();
 
-    final Function function;
     if (spanData.hasClassName()) {
-      function = functionRepository.findFunction(session, spanData.getApplicationName(),
-          ObjectArrays.concat(splitFilePath, functionName), spanData.getLandscapeTokenId(),
-          commitHash, spanData.getClassName().split("\\.")).orElse(null);
+      return functionRepository
+          .findFunction(
+              session,
+              spanData.getApplicationName(),
+              ObjectArrays.concat(splitFilePath, functionName),
+              spanData.getLandscapeTokenId(),
+              commitHash,
+              spanData.getClassName().split("\\."))
+          .orElseGet(() -> resolveFunctionFqn(session, spanData));
     } else {
-      function = functionRepository.findFunction(session, spanData.getApplicationName(),
-          ObjectArrays.concat(splitFilePath, functionName), commitHash,
-          spanData.getLandscapeTokenId()).orElse(null);
+      return functionRepository
+          .findFunction(
+              session,
+              spanData.getApplicationName(),
+              ObjectArrays.concat(splitFilePath, functionName),
+              commitHash,
+              spanData.getLandscapeTokenId())
+          .orElseGet(() -> resolveFunctionFqn(session, spanData));
     }
-
-    if (function == null) {
-      return resolveFunctionFqn(session, spanData);
-    }
-
-    return function;
   }
 
-  private FileRevision resolveFileRevision(final Session session, final SpanData spanData,
-      final String[] splitFileFqn) {
-    FileRevision fileRevision =
-        fileRevisionRepository.findFileRevisionFromAppNameAndPathWithoutCommit(session,
-                spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId())
-            .orElse(null);
+  private FileRevision resolveFileRevision(
+      final Session session, final SpanData spanData, final String[] splitFileFqn) {
+    return fileRevisionRepository
+        .findFileRevisionFromAppNameAndPathWithoutCommit(
+            session, spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId())
+        .orElseGet(
+            () -> {
+              final Application application =
+                  applicationRepository
+                      .findApplicationByNameAndLandscapeToken(
+                          session, spanData.getApplicationName(), spanData.getLandscapeTokenId())
+                      .orElse(new Application(spanData.getApplicationName()));
 
-    if (fileRevision != null) {
-      return fileRevision;
-    }
+              FileRevision fileRevision;
 
-    final Application application =
-        applicationRepository.findApplicationByNameAndLandscapeToken(session,
-                spanData.getApplicationName(), spanData.getLandscapeTokenId())
-            .orElse(new Application(spanData.getApplicationName()));
+              if (application.getRootDirectory() == null) {
+                // Application did not previously exist, build file structure from scratch
+                fileRevision =
+                    fileRevisionRepository.createFileStructureForNewApplicationFromFqn(
+                        session, application, splitFileFqn);
+              } else {
+                // Create missing directories and file for existing Application
+                fileRevision =
+                    fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(
+                        session,
+                        splitFileFqn,
+                        application.getName(),
+                        spanData.getLandscapeTokenId());
+              }
 
-    if (application.getRootDirectory() == null) {
-      // Application did not previously exist, build file structure from scratch
-      fileRevision =
-          fileRevisionRepository.createFileStructureForNewApplicationFromFqn(session, application,
-              splitFileFqn);
-    } else {
-      // Create missing directories and file for existing Application
-      fileRevision =
-          fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(session,
-              splitFileFqn, application.getName(), spanData.getLandscapeTokenId());
-    }
-
-    return fileRevision;
+              return fileRevision;
+            });
   }
 }
