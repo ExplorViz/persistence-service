@@ -86,8 +86,8 @@ Easily start your REST Web Services
 </tr>
 <tr>
 <td style="border:1px solid #999; padding:6px;"></td>
-<td style="border:1px solid #999; padding:6px;">Field</td>
-<td style="border:1px solid #999; padding:6px;">Field Type</td>
+<td style="border:1px solid #999; padding:6px;"><b>Field</b></td>
+<td style="border:1px solid #999; padding:6px;"><b>Field Type</b></td>
 </tr>
 
 <tr>
