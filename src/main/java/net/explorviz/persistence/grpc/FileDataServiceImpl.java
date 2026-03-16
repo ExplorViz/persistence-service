@@ -6,7 +6,6 @@ import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import java.util.Map;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Field;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -14,7 +13,6 @@ import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.proto.ClassData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
-import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
@@ -24,24 +22,12 @@ import org.neo4j.ogm.session.SessionFactory;
 @GrpcService
 public class FileDataServiceImpl implements FileDataService {
 
-  // TODO: Mapping file extensions to Language values is not very good
-  private static final Map<Language, String> LANGUAGE_EXTENSION_MAP =
-      Map.of(
-          Language.LANGUAGE_UNSPECIFIED,
-          "",
-          Language.JAVA,
-          ".java",
-          Language.JAVASCRIPT,
-          ".js",
-          Language.TYPESCRIPT,
-          ".ts",
-          Language.PYTHON,
-          ".py",
-          Language.PLAINTEXT,
-          ".txt");
   @Inject private ClazzRepository clazzRepository;
+
   @Inject private FileRevisionRepository fileRevisionRepository;
+
   @Inject private FunctionRepository functionRepository;
+
   @Inject private SessionFactory sessionFactory;
 
   @Blocking
@@ -72,7 +58,14 @@ public class FileDataServiceImpl implements FileDataService {
     file.setModifiedLines(request.getModifiedLines());
     file.setDeletedLines(request.getDeletedLines());
 
-    request.getClassesList().forEach(c -> file.addClass(createClazz(session, c, request)));
+    for (final ClassData c : request.getClassesList()) {
+      try {
+        file.addClass(createClazz(session, c, request));
+      } catch (IllegalArgumentException e) {
+        return Uni.createFrom()
+            .failure(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+      }
+    }
 
     request
         .getFunctionsList()
@@ -151,18 +144,16 @@ public class FileDataServiceImpl implements FileDataService {
                   .getSuperclassesList()
                   .forEach(
                       superFqn -> {
-                        final String[] splitFqn = superFqn.split("\\.");
+                        final String[] splitSuperFqn = superFqn.split("::");
                         clazz.addSuperClass(
                             clazzRepository
                                 .findClassByLandscapeTokenAndRepositoryAndClazzFqn(
                                     session,
                                     request.getLandscapeToken(),
                                     request.getRepositoryName(),
-                                    splitFqn,
-                                    LANGUAGE_EXTENSION_MAP.get(request.getLanguage()))
-                                .orElse(new Clazz(splitFqn[splitFqn.length - 1])));
+                                    splitSuperFqn)
+                                .orElse(new Clazz(splitSuperFqn[1])));
                       });
-
 
               session.save(clazz);
 

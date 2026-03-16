@@ -169,8 +169,8 @@ class FileDataServiceTest {
   void testPersistFileCorrectlyCreatesClazzNode() {
     String commitHash = "commit1";
     String superclassName = "Class1";
-    String superclassFqn = "src." + superclassName;
     String fileNameSuper = superclassName + ".java";
+    String superclassFqn = "src/" + fileNameSuper + "::" + superclassName;
     String filePathSuper = "src/" + fileNameSuper;
     String fileHashSuper = "1";
     String className = "Class2";
@@ -303,8 +303,8 @@ class FileDataServiceTest {
   void testPersistFileInheritingClazzBeforeSuperClazz() {
     String commitHash = "commit1";
     String superclassName = "Class1";
-    String superclassFqn = "src." + superclassName;
     String fileNameSuper = superclassName + ".java";
+    String superclassFqn = "src/" + fileNameSuper + "::" + superclassName;
     String filePathSuper = "src/" + fileNameSuper;
     String fileHashSuper = "1";
     String className = "Class2";
@@ -566,4 +566,75 @@ class FileDataServiceTest {
         ex.getStatus().getDescription());
   }
 
+  @Test
+  void testPersistFileThrowsWithInvalidSuperclassNameFormat() {
+    String commitHash = "commit1";
+    String superclassName = "Class1";
+    String fileNameSuper = superclassName + ".java";
+    String superclassFqn = "src." + fileNameSuper + "." + superclassName;
+    String superclassFqnTwo = "src::" + fileNameSuper + "::" + superclassName;
+    String filePathSuper = "src/" + fileNameSuper;
+    String fileHashSuper = "1";
+    String className = "Class2";
+    String fileNameClass = className + ".java";
+    String filePathClass = "src/" + fileNameClass;
+    String fileHashClass = "2";
+
+    CommitData commitDataOne =
+        CommitData.newBuilder().setCommitId(commitHash).setRepositoryName(repoName)
+            .setBranchName(branchName).setLandscapeToken(landscapeToken)
+            .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
+            .addAllAddedFiles(List.of(
+                FileIdentifier.newBuilder().setFileHash(fileHashSuper).setFilePath(filePathSuper)
+                    .build(),
+                FileIdentifier.newBuilder().setFileHash(fileHashClass).setFilePath(filePathClass)
+                    .build())).build();
+
+    commitService.persistCommit(commitDataOne).await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    ClassData classData = ClassData.newBuilder().setName(className).setType(ClassType.CLASS)
+        .addAllModifiers(List.of()).addAllImplementedInterfaces(List.of())
+        .addAllSuperclasses(List.of(superclassFqn)).addAllAnnotations(List.of())
+        .addAllFields(List.of()).addAllInnerClasses(List.of()).addAllFunctions(List.of())
+        .addAllEnumValues(List.of()).build();
+
+    ClassData classDataTwo = ClassData.newBuilder().setName(className).setType(ClassType.CLASS)
+        .addAllModifiers(List.of()).addAllImplementedInterfaces(List.of())
+        .addAllSuperclasses(List.of(superclassFqnTwo)).addAllAnnotations(List.of())
+        .addAllFields(List.of()).addAllInnerClasses(List.of()).addAllFunctions(List.of())
+        .addAllEnumValues(List.of()).build();
+
+    FileData fileDataClass =
+        FileData.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setFileHash(fileHashClass).setFilePath(filePathClass).setLanguage(Language.JAVA)
+            .addAllImportNames(List.of("Superclass")).addAllClasses(List.of(classData))
+            .addAllFunctions(List.of()).setLastEditor("Testi").setAddedLines(1).setModifiedLines(1)
+            .setDeletedLines(0).build();
+
+    FileData fileDataClassTwo =
+        FileData.newBuilder().setLandscapeToken(landscapeToken).setRepositoryName(repoName)
+            .setFileHash(fileHashClass).setFilePath(filePathClass).setLanguage(Language.JAVA)
+            .addAllImportNames(List.of("Superclass")).addAllClasses(List.of(classDataTwo))
+            .addAllFunctions(List.of()).setLastEditor("Testi").setAddedLines(1).setModifiedLines(1)
+            .setDeletedLines(0).build();
+
+    StatusRuntimeException ex = assertThrows(StatusRuntimeException.class,
+        () -> fileDataService.persistFile(fileDataClass).await()
+            .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS)));
+
+    StatusRuntimeException exTwo = assertThrows(StatusRuntimeException.class,
+        () -> fileDataService.persistFile(fileDataClassTwo).await()
+            .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS)));
+
+    assertEquals(Status.INVALID_ARGUMENT.getCode(), ex.getStatus().getCode());
+    assertEquals("Format of super class invalid:\n"
+        + "   Expected format: path/to/file/file.extension::class \n" + "   Actual value: "
+        + superclassFqn, ex.getStatus().getDescription());
+
+    assertEquals(Status.INVALID_ARGUMENT.getCode(), exTwo.getStatus().getCode());
+    assertEquals("Format of super class invalid:\n"
+        + "   Expected format: path/to/file/file.extension::class \n" + "   Actual value: "
+        + superclassFqnTwo, exTwo.getStatus().getDescription());
+  }
 }
