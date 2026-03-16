@@ -187,49 +187,33 @@ public class ClazzRepository {
                 clazzName)));
   }
 
-  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzFqn(
-      final Session session,
-      final String tokenId,
-      final String repoName,
-      final String[] splitFqn,
-      final String fileExt) {
-    final String clazzName = splitFqn[splitFqn.length - 1];
-    final String fileName = clazzName + fileExt;
-    String[] fullFqn = new String[splitFqn.length + 1];
-    System.arraycopy(splitFqn, 0, fullFqn, 0, splitFqn.length - 1);
-    fullFqn[splitFqn.length - 1] = fileName;
-    fullFqn[splitFqn.length] = clazzName;
+  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzFqn(final Session session,
+      final String tokenId, final String repoName, final String[] splitSuperFqn) {
+    if (splitSuperFqn.length != 2) { // NOPMD - literal is intentional here
+      throw new IllegalArgumentException("Format of super class invalid:\n"
+          + "   Expected format: path/to/file/file.extension::class \n" + "   Actual value: "
+          + String.join("::", splitSuperFqn));
+    }
+    final String superClassName = splitSuperFqn[1];
+    final String[] filePath = splitSuperFqn[0].split("/");
 
-    return Optional.ofNullable(
-        session.queryForObject(
-            Clazz.class,
-            """
+    return Optional.ofNullable(session.queryForObject(Clazz.class, """
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(r:Repository {name: $repoName})
               -[:CONTAINS]->(:Commit)
               -[:CONTAINS]->(file:FileRevision {name: $fileName})
               -[:CONTAINS]->(cl:Clazz {name: $clazzName})
             MATCH (r)-[:HAS_ROOT]->(root:Directory {name: $repoName})
-            WITH root, $pathSegments AS pathSegments
+            WITH cl, root, $pathSegments AS pathSegments
             MATCH p = (root)-[:CONTAINS]->(:Directory)
                       -[:CONTAINS]->*(file)
-                      -[:CONTAINS]->(cl)
             WHERE
             all(j IN range(1, length(p)-1) WHERE nodes(p)[j].name = pathSegments[j-1])
               AND size(nodes(p))-1 = size(pathSegments)
             RETURN cl;
             """,
-            Map.of(
-                "tokenId",
-                tokenId,
-                "repoName",
-                repoName,
-                "clazzName",
-                clazzName,
-                "fileName",
-                fileName,
-                "pathSegments",
-                fullFqn)));
+        Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", superClassName, "fileName",
+            filePath[filePath.length - 1], "pathSegments", filePath)));
   }
 
   public Optional<Clazz> findClassFromInheritingClass(

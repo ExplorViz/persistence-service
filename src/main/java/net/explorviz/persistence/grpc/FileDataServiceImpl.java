@@ -6,17 +6,13 @@ import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import java.util.Map;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Field;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.proto.ClassData;
-import net.explorviz.persistence.proto.FieldData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
-import net.explorviz.persistence.proto.FunctionData;
-import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
@@ -26,22 +22,13 @@ import org.neo4j.ogm.session.SessionFactory;
 @GrpcService
 public class FileDataServiceImpl implements FileDataService {
 
-  @Inject
-  private ClazzRepository clazzRepository;
+  @Inject private ClazzRepository clazzRepository;
 
-  @Inject
-  private FileRevisionRepository fileRevisionRepository;
+  @Inject private FileRevisionRepository fileRevisionRepository;
 
-  @Inject
-  private FunctionRepository functionRepository;
+  @Inject private FunctionRepository functionRepository;
 
-  @Inject
-  private SessionFactory sessionFactory;
-
-  // TODO: Mapping file extensions to Language values is not very good
-  private static final Map<Language, String> LANGUAGE_EXTENSION_MAP =
-      Map.of(Language.LANGUAGE_UNSPECIFIED, "", Language.JAVA, ".java", Language.JAVASCRIPT, ".js",
-          Language.TYPESCRIPT, ".ts", Language.PYTHON, ".py", Language.PLAINTEXT, ".txt");
+  @Inject private SessionFactory sessionFactory;
 
   @Blocking
   @Override
@@ -49,20 +36,22 @@ public class FileDataServiceImpl implements FileDataService {
     final Session session = sessionFactory.openSession();
 
     final FileRevision file =
-        fileRevisionRepository.getFileRevisionFromHashAndPath(session, request.getFileHash(),
-            request.getRepositoryName(), request.getLandscapeToken(),
-            request.getFilePath().split("/")).orElse(null);
-
-    if (file == null) {
-      return Uni.createFrom().failure(Status.FAILED_PRECONDITION.withDescription(
-          "No corresponding file was sent before in CommitData.").asRuntimeException());
-    }
+        fileRevisionRepository
+            .getFileRevisionFromHashAndPath(
+                session,
+                request.getFileHash(),
+                request.getRepositoryName(),
+                request.getLandscapeToken(),
+                request.getFilePath().split("/"))
+            .orElseThrow(
+                () ->
+                    Status.FAILED_PRECONDITION
+                        .withDescription("No corresponding file was sent before in CommitData.")
+                        .asRuntimeException());
 
     file.setLanguage(request.getLanguage());
     file.setPackageName(request.getPackageName());
-    for (final String importName : request.getImportNamesList()) {
-      file.addImportNames(importName);
-    }
+    request.getImportNamesList().forEach(file::addImportNames);
     request.getMetricsMap().forEach(file::addMetric);
     file.setLastEditor(request.getLastEditor());
     file.setAddedLines(request.getAddedLines());
@@ -70,14 +59,22 @@ public class FileDataServiceImpl implements FileDataService {
     file.setDeletedLines(request.getDeletedLines());
 
     for (final ClassData c : request.getClassesList()) {
-      file.addClass(createClazz(session, c, request));
+      try {
+        file.addClass(createClazz(session, c, request));
+      } catch (IllegalArgumentException e) {
+        return Uni.createFrom()
+            .failure(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+      }
     }
 
-    for (final FunctionData f : request.getFunctionsList()) {
-      final Function function = new Function(f);
-      function.addParameters(f.getParametersList());
-      file.addFunction(function);
-    }
+    request
+        .getFunctionsList()
+        .forEach(
+            f -> {
+              final Function function = new Function(f);
+              function.addParameters(f.getParametersList());
+              file.addFunction(function);
+            });
 
     file.setHasFileData(true);
 
@@ -86,65 +83,81 @@ public class FileDataServiceImpl implements FileDataService {
     return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
-  private Clazz createClazz(final Session session, final ClassData classData,
-      final FileData request) {
-    Clazz clazz =
-        clazzRepository.findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(session,
-            request.getLandscapeToken(), request.getRepositoryName(), request.getFileHash(),
-            classData.getName()).orElse(null);
+  private Clazz createClazz(
+      final Session session, final ClassData classData, final FileData request) {
+    return clazzRepository
+        .findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(
+            session,
+            request.getLandscapeToken(),
+            request.getRepositoryName(),
+            request.getFileHash(),
+            classData.getName())
+        .orElseGet(
+            () -> {
+              final Clazz clazz =
+                  clazzRepository
+                      .findClassFromInheritingClass(
+                          session,
+                          request.getLandscapeToken(),
+                          request.getRepositoryName(),
+                          classData.getName())
+                      .map(
+                          foundClazz -> {
+                            if (foundClazz.getType() == null) {
+                              foundClazz.setType(classData.getType());
+                              foundClazz.setModifiers(classData.getModifiersList());
+                              foundClazz.setImplementedInterfaces(
+                                  classData.getImplementedInterfacesList());
+                              foundClazz.setAnnotations(classData.getAnnotationsList());
+                              foundClazz.setEnumValues(classData.getEnumValuesList());
+                              foundClazz.setMetrics(classData.getMetricsMap());
+                            }
+                            return foundClazz;
+                          })
+                      /*
+                       If found clazz has a type, then it must be from another commit,
+                       therefore we create a new Clazz object. Same for clazz is null.
+                      */
+                      .orElse(new Clazz(classData));
 
-    if (clazz != null) {
-      return clazz;
-    } else {
-      clazz = clazzRepository.findClassFromInheritingClass(session, request.getLandscapeToken(),
-          request.getRepositoryName(), classData.getName()).orElse(null);
-    }
+              classData
+                  .getFieldsList()
+                  .forEach(
+                      f ->
+                          clazz.addField(
+                              new Field(f.getName(), f.getType(), f.getModifiersList())));
 
-    if (clazz != null && clazz.getType() == null) {
-      clazz.setType(classData.getType());
-      clazz.setModifiers(classData.getModifiersList());
-      clazz.setImplementedInterfaces(classData.getImplementedInterfacesList());
-      clazz.setAnnotations(classData.getAnnotationsList());
-      clazz.setEnumValues(classData.getEnumValuesList());
-      clazz.setMetrics(classData.getMetricsMap());
-    } else {
-      /*
-      If found clazz has a type, then it must be from another commit,
-      therefore we create a new Clazz object. Same for clazz is null.
-     */
-      clazz = new Clazz(classData);
-    }
+              classData
+                  .getInnerClassesList()
+                  .forEach(c -> clazz.addInnerClass(createClazz(session, c, request)));
 
-    for (final FieldData f : classData.getFieldsList()) {
-      clazz.addField(new Field(f.getName(), f.getType(), f.getModifiersList()));
-    }
+              classData
+                  .getFunctionsList()
+                  .forEach(
+                      f -> {
+                        final Function function = new Function(f);
+                        function.addParameters(f.getParametersList());
+                        clazz.addFunction(function);
+                      });
 
-    for (final ClassData c : classData.getInnerClassesList()) {
-      clazz.addInnerClass(createClazz(session, c, request));
-    }
+              classData
+                  .getSuperclassesList()
+                  .forEach(
+                      superFqn -> {
+                        final String[] splitSuperFqn = superFqn.split("::");
+                        clazz.addSuperClass(
+                            clazzRepository
+                                .findClassByLandscapeTokenAndRepositoryAndClazzFqn(
+                                    session,
+                                    request.getLandscapeToken(),
+                                    request.getRepositoryName(),
+                                    splitSuperFqn)
+                                .orElse(new Clazz(splitSuperFqn[1])));
+                      });
 
-    for (final FunctionData f : classData.getFunctionsList()) {
-      final Function function = new Function(f);
-      function.addParameters(f.getParametersList());
-      clazz.addFunction(function);
-    }
+              session.save(clazz);
 
-    for (final String superFqn : classData.getSuperclassesList()) {
-      final String[] splitFqn = superFqn.split("\\.");
-      Clazz superClass = clazzRepository.findClassByLandscapeTokenAndRepositoryAndClazzFqn(session,
-          request.getLandscapeToken(), request.getRepositoryName(), splitFqn,
-          LANGUAGE_EXTENSION_MAP.get(request.getLanguage())).orElse(null);
-
-      if (superClass == null) {
-        superClass = new Clazz(splitFqn[splitFqn.length - 1]);
-      }
-
-      clazz.addSuperClass(superClass);
-    }
-
-    session.save(clazz);
-
-    return clazz;
+              return clazz;
+            });
   }
-
 }

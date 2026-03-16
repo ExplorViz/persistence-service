@@ -26,26 +26,19 @@ import org.neo4j.ogm.session.SessionFactory;
 @GrpcService
 public class StateDataServiceImpl implements StateDataService {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  @Inject
-  private ApplicationRepository applicationRepository;
+  @Inject private ApplicationRepository applicationRepository;
 
-  @Inject
-  private BranchRepository branchRepository;
+  @Inject private BranchRepository branchRepository;
 
-  @Inject
-  private CommitRepository commitRepository;
+  @Inject private CommitRepository commitRepository;
 
-  @Inject
-  private DirectoryRepository directoryRepository;
+  @Inject private DirectoryRepository directoryRepository;
 
-  @Inject
-  private LandscapeRepository landscapeRepository;
+  @Inject private LandscapeRepository landscapeRepository;
 
-  @Inject
-  private RepositoryRepository repositoryRepository;
+  @Inject private RepositoryRepository repositoryRepository;
 
   @Blocking
   @Override
@@ -56,12 +49,16 @@ public class StateDataServiceImpl implements StateDataService {
         landscapeRepository.getOrCreateLandscape(session, request.getLandscapeToken());
 
     final Repository repository =
-        repositoryRepository.getOrCreateRepository(session, request.getRepositoryName(),
-            request.getLandscapeToken());
+        repositoryRepository.getOrCreateRepository(
+            session, request.getRepositoryName(), request.getLandscapeToken());
     landscape.addRepository(repository);
 
-    final Branch branch = branchRepository.getOrCreateBranch(session, request.getBranchName(),
-        request.getRepositoryName(), request.getLandscapeToken());
+    final Branch branch =
+        branchRepository.getOrCreateBranch(
+            session,
+            request.getBranchName(),
+            request.getRepositoryName(),
+            request.getLandscapeToken());
 
     repository.addBranch(branch);
 
@@ -72,35 +69,45 @@ public class StateDataServiceImpl implements StateDataService {
 
     session.save(List.of(repository, landscape));
 
-    request.getApplicationPathsMap().forEach((String k, String v) -> {
-      final Application application =
-          applicationRepository.findApplicationByNameAndLandscapeToken(session, k,
-              request.getLandscapeToken()).orElse(new Application(k));
-      if (v.isEmpty()) {
-        application.setRootDirectory(repository.getRootDirectory());
-      } else {
-        final Directory applicationRootDirectory =
-            directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(session,
-                (repository.getName() + "/" + v).split("/"), request.getRepositoryName(),
-                request.getLandscapeToken());
-        application.setRootDirectory(applicationRootDirectory);
-      }
-      session.save(application);
-      session.clear();
-    });
+    request
+        .getApplicationPathsMap()
+        .forEach(
+            (String k, String v) -> {
+              final Application application =
+                  applicationRepository
+                      .findApplicationByNameAndLandscapeToken(
+                          session, k, request.getLandscapeToken())
+                      .orElse(new Application(k));
+
+              if (v.isEmpty()) {
+                application.setRootDirectory(repository.getRootDirectory());
+              } else {
+                final Directory applicationRootDirectory =
+                    directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(
+                        session,
+                        (repository.getName() + "/" + v).split("/"),
+                        request.getRepositoryName(),
+                        request.getLandscapeToken());
+                application.setRootDirectory(applicationRootDirectory);
+              }
+              session.save(application);
+              session.clear();
+            });
 
     session.save(List.of(repository, landscape));
 
-    final Commit latestCommit =
-        commitRepository.findLatestFullyPersistedCommit(session, request.getRepositoryName(),
-            request.getLandscapeToken(), request.getBranchName()).orElse(null);
-
     final StateData.Builder stateDataBuilder = StateData.newBuilder();
-    if (latestCommit == null) {
-      stateDataBuilder.setCommitId("");
-    } else {
-      stateDataBuilder.setCommitId(latestCommit.getHash());
-    }
+    final String commitId =
+        commitRepository
+            .findLatestFullyPersistedCommit(
+                session,
+                request.getRepositoryName(),
+                request.getLandscapeToken(),
+                request.getBranchName())
+            .map(Commit::getHash)
+            .orElse("");
+    stateDataBuilder.setCommitId(commitId);
+
     return Uni.createFrom().item(stateDataBuilder.build());
   }
 }
