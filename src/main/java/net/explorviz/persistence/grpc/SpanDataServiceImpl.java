@@ -1,15 +1,14 @@
 package net.explorviz.persistence.grpc;
 
+import com.google.common.collect.ObjectArrays;
 import com.google.protobuf.Empty;
-import io.grpc.Status;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 import net.explorviz.persistence.ogm.Application;
+import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
@@ -18,15 +17,14 @@ import net.explorviz.persistence.ogm.Trace;
 import net.explorviz.persistence.proto.SpanData;
 import net.explorviz.persistence.proto.SpanDataService;
 import net.explorviz.persistence.repository.ApplicationRepository;
+import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.SpanRepository;
 import net.explorviz.persistence.repository.TraceRepository;
-import net.explorviz.persistence.util.Pair;
 import org.jboss.logging.Logger;
-import org.jboss.logging.Logger.Level;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -35,38 +33,28 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   private static final Logger LOGGER = Logger.getLogger(SpanDataServiceImpl.class);
 
-  @Inject
-  private LandscapeRepository landscapeRepository;
+  @Inject private ApplicationRepository applicationRepository;
 
-  @Inject
-  private ApplicationRepository applicationRepository;
+  @Inject private ClazzRepository clazzRepository;
 
-  @Inject
-  private CommitRepository commitRepository;
+  @Inject private CommitRepository commitRepository;
 
-  @Inject
-  private FileRevisionRepository fileRevisionRepository;
+  @Inject private FileRevisionRepository fileRevisionRepository;
 
-  @Inject
-  private FunctionRepository functionRepository;
+  @Inject private FunctionRepository functionRepository;
 
-  @Inject
-  private SpanRepository spanRepository;
+  @Inject private LandscapeRepository landscapeRepository;
 
-  @Inject
-  private TraceRepository traceRepository;
+  @Inject private SpanRepository spanRepository;
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
+
+  @Inject private TraceRepository traceRepository;
 
   @Blocking
   @Override
   public Uni<Empty> persistSpan(final SpanData spanData) {
-
-    final String[] splitFqn = spanData.getFunctionFqn().split("\\.");
-    final String[] splitFileFqn = Arrays.copyOfRange(splitFqn, 0, splitFqn.length - 1);
-    final String commitId = spanData.hasCommitId() ? spanData.getCommitId() : null;
-
+    final String commitHash = spanData.hasCommitHash() ? spanData.getCommitHash() : null;
     final Session session = sessionFactory.openSession();
 
     final Span span = new Span(spanData);
@@ -84,86 +72,113 @@ public class SpanDataServiceImpl implements SpanDataService {
     landscape.addTrace(trace);
 
     final Function function;
-    FileRevision fileRevision = null;
-
-    if (commitId != null) {
-      final Pair<FileRevision, Function> result =
-          resolveSpanWithCommitId(session, spanData, splitFqn, splitFileFqn, landscape);
-      fileRevision = result.first();
-      function = result.second();
+    if (commitHash != null) {
+      function = resolveFunctionFqn(session, spanData, commitHash);
     } else {
-      function = functionRepository.findFunction(session, spanData.getApplicationName(), splitFqn,
-          spanData.getLandscapeTokenId()).orElse(new Function(splitFqn[splitFqn.length - 1]));
+      function = resolveFunctionFqn(session, spanData);
     }
+
     span.setFunction(function);
 
-    if (fileRevision == null) {
-      try {
-        fileRevision = resolveFileRevision(session, spanData, landscape, splitFileFqn);
-      } catch (final NoSuchElementException | IllegalArgumentException e) {
-        if (LOGGER.isEnabled(Level.ERROR)) {
-          LOGGER.error("Error while creating file structure for span: " + e);
-        }
-        return Uni.createFrom()
-            .failure(Status.ABORTED.withDescription("Something went wrong!").asRuntimeException());
-      }
-    }
-
-    fileRevision.addFunction(function);
-
-    session.save(List.of(span, trace, landscape, fileRevision, function));
+    session.save(List.of(span, trace, landscape, function));
 
     return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
-  private Pair<FileRevision, Function> resolveSpanWithCommitId(final Session session,
-      final SpanData spanData, final String[] splitFqn, final String[] splitFileFqn,
-      final Landscape landscape) {
-    FileRevision fileRevision;
-    Function function =
-        functionRepository.findFunction(session, spanData.getApplicationName(), splitFqn,
-            spanData.getCommitId(), spanData.getLandscapeTokenId()).orElse(null);
+  private Function resolveFunctionFqn(final Session session, final SpanData spanData) {
+    final String[] splitFilePath = spanData.getFilePath().split("/");
+    final String functionName = spanData.getFunctionName();
 
-    if (function != null) {
-      fileRevision = fileRevisionRepository.findFileRevisionFromAppNameAndCommitHashAndPath(session,
-          spanData.getApplicationName(), spanData.getCommitId(), splitFileFqn,
-          spanData.getLandscapeTokenId()).orElse(null);
+    final FileRevision fileRevision = resolveFileRevision(session, spanData, splitFilePath);
+    final Function function;
+
+    if (spanData.hasClassName()) {
+      final Clazz clazz =
+          clazzRepository
+              .findClassByClassPathAndFileRevisionId(
+                  session, spanData.getClassName().split("\\."), fileRevision.getId())
+              .orElseGet(
+                  () ->
+                      clazzRepository.createClazzPathAndReturnLastClazz(
+                          session, spanData.getClassName().split("\\."), fileRevision.getId()));
+
+      function =
+          functionRepository
+              .findFunctionByFunctionNameAndClazzId(session, functionName, clazz.getId())
+              .orElse(new Function(functionName));
+      clazz.addFunction(function);
+      session.save(clazz);
     } else {
-      fileRevision = fileRevisionRepository.findFileRevisionFromAppNameAndPathWithoutCommit(session,
-          spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId()).orElse(null);
-
-      if (fileRevision == null) {
-        fileRevision = resolveFileRevision(session, spanData, landscape, splitFileFqn);
-      }
-
-      function = new Function(splitFqn[splitFqn.length - 1]);
+      function =
+          functionRepository
+              .findFunctionWithFunctionNameAndFileRevisionId(
+                  session, functionName, fileRevision.getId())
+              .orElse(new Function(functionName));
+      fileRevision.addFunction(function);
+      session.save(fileRevision);
     }
 
-    return new Pair<>(fileRevision, function);
+    return function;
   }
 
-  private FileRevision resolveFileRevision(final Session session, final SpanData spanData,
-      final Landscape landscape, final String[] splitFileFqn) {
-    final FileRevision fileRevision;
+  private Function resolveFunctionFqn(
+      final Session session, final SpanData spanData, final String commitHash) {
+    final String[] splitFilePath = spanData.getFilePath().split("/");
+    final String functionName = spanData.getFunctionName();
 
-    final Application application =
-        applicationRepository.findApplicationByNameAndLandscapeToken(session,
-                spanData.getApplicationName(), spanData.getLandscapeTokenId())
-            .orElse(new Application(spanData.getApplicationName()));
-
-    if (application.getRootDirectory() == null) {
-      // Application did not previously exist, build file structure from scratch
-      fileRevision =
-          fileRevisionRepository.createFileStructureForNewApplicationFromFqn(session, application,
-              splitFileFqn);
+    if (spanData.hasClassName()) {
+      return functionRepository
+          .findFunction(
+              session,
+              spanData.getApplicationName(),
+              ObjectArrays.concat(splitFilePath, functionName),
+              spanData.getLandscapeTokenId(),
+              commitHash,
+              spanData.getClassName().split("\\."))
+          .orElseGet(() -> resolveFunctionFqn(session, spanData));
     } else {
-      // Create missing directories and file for existing Application
-      fileRevision =
-          fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(session,
-              splitFileFqn, application.getName(), landscape.getTokenId());
+      return functionRepository
+          .findFunction(
+              session,
+              spanData.getApplicationName(),
+              ObjectArrays.concat(splitFilePath, functionName),
+              commitHash,
+              spanData.getLandscapeTokenId())
+          .orElseGet(() -> resolveFunctionFqn(session, spanData));
     }
-
-    return fileRevision;
   }
 
+  private FileRevision resolveFileRevision(
+      final Session session, final SpanData spanData, final String[] splitFileFqn) {
+    return fileRevisionRepository
+        .findFileRevisionFromAppNameAndPathWithoutCommit(
+            session, spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId())
+        .orElseGet(
+            () -> {
+              final Application application =
+                  applicationRepository
+                      .findApplicationByNameAndLandscapeToken(
+                          session, spanData.getApplicationName(), spanData.getLandscapeTokenId())
+                      .orElse(new Application(spanData.getApplicationName()));
+
+              FileRevision fileRevision;
+
+              if (application.getRootDirectory() == null) {
+                // Application did not previously exist, build file structure from scratch
+                fileRevision =
+                    fileRevisionRepository.createFileStructureForNewApplicationFromFqn(
+                        session, application, splitFileFqn);
+              } else {
+                // Create missing directories and file for existing Application
+                fileRevision =
+                    fileRevisionRepository.createFileStructureForExistingApplicationFromFileFqn(
+                        session,
+                        splitFileFqn,
+                        application.getName(),
+                        spanData.getLandscapeTokenId());
+              }
+
+              return fileRevision;
+            });
+  }
 }
