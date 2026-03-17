@@ -55,15 +55,15 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   @Blocking
   @Override
-  public Uni<Empty> persistSpan(final SpanData spanData) {
+  public Uni<Empty> persistSpan(final SpanData request) {
     final Session session = sessionFactory.openSession();
 
     try (Transaction tx = session.beginTransaction()) {
-      saveSpanData(session, spanData);
+      saveSpanData(session, request);
       tx.commit();
       return Uni.createFrom().item(Empty.getDefaultInstance());
     } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
-      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, spanData));
+      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
     }
   }
 

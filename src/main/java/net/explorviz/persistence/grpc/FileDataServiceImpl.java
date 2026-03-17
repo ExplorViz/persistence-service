@@ -46,33 +46,33 @@ public class FileDataServiceImpl implements FileDataService {
     }
   }
 
-  private void saveFileData(final Session session, final FileData request) {
+  private void saveFileData(final Session session, final FileData fileData) {
     final FileRevision file =
         fileRevisionRepository
             .getFileRevisionFromHashAndPath(
                 session,
-                request.getFileHash(),
-                request.getRepositoryName(),
-                request.getLandscapeToken(),
-                request.getFilePath().split("/"))
+                fileData.getFileHash(),
+                fileData.getRepositoryName(),
+                fileData.getLandscapeToken(),
+                fileData.getFilePath().split("/"))
             .orElseThrow(
                 () ->
                     Status.FAILED_PRECONDITION
                         .withDescription("No corresponding file was sent before in CommitData.")
                         .asRuntimeException());
 
-    file.setLanguage(request.getLanguage());
-    file.setPackageName(request.getPackageName());
-    request.getImportNamesList().forEach(file::addImportNames);
-    request.getMetricsMap().forEach(file::addMetric);
-    file.setLastEditor(request.getLastEditor());
-    file.setAddedLines(request.getAddedLines());
-    file.setModifiedLines(request.getModifiedLines());
-    file.setDeletedLines(request.getDeletedLines());
+    file.setLanguage(fileData.getLanguage());
+    file.setPackageName(fileData.getPackageName());
+    fileData.getImportNamesList().forEach(file::addImportNames);
+    fileData.getMetricsMap().forEach(file::addMetric);
+    file.setLastEditor(fileData.getLastEditor());
+    file.setAddedLines(fileData.getAddedLines());
+    file.setModifiedLines(fileData.getModifiedLines());
+    file.setDeletedLines(fileData.getDeletedLines());
 
-    request.getClassesList().forEach(c -> file.addClass(createClazz(session, c, request)));
+    fileData.getClassesList().forEach(c -> file.addClass(createClazz(session, c, fileData)));
 
-    request
+    fileData
         .getFunctionsList()
         .forEach(
             f -> {
@@ -87,13 +87,13 @@ public class FileDataServiceImpl implements FileDataService {
   }
 
   private Clazz createClazz(
-      final Session session, final ClassData classData, final FileData request) {
+      final Session session, final ClassData classData, final FileData fileData) {
     return clazzRepository
         .findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(
             session,
-            request.getLandscapeToken(),
-            request.getRepositoryName(),
-            request.getFileHash(),
+            fileData.getLandscapeToken(),
+            fileData.getRepositoryName(),
+            fileData.getFileHash(),
             classData.getName())
         .orElseGet(
             () -> {
@@ -101,8 +101,8 @@ public class FileDataServiceImpl implements FileDataService {
                   clazzRepository
                       .findClassFromInheritingClass(
                           session,
-                          request.getLandscapeToken(),
-                          request.getRepositoryName(),
+                          fileData.getLandscapeToken(),
+                          fileData.getRepositoryName(),
                           classData.getName())
                       .map(
                           foundClazz -> {
@@ -132,7 +132,7 @@ public class FileDataServiceImpl implements FileDataService {
 
               classData
                   .getInnerClassesList()
-                  .forEach(c -> clazz.addInnerClass(createClazz(session, c, request)));
+                  .forEach(c -> clazz.addInnerClass(createClazz(session, c, fileData)));
 
               classData
                   .getFunctionsList()
@@ -152,8 +152,8 @@ public class FileDataServiceImpl implements FileDataService {
                             clazzRepository
                                 .findClassByLandscapeTokenAndRepositoryAndClazzFqn(
                                     session,
-                                    request.getLandscapeToken(),
-                                    request.getRepositoryName(),
+                                    fileData.getLandscapeToken(),
+                                    fileData.getRepositoryName(),
                                     splitSuperFqn)
                                 .orElse(new Clazz(splitSuperFqn[1])));
                       });

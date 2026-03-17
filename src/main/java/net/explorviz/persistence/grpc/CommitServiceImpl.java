@@ -54,11 +54,11 @@ public class CommitServiceImpl implements CommitService {
     }
   }
 
-  public void saveCommitData(final Session session, final CommitData request) {
+  public void saveCommitData(final Session session, final CommitData commitData) {
     final Repository repo =
         repositoryRepository
             .findRepositoryByNameAndLandscapeToken(
-                session, request.getRepositoryName(), request.getLandscapeToken())
+                session, commitData.getRepositoryName(), commitData.getLandscapeToken())
             .orElseThrow(
                 () ->
                     Status.FAILED_PRECONDITION
@@ -68,38 +68,46 @@ public class CommitServiceImpl implements CommitService {
     final Branch branch =
         branchRepository.getOrCreateBranch(
             session,
-            request.getBranchName(),
-            request.getRepositoryName(),
-            request.getLandscapeToken());
+            commitData.getBranchName(),
+            commitData.getRepositoryName(),
+            commitData.getLandscapeToken());
     repo.addBranch(branch);
 
     final Commit commit =
         commitRepository.getOrCreateCommit(
-            session, request.getCommitId(), request.getLandscapeToken());
+            session, commitData.getCommitId(), commitData.getLandscapeToken());
     commit.setBranch(branch);
     commit.setCommitDate(
         Instant.ofEpochSecond(
-            request.getCommitDate().getSeconds(), request.getCommitDate().getNanos()));
+            commitData.getCommitDate().getSeconds(), commitData.getCommitDate().getNanos()));
     commit.setAuthorDate(
         Instant.ofEpochSecond(
-            request.getAuthorDate().getSeconds(), request.getAuthorDate().getNanos()));
+            commitData.getAuthorDate().getSeconds(), commitData.getAuthorDate().getNanos()));
     repo.addCommit(commit);
 
-    request
+    commitData
         .getAddedFilesList()
         .forEach(
             f ->
                 fileRevisionRepository.createFileStructureFromStaticData(
-                    session, f, request.getRepositoryName(), request.getLandscapeToken(), commit));
+                    session,
+                    f,
+                    commitData.getRepositoryName(),
+                    commitData.getLandscapeToken(),
+                    commit));
 
-    request
+    commitData
         .getModifiedFilesList()
         .forEach(
             f ->
                 fileRevisionRepository.createFileStructureFromStaticData(
-                    session, f, request.getRepositoryName(), request.getLandscapeToken(), commit));
+                    session,
+                    f,
+                    commitData.getRepositoryName(),
+                    commitData.getLandscapeToken(),
+                    commit));
 
-    request
+    commitData
         .getUnchangedFilesList()
         .forEach(
             f -> {
@@ -109,33 +117,34 @@ public class CommitServiceImpl implements CommitService {
                       .getFileRevisionFromHashAndPath(
                           session,
                           f.getFileHash(),
-                          request.getRepositoryName(),
-                          request.getLandscapeToken(),
+                          commitData.getRepositoryName(),
+                          commitData.getLandscapeToken(),
                           pathSegments)
                       .orElse(
                           fileRevisionRepository.createFileStructureFromStaticData(
                               session,
                               f,
-                              request.getRepositoryName(),
-                              request.getLandscapeToken(),
+                              commitData.getRepositoryName(),
+                              commitData.getLandscapeToken(),
                               commit));
 
               commit.addFileRevision(unchangedFile);
             });
 
-    request
+    commitData
         .getTagsList()
         .forEach(
             tagName ->
                 commit.addTag(
                     tagRepository.findTagByName(session, tagName).orElse(new Tag(tagName))));
 
-    if (request.getParentCommitId().isEmpty() || NO_PARENT_ID.equals(request.getParentCommitId())) {
+    if (commitData.getParentCommitId().isEmpty()
+        || NO_PARENT_ID.equals(commitData.getParentCommitId())) {
       session.save(List.of(repo, branch, commit));
     } else {
       final Commit parentCommit =
           commitRepository.getOrCreateCommit(
-              session, request.getParentCommitId(), request.getLandscapeToken());
+              session, commitData.getParentCommitId(), commitData.getLandscapeToken());
       commit.addParent(parentCommit);
       session.save(List.of(repo, branch, commit, parentCommit));
     }

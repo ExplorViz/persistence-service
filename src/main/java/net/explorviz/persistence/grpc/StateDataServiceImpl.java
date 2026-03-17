@@ -69,39 +69,39 @@ public class StateDataServiceImpl implements StateDataService {
     }
   }
 
-  public void saveStateData(final Session session, final StateDataRequest request) {
+  public void saveStateData(final Session session, final StateDataRequest stateData) {
     final Landscape landscape =
-        landscapeRepository.getOrCreateLandscape(session, request.getLandscapeToken());
+        landscapeRepository.getOrCreateLandscape(session, stateData.getLandscapeToken());
 
     final Repository repository =
         repositoryRepository.getOrCreateRepository(
-            session, request.getRepositoryName(), request.getLandscapeToken());
+            session, stateData.getRepositoryName(), stateData.getLandscapeToken());
     landscape.addRepository(repository);
 
     final Branch branch =
         branchRepository.getOrCreateBranch(
             session,
-            request.getBranchName(),
-            request.getRepositoryName(),
-            request.getLandscapeToken());
+            stateData.getBranchName(),
+            stateData.getRepositoryName(),
+            stateData.getLandscapeToken());
 
     repository.addBranch(branch);
 
     if (repository.getRootDirectory() == null) {
-      final Directory repoRootDirectory = new Directory(request.getRepositoryName());
+      final Directory repoRootDirectory = new Directory(stateData.getRepositoryName());
       repository.setRootDirectory(repoRootDirectory);
     }
 
     session.save(List.of(repository, landscape));
 
-    request
+    stateData
         .getApplicationPathsMap()
         .forEach(
             (String k, String v) -> {
               final Application application =
                   applicationRepository
                       .findApplicationByNameAndLandscapeToken(
-                          session, k, request.getLandscapeToken())
+                          session, k, stateData.getLandscapeToken())
                       .orElse(new Application(k));
 
               if (v.isEmpty()) {
@@ -111,8 +111,8 @@ public class StateDataServiceImpl implements StateDataService {
                     directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(
                         session,
                         (repository.getName() + "/" + v).split("/"),
-                        request.getRepositoryName(),
-                        request.getLandscapeToken());
+                        stateData.getRepositoryName(),
+                        stateData.getLandscapeToken());
                 application.setRootDirectory(applicationRootDirectory);
               }
               session.save(application);
