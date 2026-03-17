@@ -24,9 +24,11 @@ import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.SpanRepository;
 import net.explorviz.persistence.repository.TraceRepository;
+import net.explorviz.persistence.util.GrpcExceptionMapper;
 import org.jboss.logging.Logger;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import org.neo4j.ogm.transaction.Transaction;
 
 @GrpcService
 public class SpanDataServiceImpl implements SpanDataService {
@@ -53,10 +55,19 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   @Blocking
   @Override
-  public Uni<Empty> persistSpan(final SpanData spanData) {
-    final String commitHash = spanData.hasCommitHash() ? spanData.getCommitHash() : null;
+  public Uni<Empty> persistSpan(final SpanData request) {
     final Session session = sessionFactory.openSession();
 
+    try (Transaction tx = session.beginTransaction()) {
+      saveSpanData(session, request);
+      tx.commit();
+      return Uni.createFrom().item(Empty.getDefaultInstance());
+    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
+      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
+    }
+  }
+
+  public void saveSpanData(final Session session, final SpanData spanData) {
     final Span span = new Span(spanData);
 
     if (!spanData.getParentId().isEmpty()) {
@@ -72,8 +83,8 @@ public class SpanDataServiceImpl implements SpanDataService {
     landscape.addTrace(trace);
 
     final Function function;
-    if (commitHash != null) {
-      function = resolveFunctionFqn(session, spanData, commitHash);
+    if (spanData.hasCommitHash()) {
+      function = resolveFunctionFqn(session, spanData, spanData.getCommitHash());
     } else {
       function = resolveFunctionFqn(session, spanData);
     }
@@ -81,8 +92,6 @@ public class SpanDataServiceImpl implements SpanDataService {
     span.setFunction(function);
 
     session.save(List.of(span, trace, landscape, function));
-
-    return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
   private Function resolveFunctionFqn(final Session session, final SpanData spanData) {
