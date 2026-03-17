@@ -20,8 +20,10 @@ import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.DirectoryRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.RepositoryRepository;
+import net.explorviz.persistence.util.GrpcExceptionMapper;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import org.neo4j.ogm.transaction.Transaction;
 
 @GrpcService
 public class StateDataServiceImpl implements StateDataService {
@@ -45,6 +47,29 @@ public class StateDataServiceImpl implements StateDataService {
   public Uni<StateData> getStateData(final StateDataRequest request) {
     final Session session = sessionFactory.openSession();
 
+    try (Transaction tx = session.beginTransaction()) {
+      saveStateData(session, request);
+      tx.commit();
+
+      final StateData.Builder stateDataBuilder = StateData.newBuilder();
+      final String commitId =
+          commitRepository
+              .findLatestFullyPersistedCommit(
+                  session,
+                  request.getRepositoryName(),
+                  request.getLandscapeToken(),
+                  request.getBranchName())
+              .map(Commit::getHash)
+              .orElse("");
+      stateDataBuilder.setCommitId(commitId);
+
+      return Uni.createFrom().item(stateDataBuilder.build());
+    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
+      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
+    }
+  }
+
+  public void saveStateData(final Session session, final StateDataRequest request) {
     final Landscape landscape =
         landscapeRepository.getOrCreateLandscape(session, request.getLandscapeToken());
 
@@ -95,19 +120,5 @@ public class StateDataServiceImpl implements StateDataService {
             });
 
     session.save(List.of(repository, landscape));
-
-    final StateData.Builder stateDataBuilder = StateData.newBuilder();
-    final String commitId =
-        commitRepository
-            .findLatestFullyPersistedCommit(
-                session,
-                request.getRepositoryName(),
-                request.getLandscapeToken(),
-                request.getBranchName())
-            .map(Commit::getHash)
-            .orElse("");
-    stateDataBuilder.setCommitId(commitId);
-
-    return Uni.createFrom().item(stateDataBuilder.build());
   }
 }

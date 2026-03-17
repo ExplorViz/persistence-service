@@ -5,6 +5,7 @@ import io.grpc.StatusRuntimeException;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.SpanData;
+import net.explorviz.persistence.proto.StateDataRequest;
 
 /** Utility class to map Java exceptions to gRPC exceptions. */
 public final class GrpcExceptionMapper {
@@ -33,6 +34,18 @@ public final class GrpcExceptionMapper {
     return Status.CANCELLED
         .withDescription("Something went wrong: " + contextInfo + " All changes were rolled back.")
         .asRuntimeException();
+  }
+
+  public static StatusRuntimeException mapToGrpcException(
+      final Exception e, final StateDataRequest stateData) {
+    final String contextInfo =
+        "Regarding the call to getStateData for the "
+            + "landscape with tokenId '"
+            + stateData.getLandscapeToken()
+            + "' and repository '"
+            + stateData.getRepositoryName()
+            + "'.";
+    return mapToGrpcException(e, contextInfo);
   }
 
   public static StatusRuntimeException mapToGrpcException(
