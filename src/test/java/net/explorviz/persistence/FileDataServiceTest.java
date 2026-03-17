@@ -2,6 +2,7 @@ package net.explorviz.persistence;
 
 import static net.explorviz.persistence.util.TestUtils.assertNodeCounts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -906,11 +907,17 @@ class FileDataServiceTest {
     Boolean databaseCorrectAfterPersistFile =
         session.queryForObject(Boolean.class, dbQuery, params);
 
+    Boolean fileHasFileData = session.queryForObject(Boolean.class, """
+      MATCH (f:FileRevision {hash: $fileHash, name: $fileName})
+      RETURN f.hasFileData;
+    """, params);
+
     assertTrue(databaseCorrectBeforePersistFile);
     assertEquals(Status.FAILED_PRECONDITION.getCode(), ex.getStatus().getCode());
     assertEquals(
         "No corresponding file was sent before in CommitData.", ex.getStatus().getDescription());
     assertTrue(databaseCorrectAfterPersistFile);
+    assertFalse(fileHasFileData);
     assertNodeCounts(
         session,
         ExpectedCounts.builder()
@@ -1067,6 +1074,11 @@ class FileDataServiceTest {
     Boolean databaseCorrectAfterPersistFileOne =
         session.queryForObject(Boolean.class, dbQuery, params);
 
+    Boolean fileOneHasFileData = session.queryForObject(Boolean.class, """
+      MATCH (f:FileRevision {hash: $fileHashSuper, name: $fileNameSuper})
+      RETURN f.hasFileData;
+    """, params);
+
     StatusRuntimeException exTwo =
         assertThrows(
             StatusRuntimeException.class,
@@ -1079,6 +1091,11 @@ class FileDataServiceTest {
     Boolean databaseCorrectAfterPersistFileTwo =
         session.queryForObject(Boolean.class, dbQuery, params);
 
+    Boolean fileTwoHasFileData = session.queryForObject(Boolean.class, """
+      MATCH (f:FileRevision {hash: $fileHashClass, name: $fileNameClass})
+      RETURN f.hasFileData;
+    """, params);
+
     assertTrue(databaseCorrectBeforePersistFile);
     assertEquals(Status.INVALID_ARGUMENT.getCode(), ex.getStatus().getCode());
     assertEquals(
@@ -1088,6 +1105,7 @@ class FileDataServiceTest {
             + superclassFqn,
         ex.getStatus().getDescription());
     assertTrue(databaseCorrectAfterPersistFileOne);
+    assertFalse(fileOneHasFileData);
 
     assertEquals(Status.INVALID_ARGUMENT.getCode(), exTwo.getStatus().getCode());
     assertEquals(
@@ -1097,6 +1115,7 @@ class FileDataServiceTest {
             + superclassFqnTwo,
         exTwo.getStatus().getDescription());
     assertTrue(databaseCorrectAfterPersistFileTwo);
+    assertFalse(fileTwoHasFileData);
 
     assertNodeCounts(
         session,
