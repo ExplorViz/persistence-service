@@ -13,13 +13,10 @@ import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 
-/**
- * Provides wrapper classes for turning OGM Application objects into FlatLandscape city models.
- */
-public final class ApplicationToCityConverter {
+/** Provides wrapper classes for turning OGM Application objects into FlatLandscape city models. */
+public final class DefaultApplicationToCityConverter {
 
-  private ApplicationToCityConverter() {
-  }
+  private DefaultApplicationToCityConverter() {}
 
   public static CityConvertible convert(final Application ogmApp) {
     return new ApplicationWrapper(ogmApp);
@@ -48,7 +45,6 @@ public final class ApplicationToCityConverter {
     }
   }
 
-
   private record DirectoryWrapper(Directory ogmDir) implements DistrictConvertible {
 
     @Override
@@ -72,7 +68,6 @@ public final class ApplicationToCityConverter {
     }
   }
 
-
   private record FileRevisionWrapper(FileRevision ogmFile) implements BuildingConvertible {
 
     @Override
@@ -95,7 +90,6 @@ public final class ApplicationToCityConverter {
       return ogmFile.getFunctions().stream().map(FunctionWrapper::new);
     }
   }
-
 
   private record ClassWrapper(Clazz ogmClass) implements ClassConvertible {
 
@@ -124,7 +118,6 @@ public final class ApplicationToCityConverter {
       return ogmClass.getMetrics();
     }
   }
-
 
   private record FunctionWrapper(Function ogmFunc) implements FunctionConvertible {
 

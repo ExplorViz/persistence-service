@@ -14,39 +14,91 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class ApplicationRepository {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
-  public Optional<Application> findApplicationByNameAndLandscapeToken(final Session session,
-      final String name, final String tokenId) {
-    return Optional.ofNullable(session.queryForObject(Application.class, """
+  public Optional<Application> findApplicationByNameAndLandscapeToken(
+      final Session session, final String name, final String tokenId) {
+    return Optional.ofNullable(
+        session.queryForObject(
+            Application.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})
         MATCH (app:Application {name: $name})-[h:HAS_ROOT]->(appRoot:Directory)
         WHERE
           (appRoot)-[*]-(l)
         RETURN app, h, appRoot;
-        """, Map.of("tokenId", tokenId, "name", name)));
+        """,
+            Map.of("tokenId", tokenId, "name", name)));
   }
 
   /**
-   * Returns a list of fully hydrated Application objects with respect to the file structure,
-   * meaning all files and corresponding directories are fetched. This includes fully hydrated
-   * functions and classes. Empty if no Application is matched.
+   * Returns a list of Application objects hydrated with respect to the file structure generated
+   * from runtime analysis, meaning all files and corresponding directories gathered from trace
+   * analysis are fetched. This includes fully hydrated functions and classes. A file is considered
+   * to be gathered from runtime analysis if it contains a function that is represented by at least
+   * one span. Empty if no Application is matched.
    */
-  public List<Application> fetchAllFullyHydratedApplications(final Session session,
-      final String landscapeToken) {
-    return Lists.newArrayList(session.query(Application.class, """
+  // TODO this should only include functions that have a span attached, otherwise we also include
+  // information not actually gathered from runtime analysis
+  public List<Application> fetchAllApplicationsHydratedForRuntimeData(
+      final Session session, final String landscapeToken) {
+    return Lists.newArrayList(
+        session.query(
+            Application.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (a:Application)
+        MATCH (func:Function)
         WHERE
-          (a)-[*]-(l)
-        CALL apoc.path.subgraphAll(a, {
-          relationshipFilter: "HAS_ROOT>|CONTAINS>"
+          (l)-[:CONTAINS]->(:Trace)-[:CONTAINS]->(:Span)-[:REPRESENTS]->(func)
+
+        MATCH p = (:Application)-[:CONTAINS]->*(file:FileRevision)
+        WHERE (file)-[:CONTAINS]->(func)
+
+        CALL apoc.path.subgraphAll(file, {
+          relationshipFilter: "CONTAINS>"
         })
-        YIELD relationships
-        UNWIND relationships as r
+        YIELD relationships AS fileContentRels
+
+        WITH relationships(p) + fileContentRels AS rels
+        UNWIND rels as r
         RETURN startNode(r), r, endNode(r);
-        """, Map.of("tokenId", landscapeToken)));
+        """,
+            Map.of("tokenId", landscapeToken)));
+  }
+
+  /**
+   * Returns a list of all Application objects that are contained in the given repository. The
+   * application objects are hydrated with respect to the file structure of a specific commit,
+   * meaning all files and corresponding directories within the commit are also fetched. This
+   * includes fully hydrated functions and classes. Empty if no Application is matched.
+   */
+  public List<Application> fetchHydratedApplicationsInRepositoryForCommit(
+      final Session session,
+      final String landscapeToken,
+      final String repositoryName,
+      final String commitHash) {
+    return Lists.newArrayList(
+        session.query(
+            Application.class,
+            """
+        MATCH (l:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(:Repository {name: $repoName})
+          -[:CONTAINS]->(c:Commit {hash: $commitHash})
+        MATCH (c)-[:CONTAINS]->(f:FileRevision)
+
+        CALL apoc.path.subgraphAll(f, {
+          relationshipFilter: "CONTAINS>"
+        })
+        YIELD relationships AS fileContentRels
+
+        MATCH p = (:Application)-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(f:FileRevision)
+
+        WITH relationships(p) + fileContentRels AS rels
+        UNWIND rels as r
+        RETURN DISTINCT startNode(r), r, endNode(r);
+        """,
+            Map.of(
+                "tokenId", landscapeToken, "repoName", repositoryName, "commitHash", commitHash)));
   }
 
   /**
@@ -56,58 +108,72 @@ public class ApplicationRepository {
    * file which is included in either commit is returned, i.e. the union of the commit's file
    * structures is fetched.
    *
-   * @param session          OGM session object
-   * @param firstCommitHash  Hash of the first commit whose files to include
+   * @param session OGM session object
+   * @param firstCommitHash Hash of the first commit whose files to include
    * @param secondCommitHash Hash of the second commit whose files to include
-   * @param landscapeToken   Identifier of the software landscape
+   * @param landscapeToken String identifier of the visualization landscape
    * @return A list of the Application objects belonging to the specified commits, hydrated to
    *     include all files and file contents in the given commits that are part of the application.
    *     Empty if no application is matched.
    */
-  public List<Application> fetchApplicationsHydratedForTwoCommits(final Session session,
-      final String landscapeToken, final String firstCommitHash, final String secondCommitHash) {
-    return Lists.newArrayList(session.query(Application.class, """
+  public List<Application> fetchApplicationsHydratedForTwoCommits(
+      final Session session,
+      final String landscapeToken,
+      final String firstCommitHash,
+      final String secondCommitHash) {
+    return Lists.newArrayList(
+        session.query(
+            Application.class,
+            """
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository)
               -[:CONTAINS]->(c:Commit WHERE c.hash = $firstCommitHash OR c.hash = $secondCommitHash)
-              -[:CONTAINS]->(f:FileRevision)
-            
-            CALL apoc.path.subgraphAll(f, {
-              relationshipFilter: "<HAS_ROOT|<CONTAINS",
-              labelFilter: "+Directory|+Application"
-            })
-            YIELD relationships AS filePathRelations
-            
+
+            MATCH (f:FileRevision)
+            WHERE (c)-[:CONTAINS]->(f)
+
             CALL apoc.path.subgraphAll(f, {
               relationshipFilter: "CONTAINS>"
             })
             YIELD relationships AS fileContentRelations
-            
-            UNWIND filePathRelations + fileContentRelations as r
-            RETURN startNode(r), r, endNode(r);
+
+            MATCH p = (:Application)-[:CONTAINS]->*(f:FileRevision)
+
+            WITH relationships(p) + fileContentRelations AS rels
+            UNWIND rels as r
+            RETURN DISTINCT startNode(r), r, endNode(r);
             """,
-        Map.of("tokenId", landscapeToken, "firstCommitHash", firstCommitHash, "secondCommitHash",
-            secondCommitHash)));
+            Map.of(
+                "tokenId",
+                landscapeToken,
+                "firstCommitHash",
+                firstCommitHash,
+                "secondCommitHash",
+                secondCommitHash)));
   }
 
   /**
    * Return the names of all application nodes in a landscape which are contained in a repository,
    * i.e. the names of all applications which have static data available.
    */
-  public List<String> findStaticApplicationNamesForLandscapeToken(final Session session,
-      final String landscapeToken) {
-    return Lists.newArrayList(session.query(String.class, """
+  public List<String> findStaticApplicationNamesForLandscapeToken(
+      final Session session, final String landscapeToken) {
+    return Lists.newArrayList(
+        session.query(
+            String.class,
+            """
         MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(a:Application)
         RETURN DISTINCT a.name;
-        """, Map.of("tokenId", landscapeToken)));
+        """,
+            Map.of("tokenId", landscapeToken)));
   }
 
-  public Application getOrCreateApplication(final Session session, final String name,
-      final String tokenId) {
-    return findApplicationByNameAndLandscapeToken(session, name, tokenId).orElse(
-        new Application(name));
+  public Application getOrCreateApplication(
+      final Session session, final String name, final String tokenId) {
+    return findApplicationByNameAndLandscapeToken(session, name, tokenId)
+        .orElse(new Application(name));
   }
 }

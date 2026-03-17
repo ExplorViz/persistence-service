@@ -27,20 +27,15 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings("PMD.UseObjectForClearerAPI")
 class LandscapeResource {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  @Inject
-  private ApplicationRepository applicationRepository;
+  @Inject private ApplicationRepository applicationRepository;
 
-  @Inject
-  private CommitRepository commitRepository;
+  @Inject private CommitRepository commitRepository;
 
-  @Inject
-  private RepositoryRepository repositoryRepository;
+  @Inject private RepositoryRepository repositoryRepository;
 
-  @Inject
-  private TraceRepository traceRepository;
+  @Inject private TraceRepository traceRepository;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -49,7 +44,7 @@ class LandscapeResource {
     final Session session = sessionFactory.openSession();
 
     final List<Application> ogmApps =
-        applicationRepository.fetchAllFullyHydratedApplications(session, landscapeToken);
+        applicationRepository.fetchAllApplicationsHydratedForRuntimeData(session, landscapeToken);
 
     final NodeDto node = new NodeDto("", "", ogmApps.stream().map(ApplicationDto::new).toList());
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
@@ -58,8 +53,8 @@ class LandscapeResource {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @Path("/dynamic")
-  public List<TraceDto> getDynamicData(@RestPath final String landscapeToken,
-      @RestQuery final Long from, @RestQuery final Long to) {
+  public List<TraceDto> getDynamicData(
+      @RestPath final String landscapeToken, @RestQuery final Long from, @RestQuery final Long to) {
 
     final Session session = sessionFactory.openSession();
 
@@ -69,10 +64,13 @@ class LandscapeResource {
     final List<Trace> ogmTraces =
         traceRepository.findHydratedTraces(session, landscapeToken, fromTimestamp, toTimestamp);
 
-    return ogmTraces.stream().map(t -> {
-      final Optional<String> commitHash =
-          traceRepository.findCommitHashForTrace(session, landscapeToken, t.getTraceId());
-      return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
-    }).toList();
+    return ogmTraces.stream()
+        .map(
+            t -> {
+              final Optional<String> commitHash =
+                  traceRepository.findCommitHashForTrace(session, landscapeToken, t.getTraceId());
+              return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
+            })
+        .toList();
   }
 }
