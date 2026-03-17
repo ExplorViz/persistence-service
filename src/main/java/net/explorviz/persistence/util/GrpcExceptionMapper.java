@@ -4,6 +4,7 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.FileData;
+import net.explorviz.persistence.proto.SpanData;
 
 /** Utility class to map Java exceptions to gRPC exceptions. */
 public final class GrpcExceptionMapper {
@@ -48,6 +49,15 @@ public final class GrpcExceptionMapper {
     final String contextInfo =
         "Regarding the call to persistCommit for the commit with hash '"
             + commitData.getCommitId()
+            + "'.";
+    return mapToGrpcException(e, contextInfo);
+  }
+
+  public static StatusRuntimeException mapToGrpcException(
+      final Exception e, final SpanData spanData) {
+    final String contextInfo =
+        "Regarding the call to persistSpan for the span with id '"
+            + spanData.getSpanId()
             + "'.";
     return mapToGrpcException(e, contextInfo);
   }
