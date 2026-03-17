@@ -11,20 +11,22 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 
 # Table of Contents
 - [Database Model](#database-model)
-    - [Application](#application)
-    - [Branch](#branch)
-    - [Clazz](#clazz)
-    - [Commit](#commit)
-    - [Directory](#directory)
-    - [Field](#field)
-    - [FileRevision](#filerevision)
-    - [Function](#function)
-    - [Landscape](#landscape)
-    - [Parameter](#parameter)
-    - [Repository](#repository)
-    - [Span](#span)
-    - [Tag](#tag)
-    - [Trace](#trace)
+    - [Node Fields](#node-fields)
+        - [Application](#application)
+        - [Branch](#branch)
+        - [Clazz](#clazz)
+        - [Commit](#commit)
+        - [Directory](#directory)
+        - [Field](#field)
+        - [FileRevision](#filerevision)
+        - [Function](#function)
+        - [Landscape](#landscape)
+        - [Parameter](#parameter)
+        - [Repository](#repository)
+        - [Span](#span)
+        - [Tag](#tag)
+        - [Trace](#trace)
+    - [Updating the Database Model](#updating-the-database-model)
 - [REST-API](#rest-api)
     - [v2](#v2)
         - [GET /v2/landscapes/{landscapeToken}/structure](#get-v2landscapeslandscapetokenstructure)
@@ -50,19 +52,21 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 
 ![Model of database](resources/db_model.png)
 
-## Application
+## Node Fields
+
+### Application
 | Field               | Type                         |
 |---------------------|------------------------------|
 | **id**              | **Long**                     |
 | name                | string                       |
 
-## Branch
+### Branch
 | Field  | Type     |
 | ------ | -------- |
 | **id** | **Long** |
 | name   | string   |
 
-## Clazz
+### Clazz
 | Field                 | Type                |
 | --------------------- | ------------------- |
 | **id**                | **Long**            |
@@ -74,7 +78,7 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 | enumValues            | set[String]         |
 | metrics               | map[String, Double] |
 
-## Commit
+### Commit
 | Field      | Type       |
 | ---------- | ---------- |
 | **hash**   | **string** |
@@ -82,13 +86,13 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 | authorDate | Instant    |
 | commitDate | Instant    |
 
-## Directory
+### Directory
 | Field  | Type     |
 | ------ | -------- |
 | **id** | **Long** |
 | name   | string   |
 
-## Field
+### Field
 | Field     | Type         |
 | --------- | ------------ |
 | **id**    | **Long**     |
@@ -96,7 +100,7 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 | type      | String       |
 | modifiers | list[String] |
 
-## FileRevision
+### FileRevision
 | Field         | Type                |
 | ------------- | ------------------- |
 | **id**        | **Long**            |
@@ -112,7 +116,7 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 | modifiedLines | int                 |
 | deletedLines  | int                 |
 
-## Function
+### Function
 | Field               | Type                |
 | ------------------- | ------------------- |
 | **id**              | **Long**            |
@@ -126,12 +130,12 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 | startLine           | int                 |
 | endLine             | int                 |
 
-## Landscape
+### Landscape
 | Field       | Type       |
 | ----------- | ---------- |
 | **tokenId** | **string** |
 
-## Parameter
+### Parameter
 | Field     | Type         |
 | --------- | ------------ |
 | **id**    | **Long**     |
@@ -139,30 +143,44 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 | type      | String       |
 | modifiers | list[String] |
 
-## Repository
+### Repository
 | Field  | Type     |
 | ------ | -------- |
 | **id** | **Long** |
 | name   | string   |
 
-## Span
+### Span
 | Field      | Type       |
 | ---------- | ---------- |
 | **spanId** | **string** |
 | start_time | long       |
 | end_time   | long       |
 
-## Tag
+### Tag
 | Field    | Type       |
 | -------- | ---------- |
 | **name** | **string** |
 
-## Trace
+### Trace
 | Field       | Type       |
 | ----------- | ---------- |
 | **traceId** | **string** |
 | start_time  | long       |
 | end_time    | long       |
+
+## Updating the Database Model
+The database model was created using the web application arrows.app. 
+This is free to use and is officially recommended by Neo4j.
+
+The model can be exported in formats such as PNG and JSON. 
+The latest versions can be found under `./resources/`.
+You can import the model via JSON or create a resource link that loads the entire model.
+
+[**Link to the model**](https://arrows.app/#/import/json=eyJncmFwaCI6eyJub2RlcyI6W3siaWQiOiJuMCIsInBvc2l0aW9uIjp7IngiOjEyNi4wNDc4MzA0NDgyNjc1NSwieSI6MzgwLjMyMDQwMjc2ODc3MzZ9LCJjYXB0aW9uIjoiIiwibGFiZWxzIjpbIkxhbmRzY2FwZSJdLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjEiLCJwb3NpdGlvbiI6eyJ4Ijo2OTEuNzY5NjUzNTkzNTYzNywieSI6Mzc1LjMxNjk3NDgxNDQwMTl9LCJjYXB0aW9uIjoiIiwibGFiZWxzIjpbIkRpcmVjdG9yeSJdLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjIiLCJwb3NpdGlvbiI6eyJ4IjozMTkuNjkzNDE3NzEzMDIxLCJ5IjoyNC44NzIzMTc0NzU5ODEzNDd9LCJjYXB0aW9uIjoiIiwibGFiZWxzIjpbIlRyYWNlIl0sInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6eyJsYWJlbC1mb250LXNpemUiOjI0fX0seyJpZCI6Im4zIiwicG9zaXRpb24iOnsieCI6NTgwLjU0OTk3MDY3Njg3MTIsInkiOjI3LjM5ODc2MzQxOTU1MDYyNn0sImNhcHRpb24iOiIiLCJsYWJlbHMiOlsiU3BhbiJdLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnsibGFiZWwtZm9udC1zaXplIjoyNH19LHsiaWQiOiJuNCIsInBvc2l0aW9uIjp7IngiOjg5Ni4wMjkwMDQ2MTcyMTk3LCJ5Ijo2MDAuODM3ODUzNjA1Mjk3OH0sImNhcHRpb24iOiIiLCJsYWJlbHMiOlsiQ29tbWl0Il0sInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6eyJsYWJlbC1mb250LXNpemUiOjI0fX0seyJpZCI6Im41IiwicG9zaXRpb24iOnsieCI6MTAwNy41NTc1NDY4NjcyNjAzLCJ5IjozNzUuMzE2OTc0ODE0NDAxOX0sImNhcHRpb24iOiIiLCJsYWJlbHMiOlsiRmlsZVJldmlzaW9uIl0sInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6eyJsYWJlbC1mb250LXNpemUiOjI0fX0seyJpZCI6Im42IiwicG9zaXRpb24iOnsieCI6ODg3LjAwNzczMDQ2MTMxMTEsInkiOjI0Ljg3MjMxNzQ3NTk4MTM0N30sImNhcHRpb24iOiIiLCJsYWJlbHMiOlsiRnVuY3Rpb24iXSwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im43IiwicG9zaXRpb24iOnsieCI6MTMyMy4zNDU0NDAxNDA5NTcsInkiOjM4MC4zMjA0MDI3Njg3NzM2fSwiY2FwdGlvbiI6IiIsImxhYmVscyI6WyJDbGF6eiJdLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjgiLCJwb3NpdGlvbiI6eyJ4Ijo1ODAuNTQ5OTcwNjc2ODcxMiwieSI6NzgyLjk3OTc1ODc3NDQ0MTN9LCJjYXB0aW9uIjoiIiwibGFiZWxzIjpbIkJyYW5jaCJdLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjkiLCJwb3NpdGlvbiI6eyJ4IjozMDEuMTU2MDMzMzYwMTQ5NTQsInkiOjYwMC44Mzc4NTM2MDUyOTc4fSwiY2FwdGlvbiI6IiIsImxhYmVscyI6WyJSZXBvc2l0b3J5Il0sInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6e319LHsiaWQiOiJuMTAiLCJwb3NpdGlvbiI6eyJ4IjozNzYuMDIxNDAwNjM0MTEzNDMsInkiOjM4MC4zMjA0MDI3Njg3NzM2fSwiY2FwdGlvbiI6IiIsImxhYmVscyI6WyJBcHBsaWNhdGlvbiJdLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjExIiwicG9zaXRpb24iOnsieCI6MTMyMy4zNDU0NDAxNDA5NTcsInkiOjEwNy43MDMzMDI0NjIwNDE0OX0sImNhcHRpb24iOiIiLCJsYWJlbHMiOlsiRmllbGQiXSwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im4xMiIsInBvc2l0aW9uIjp7IngiOjExOTMuNDY1NDkwMjQ1NzUxLCJ5IjoyNi40NDM4ODg5MTA0NjA0OX0sImNhcHRpb24iOiIiLCJsYWJlbHMiOlsiUGFyYW1ldGVyIl0sInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6e319LHsiaWQiOiJuMTMiLCJwb3NpdGlvbiI6eyJ4IjoxMTkzLjQ2NTQ5MDI0NTc1MSwieSI6NjAwLjgzNzg1MzYwNTI5Nzh9LCJjYXB0aW9uIjoiIiwibGFiZWxzIjpbIlRhZyJdLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fV0sInJlbGF0aW9uc2hpcHMiOlt7ImlkIjoibjAiLCJmcm9tSWQiOiJuMCIsInRvSWQiOiJuMiIsInR5cGUiOiJDT05UQUlOUyIsInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6e319LHsiaWQiOiJuMSIsImZyb21JZCI6Im4yIiwidG9JZCI6Im4zIiwidHlwZSI6IkNPTlRBSU5TIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im4yIiwiZnJvbUlkIjoibjUiLCJ0b0lkIjoibjYiLCJ0eXBlIjoiQ09OVEFJTlMiLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjMiLCJmcm9tSWQiOiJuNCIsInRvSWQiOiJuNCIsInR5cGUiOiJIQVNfUEFSRU5UIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7InR5cGUtcGFkZGluZyI6NSwibWFyZ2luLXBlZXIiOjIwLCJkZXRhaWwtcG9zaXRpb24iOiJhYm92ZSJ9fSx7ImlkIjoibjQiLCJmcm9tSWQiOiJuMyIsInRvSWQiOiJuNiIsInR5cGUiOiJSRVBSRVNFTlRTIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im41IiwiZnJvbUlkIjoibjciLCJ0b0lkIjoibjYiLCJ0eXBlIjoiQ09OVEFJTlMiLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjYiLCJmcm9tSWQiOiJuNyIsInRvSWQiOiJuNyIsInR5cGUiOiJDT05UQUlOUyIsInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6eyJkZXRhaWwtcG9zaXRpb24iOiJiZWxvdyJ9fSx7ImlkIjoibjciLCJmcm9tSWQiOiJuNyIsInRvSWQiOiJuNyIsInR5cGUiOiJJTkhFUklUUyIsInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6eyJkZXRhaWwtcG9zaXRpb24iOiJhYm92ZSJ9fSx7ImlkIjoibjgiLCJmcm9tSWQiOiJuNSIsInRvSWQiOiJuNyIsInR5cGUiOiJDT05UQUlOUyIsInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6e319LHsiaWQiOiJuOSIsImZyb21JZCI6Im40IiwidG9JZCI6Im44IiwidHlwZSI6IkJFTE9OR1NfVE8iLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjEwIiwiZnJvbUlkIjoibjkiLCJ0b0lkIjoibjgiLCJ0eXBlIjoiQ09OVEFJTlMiLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjExIiwiZnJvbUlkIjoibjAiLCJ0b0lkIjoibjkiLCJ0eXBlIjoiQ09OVEFJTlMiLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnsidHlwZS1mb250LXNpemUiOjE0fX0seyJpZCI6Im4xMiIsImZyb21JZCI6Im4zIiwidG9JZCI6Im4zIiwidHlwZSI6IkhBU19QQVJFTlQiLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnsiZGV0YWlsLXBvc2l0aW9uIjoiYmVsb3cifX0seyJpZCI6Im4xMyIsImZyb21JZCI6Im45IiwidG9JZCI6Im40IiwidHlwZSI6IkNPTlRBSU5TIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im4xNCIsImZyb21JZCI6Im4xIiwidG9JZCI6Im41IiwidHlwZSI6IkNPTlRBSU5TIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im4xNSIsImZyb21JZCI6Im4xIiwidG9JZCI6Im4xIiwidHlwZSI6IkNPTlRBSU5TIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7InR5cGUtZm9udC1zaXplIjoxNCwiZGV0YWlsLXBvc2l0aW9uIjoiYWJvdmUifX0seyJpZCI6Im4xNiIsImZyb21JZCI6Im40IiwidG9JZCI6Im41IiwidHlwZSI6IkNPTlRBSU5TIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im4xNyIsImZyb21JZCI6Im4xMCIsInRvSWQiOiJuMSIsInR5cGUiOiJIQVNfUk9PVCIsInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6e319LHsiaWQiOiJuMTgiLCJmcm9tSWQiOiJuOSIsInRvSWQiOiJuMSIsInR5cGUiOiJIQVNfUk9PVCIsInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6e319LHsiaWQiOiJuMTkiLCJmcm9tSWQiOiJuNyIsInRvSWQiOiJuMTEiLCJ0eXBlIjoiOkNPTlRBSU5TIiwicHJvcGVydGllcyI6e30sInN0eWxlIjp7fX0seyJpZCI6Im4yMCIsImZyb21JZCI6Im42IiwidG9JZCI6Im4xMiIsInR5cGUiOiI6Q09OVEFJTlMiLCJwcm9wZXJ0aWVzIjp7fSwic3R5bGUiOnt9fSx7ImlkIjoibjIxIiwiZnJvbUlkIjoibjQiLCJ0b0lkIjoibjEzIiwidHlwZSI6IjpJU19UQUdHRURfV0lUSCIsInByb3BlcnRpZXMiOnt9LCJzdHlsZSI6e319XSwic3R5bGUiOnsiZm9udC1mYW1pbHkiOiJzYW5zLXNlcmlmIiwiYmFja2dyb3VuZC1jb2xvciI6IiNmZmZmZmYiLCJiYWNrZ3JvdW5kLWltYWdlIjoiIiwiYmFja2dyb3VuZC1zaXplIjoiMTAwJSIsIm5vZGUtY29sb3IiOiIjZmZmZmZmIiwiYm9yZGVyLXdpZHRoIjo0LCJib3JkZXItY29sb3IiOiIjMDAwMDAwIiwicmFkaXVzIjo1MCwibm9kZS1wYWRkaW5nIjo1LCJub2RlLW1hcmdpbiI6Miwib3V0c2lkZS1wb3NpdGlvbiI6ImF1dG8iLCJub2RlLWljb24taW1hZ2UiOiIiLCJub2RlLWJhY2tncm91bmQtaW1hZ2UiOiIiLCJpY29uLXBvc2l0aW9uIjoiaW5zaWRlIiwiaWNvbi1zaXplIjo2NCwiY2FwdGlvbi1wb3NpdGlvbiI6Imluc2lkZSIsImNhcHRpb24tbWF4LXdpZHRoIjoyMDAsImNhcHRpb24tY29sb3IiOiIjMDAwMDAwIiwiY2FwdGlvbi1mb250LXNpemUiOjUwLCJjYXB0aW9uLWZvbnQtd2VpZ2h0Ijoibm9ybWFsIiwibGFiZWwtcG9zaXRpb24iOiJpbnNpZGUiLCJsYWJlbC1kaXNwbGF5IjoicGlsbCIsImxhYmVsLWNvbG9yIjoiIzAwMDAwMCIsImxhYmVsLWJhY2tncm91bmQtY29sb3IiOiIjZmZmZmZmIiwibGFiZWwtYm9yZGVyLWNvbG9yIjoiIzAwMDAwMCIsImxhYmVsLWJvcmRlci13aWR0aCI6NCwibGFiZWwtZm9udC1zaXplIjo0MCwibGFiZWwtcGFkZGluZyI6NSwibGFiZWwtbWFyZ2luIjo0LCJkaXJlY3Rpb25hbGl0eSI6ImRpcmVjdGVkIiwiZGV0YWlsLXBvc2l0aW9uIjoiaW5saW5lIiwiZGV0YWlsLW9yaWVudGF0aW9uIjoicGFyYWxsZWwiLCJhcnJvdy13aWR0aCI6NSwiYXJyb3ctY29sb3IiOiIjMDAwMDAwIiwibWFyZ2luLXN0YXJ0Ijo1LCJtYXJnaW4tZW5kIjo1LCJtYXJnaW4tcGVlciI6MjAsImF0dGFjaG1lbnQtc3RhcnQiOiJub3JtYWwiLCJhdHRhY2htZW50LWVuZCI6Im5vcm1hbCIsInJlbGF0aW9uc2hpcC1pY29uLWltYWdlIjoiIiwidHlwZS1jb2xvciI6IiMwMDAwMDAiLCJ0eXBlLWJhY2tncm91bmQtY29sb3IiOiIjZmZmZmZmIiwidHlwZS1ib3JkZXItY29sb3IiOiIjMDAwMDAwIiwidHlwZS1ib3JkZXItd2lkdGgiOjAsInR5cGUtZm9udC1zaXplIjoxNiwidHlwZS1wYWRkaW5nIjo1LCJwcm9wZXJ0eS1wb3NpdGlvbiI6Im91dHNpZGUiLCJwcm9wZXJ0eS1hbGlnbm1lbnQiOiJjb2xvbiIsInByb3BlcnR5LWNvbG9yIjoiIzAwMDAwMCIsInByb3BlcnR5LWZvbnQtc2l6ZSI6MTYsInByb3BlcnR5LWZvbnQtd2VpZ2h0Ijoibm9ybWFsIn19LCJkaWFncmFtTmFtZSI6IlVudGl0bGVkIGdyYXBoIn0=)
+
+**Please note:** 
+*After every change to the model, the JSON file at `./resources/db_model.json` must be updated, and the PNG file at `./resources/db_model.png` should also be replaced with a new PNG export. 
+In addition, the link in this README.md file must be updated to the new link.*
 
 # REST-API
 The persistence-service provides a REST-API for the [frontend](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend). 
