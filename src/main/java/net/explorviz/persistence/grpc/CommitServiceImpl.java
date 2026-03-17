@@ -46,7 +46,7 @@ public class CommitServiceImpl implements CommitService {
     final Session session = sessionFactory.openSession();
 
     try (Transaction tx = session.beginTransaction()) {
-      persistCommitInTransactionContext(session, request);
+      saveCommitData(session, request);
       tx.commit();
       return Uni.createFrom().item(Empty.getDefaultInstance());
     } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
@@ -54,7 +54,7 @@ public class CommitServiceImpl implements CommitService {
     }
   }
 
-  public void persistCommitInTransactionContext(final Session session, final CommitData request) {
+  public void saveCommitData(final Session session, final CommitData request) {
     final Repository repo =
         repositoryRepository
             .findRepositoryByNameAndLandscapeToken(

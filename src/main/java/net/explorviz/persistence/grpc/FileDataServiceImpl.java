@@ -38,7 +38,7 @@ public class FileDataServiceImpl implements FileDataService {
     final Session session = sessionFactory.openSession();
 
     try (Transaction tx = session.beginTransaction()) {
-      persistFileInTransactionContext(session, request);
+      saveFileData(session, request);
       tx.commit();
       return Uni.createFrom().item(Empty.getDefaultInstance());
     } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
@@ -46,7 +46,7 @@ public class FileDataServiceImpl implements FileDataService {
     }
   }
 
-  private void persistFileInTransactionContext(final Session session, final FileData request) {
+  private void saveFileData(final Session session, final FileData request) {
     final FileRevision file =
         fileRevisionRepository
             .getFileRevisionFromHashAndPath(
