@@ -16,8 +16,10 @@ import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
+import net.explorviz.persistence.util.GrpcExceptionMapper;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import org.neo4j.ogm.transaction.Transaction;
 
 @GrpcService
 public class FileDataServiceImpl implements FileDataService {
@@ -35,39 +37,42 @@ public class FileDataServiceImpl implements FileDataService {
   public Uni<Empty> persistFile(final FileData request) {
     final Session session = sessionFactory.openSession();
 
+    try (Transaction tx = session.beginTransaction()) {
+      saveFileData(session, request);
+      tx.commit();
+      return Uni.createFrom().item(Empty.getDefaultInstance());
+    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
+      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
+    }
+  }
+
+  private void saveFileData(final Session session, final FileData fileData) {
     final FileRevision file =
         fileRevisionRepository
             .getFileRevisionFromHashAndPath(
                 session,
-                request.getFileHash(),
-                request.getRepositoryName(),
-                request.getLandscapeToken(),
-                request.getFilePath().split("/"))
+                fileData.getFileHash(),
+                fileData.getRepositoryName(),
+                fileData.getLandscapeToken(),
+                fileData.getFilePath().split("/"))
             .orElseThrow(
                 () ->
                     Status.FAILED_PRECONDITION
                         .withDescription("No corresponding file was sent before in CommitData.")
                         .asRuntimeException());
 
-    file.setLanguage(request.getLanguage());
-    file.setPackageName(request.getPackageName());
-    request.getImportNamesList().forEach(file::addImportNames);
-    request.getMetricsMap().forEach(file::addMetric);
-    file.setLastEditor(request.getLastEditor());
-    file.setAddedLines(request.getAddedLines());
-    file.setModifiedLines(request.getModifiedLines());
-    file.setDeletedLines(request.getDeletedLines());
+    file.setLanguage(fileData.getLanguage());
+    file.setPackageName(fileData.getPackageName());
+    fileData.getImportNamesList().forEach(file::addImportNames);
+    fileData.getMetricsMap().forEach(file::addMetric);
+    file.setLastEditor(fileData.getLastEditor());
+    file.setAddedLines(fileData.getAddedLines());
+    file.setModifiedLines(fileData.getModifiedLines());
+    file.setDeletedLines(fileData.getDeletedLines());
 
-    for (final ClassData c : request.getClassesList()) {
-      try {
-        file.addClass(createClazz(session, c, request));
-      } catch (IllegalArgumentException e) {
-        return Uni.createFrom()
-            .failure(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
-      }
-    }
+    fileData.getClassesList().forEach(c -> file.addClass(createClazz(session, c, fileData)));
 
-    request
+    fileData
         .getFunctionsList()
         .forEach(
             f -> {
@@ -79,18 +84,16 @@ public class FileDataServiceImpl implements FileDataService {
     file.setHasFileData(true);
 
     session.save(file);
-
-    return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
   private Clazz createClazz(
-      final Session session, final ClassData classData, final FileData request) {
+      final Session session, final ClassData classData, final FileData fileData) {
     return clazzRepository
         .findClassByLandscapeTokenAndRepositoryAndFileHashAndClazzName(
             session,
-            request.getLandscapeToken(),
-            request.getRepositoryName(),
-            request.getFileHash(),
+            fileData.getLandscapeToken(),
+            fileData.getRepositoryName(),
+            fileData.getFileHash(),
             classData.getName())
         .orElseGet(
             () -> {
@@ -98,8 +101,8 @@ public class FileDataServiceImpl implements FileDataService {
                   clazzRepository
                       .findClassFromInheritingClass(
                           session,
-                          request.getLandscapeToken(),
-                          request.getRepositoryName(),
+                          fileData.getLandscapeToken(),
+                          fileData.getRepositoryName(),
                           classData.getName())
                       .map(
                           foundClazz -> {
@@ -129,7 +132,7 @@ public class FileDataServiceImpl implements FileDataService {
 
               classData
                   .getInnerClassesList()
-                  .forEach(c -> clazz.addInnerClass(createClazz(session, c, request)));
+                  .forEach(c -> clazz.addInnerClass(createClazz(session, c, fileData)));
 
               classData
                   .getFunctionsList()
@@ -149,8 +152,8 @@ public class FileDataServiceImpl implements FileDataService {
                             clazzRepository
                                 .findClassByLandscapeTokenAndRepositoryAndClazzFqn(
                                     session,
-                                    request.getLandscapeToken(),
-                                    request.getRepositoryName(),
+                                    fileData.getLandscapeToken(),
+                                    fileData.getRepositoryName(),
                                     splitSuperFqn)
                                 .orElse(new Clazz(splitSuperFqn[1])));
                       });
