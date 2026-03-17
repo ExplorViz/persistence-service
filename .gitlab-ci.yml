@@ -66,7 +66,7 @@ checkstyle:
 unit-test:
   extends: .db-test
   script:
-    - ./gradlew test -Dquarkus.test.profile=ci
+    - ./gradlew quarkusTest -Dquarkus.test.profile=ci
 
 integration-test:
   extends: .db-test
