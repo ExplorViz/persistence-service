@@ -22,8 +22,10 @@ import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.RepositoryRepository;
 import net.explorviz.persistence.repository.TagRepository;
+import net.explorviz.persistence.util.GrpcExceptionMapper;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import org.neo4j.ogm.transaction.Transaction;
 
 @GrpcService
 public class CommitServiceImpl implements CommitService {
@@ -43,6 +45,16 @@ public class CommitServiceImpl implements CommitService {
   public Uni<Empty> persistCommit(final CommitData request) {
     final Session session = sessionFactory.openSession();
 
+    try (Transaction tx = session.beginTransaction()) {
+      persistCommitInTransactionContext(session, request);
+      tx.commit();
+      return Uni.createFrom().item(Empty.getDefaultInstance());
+    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
+      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
+    }
+  }
+
+  public void persistCommitInTransactionContext(final Session session, final CommitData request) {
     final Repository repo =
         repositoryRepository
             .findRepositoryByNameAndLandscapeToken(
@@ -127,7 +139,5 @@ public class CommitServiceImpl implements CommitService {
       commit.addParent(parentCommit);
       session.save(List.of(repo, branch, commit, parentCommit));
     }
-
-    return Uni.createFrom().item(() -> Empty.newBuilder().build());
   }
 }

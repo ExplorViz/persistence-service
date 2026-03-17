@@ -2,6 +2,7 @@ package net.explorviz.persistence.util;
 
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.FileData;
 
 /** Utility class to map Java exceptions to gRPC exceptions. */
@@ -29,15 +30,24 @@ public final class GrpcExceptionMapper {
     }
 
     return Status.CANCELLED
-        .withDescription("Something went wrong. " + contextInfo + " All changes were rolled back.")
+        .withDescription("Something went wrong: " + contextInfo + " All changes were rolled back.")
         .asRuntimeException();
   }
 
   public static StatusRuntimeException mapToGrpcException(
       final Exception e, final FileData fileData) {
     final String contextInfo =
-        "All changes regarding the call to persistFile for the file with hash '"
+        "Regarding the call to persistFile for the file with hash '"
             + fileData.getFileHash()
+            + "'.";
+    return mapToGrpcException(e, contextInfo);
+  }
+
+  public static StatusRuntimeException mapToGrpcException(
+      final Exception e, final CommitData commitData) {
+    final String contextInfo =
+        "Regarding the call to persistCommit for the commit with hash '"
+            + commitData.getCommitId()
             + "'.";
     return mapToGrpcException(e, contextInfo);
   }
