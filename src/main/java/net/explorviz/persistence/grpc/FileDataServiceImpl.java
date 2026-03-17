@@ -16,8 +16,10 @@ import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
+import net.explorviz.persistence.util.GrpcExceptionMapper;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import org.neo4j.ogm.transaction.Transaction;
 
 @GrpcService
 public class FileDataServiceImpl implements FileDataService {
@@ -35,6 +37,16 @@ public class FileDataServiceImpl implements FileDataService {
   public Uni<Empty> persistFile(final FileData request) {
     final Session session = sessionFactory.openSession();
 
+    try (Transaction tx = session.beginTransaction()) {
+      persistFileInTransactionContext(session, request);
+      tx.commit();
+      return Uni.createFrom().item(Empty.getDefaultInstance());
+    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
+      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
+    }
+  }
+
+  private void persistFileInTransactionContext(final Session session, final FileData request) {
     final FileRevision file =
         fileRevisionRepository
             .getFileRevisionFromHashAndPath(
@@ -58,14 +70,7 @@ public class FileDataServiceImpl implements FileDataService {
     file.setModifiedLines(request.getModifiedLines());
     file.setDeletedLines(request.getDeletedLines());
 
-    for (final ClassData c : request.getClassesList()) {
-      try {
-        file.addClass(createClazz(session, c, request));
-      } catch (IllegalArgumentException e) {
-        return Uni.createFrom()
-            .failure(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
-      }
-    }
+    request.getClassesList().forEach(c -> file.addClass(createClazz(session, c, request)));
 
     request
         .getFunctionsList()
@@ -79,8 +84,6 @@ public class FileDataServiceImpl implements FileDataService {
     file.setHasFileData(true);
 
     session.save(file);
-
-    return Uni.createFrom().item(Empty.getDefaultInstance());
   }
 
   private Clazz createClazz(
