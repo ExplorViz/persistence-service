@@ -28,11 +28,16 @@ public final class GrpcExceptionMapper {
     }
 
     if (e instanceof IllegalArgumentException) {
-      return Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException();
+      return Status.INVALID_ARGUMENT
+          .withCause(e)
+          .withDescription(e.getMessage())
+          .asRuntimeException();
     }
 
     return Status.CANCELLED
+        .withCause(e)
         .withDescription("Something went wrong: " + contextInfo + " All changes were rolled back.")
+        .augmentDescription("Exception details: " + e.getMessage())
         .asRuntimeException();
   }
 
@@ -69,9 +74,7 @@ public final class GrpcExceptionMapper {
   public static StatusRuntimeException mapToGrpcException(
       final Exception e, final SpanData spanData) {
     final String contextInfo =
-        "Regarding the call to persistSpan for the span with id '"
-            + spanData.getSpanId()
-            + "'.";
+        "Regarding the call to persistSpan for the span with id '" + spanData.getSpanId() + "'.";
     return mapToGrpcException(e, contextInfo);
   }
 }
