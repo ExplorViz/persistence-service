@@ -11,16 +11,22 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class TagRepository {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  public Optional<Tag> findTagByName(final Session session,
-      final String name) {
+  public Optional<Tag> findTagByNameAndRepositoryNameAndLandscapeToken(
+      final Session session,
+      final String tagName,
+      final String repoName,
+      final String landscapeToken) {
     return Optional.ofNullable(
-        session.queryForObject(Tag.class, """
-                MATCH (t:Tag {name: $name})
+        session.queryForObject(
+            Tag.class,
+            """
+                MATCH (:Landscape {tokenId: $landscapeToken})
+                  -[:CONTAINS]->(:Repository {name: $repoName})
+                  -[:CONTAINS]->(t:Tag {name: $name})
                 RETURN t;
                 """,
-            Map.of("name", name)));
+            Map.of("name", tagName, "repoName", repoName, "landscapeToken", landscapeToken)));
   }
 }

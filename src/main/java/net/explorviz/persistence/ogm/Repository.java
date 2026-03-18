@@ -24,6 +24,9 @@ public class Repository {
   @Relationship(type = "HAS_ROOT", direction = Relationship.Direction.OUTGOING)
   private Directory rootDirectory;
 
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private Set<Tag> tags = new HashSet<>();
+
   public Repository() {
     // Empty constructor required by Neo4j OGM
   }
@@ -56,9 +59,10 @@ public class Repository {
     this.rootDirectory = directory;
   }
 
-  public static String stripRepoNameFromUpstreamName(final String upstreamName) {
-    final String[] partsOfPath = upstreamName.split("/");
-    return partsOfPath[partsOfPath.length - 1];
+  public void addTag(final Tag tag) {
+    final Set<Tag> newTags = new HashSet<>(tags);
+    newTags.add(tag);
+    tags = Set.copyOf(newTags);
   }
 
   public Directory getRootDirectory() {

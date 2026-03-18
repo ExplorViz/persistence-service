@@ -134,9 +134,15 @@ public class CommitServiceImpl implements CommitService {
     commitData
         .getTagsList()
         .forEach(
-            tagName ->
-                commit.addTag(
-                    tagRepository.findTagByName(session, tagName).orElse(new Tag(tagName))));
+            tagName -> {
+              final Tag tag =
+                  tagRepository
+                      .findTagByNameAndRepositoryNameAndLandscapeToken(
+                          session, tagName, repo.getName(), commitData.getLandscapeToken())
+                      .orElse(new Tag(tagName));
+              commit.addTag(tag);
+              repo.addTag(tag);
+            });
 
     if (commitData.getParentCommitId().isEmpty()
         || NO_PARENT_ID.equals(commitData.getParentCommitId())) {

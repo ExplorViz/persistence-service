@@ -23,16 +23,12 @@ import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Tag;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
-import net.explorviz.persistence.proto.FileData;
-import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.proto.FileIdentifier;
-import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
 import net.explorviz.persistence.util.ExpectedCounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -136,9 +132,10 @@ class CommitServiceTest {
             Tag.class,
             """
             MATCH (:Landscape {tokenId: $landscapeToken})
-              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(r:Repository {name: $repoName})
               -[:CONTAINS]->(:Commit {hash: $commitHash})
               -[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
+            MATCH (r)-[:CONTAINS]->(t)
             RETURN t;
             """,
             Map.of(
@@ -419,6 +416,8 @@ class CommitServiceTest {
         MATCH (c2)-[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
         MATCH (c2)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
         MATCH (c2)-[:BELONGS_TO]->(branch)
+        
+        MATCH (r)-[:CONTAINS]->(t)
 
         WHERE NOT EXISTS {
           MATCH (c2)-[:CONTAINS]->(f_del)
