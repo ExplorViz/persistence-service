@@ -34,12 +34,10 @@ public class ApplicationRepository {
   /**
    * Returns a list of Application objects hydrated with respect to the file structure generated
    * from runtime analysis, meaning all files and corresponding directories gathered from trace
-   * analysis are fetched. This includes fully hydrated functions and classes. A file is considered
-   * to be gathered from runtime analysis if it contains a function that is represented by at least
-   * one span. Empty if no Application is matched.
+   * analysis are fetched. This includes hydrated functions and classes. A file / class is
+   * considered to be gathered from runtime analysis if it contains a function that is represented
+   * by at least one span. Empty if no Application is matched.
    */
-  // TODO this should only include functions that have a span attached, otherwise we also include
-  // information not actually gathered from runtime analysis
   public List<Application> fetchAllApplicationsHydratedForRuntimeData(
       final Session session, final String landscapeToken) {
     return Lists.newArrayList(
@@ -51,16 +49,11 @@ public class ApplicationRepository {
         WHERE
           (l)-[:CONTAINS]->(:Trace)-[:CONTAINS]->(:Span)-[:REPRESENTS]->(func)
 
-        MATCH p = (:Application)-[:CONTAINS]->*(file:FileRevision)
-        WHERE (file)-[:CONTAINS]->(func)
-
-        CALL apoc.path.subgraphAll(file, {
-          relationshipFilter: "CONTAINS>"
-        })
-        YIELD relationships AS fileContentRels
-
-        WITH relationships(p) + fileContentRels AS rels
-        UNWIND rels as r
+        MATCH p = (a:Application)-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(endNode)
+        WHERE
+          func IN nodes(p)
+        UNWIND relationships(p) AS rel
+        WITH DISTINCT rel AS r
         RETURN startNode(r), r, endNode(r);
         """,
             Map.of("tokenId", landscapeToken)));
