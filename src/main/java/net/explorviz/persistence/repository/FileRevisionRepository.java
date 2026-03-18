@@ -25,17 +25,17 @@ import org.neo4j.ogm.session.SessionFactory;
 public class FileRevisionRepository {
 
   private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT = """
-      MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
-            <-[:HAS_ROOT]-(app:Application  {name: $appName})
+      MATCH (l:Landscape {tokenId: $tokenId})
+      MATCH (app:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
+      WHERE (appRootDir)-[*]-(l)
       OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
-            -[:CONTAINS]->*(lastNode:Directory|FileRevision)
+        -[:CONTAINS]->*(lastNode:Directory|FileRevision)
       WHERE
         (appRootDir)-[:CONTAINS]->(fqnRoot) AND
         all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
-        (length(p) + 1 < size($pathSegments) XOR "FileRevision" IN labels(lastNode)) AND
-        NOT EXISTS {
-            (:Commit)-[:CONTAINS]->(lastNode)
-          }
+        (size(nodes(p)) < size($pathSegments) XOR "FileRevision" IN labels(lastNode)) AND
+        size(nodes(p)) <= size($pathSegments) AND
+        NOT (:Commit)-[:CONTAINS]->(lastNode)
       RETURN
         coalesce(lastNode, appRootDir) AS existingNode,
         $pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
