@@ -17,7 +17,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @Path("/v3/landscapes/{landscapeToken}")
-public class LandscapeResource {
+class LandscapeResource {
 
   @Inject SessionFactory sessionFactory;
 
