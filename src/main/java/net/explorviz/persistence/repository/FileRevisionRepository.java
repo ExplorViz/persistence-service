@@ -251,12 +251,13 @@ public class FileRevisionRepository {
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->*(rd:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
-            MATCH p = (rd)-[:CONTAINS]->*(f:FileRevision)
+              -[:CONTAINS]->*(appRoot:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+            MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+            WITH f, [node IN nodes(p)[1..] | node.name] AS nodeNames
             RETURN DISTINCT
               f AS file,
-              reduce(pth = nodes(p)[1].name, n IN nodes(p)[2..] | pth + '/' + n.name) AS filePath;
+              apoc.text.join(nodeNames, "/") AS filePath;
             """,
         Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
 

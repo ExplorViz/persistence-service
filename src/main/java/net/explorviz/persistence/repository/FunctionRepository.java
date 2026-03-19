@@ -197,12 +197,13 @@ public class FunctionRepository {
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->*(rd:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
-            MATCH p = (rd)-[:CONTAINS]->*(f:FileRevision)-[:CONTAINS]->(fn:Function)
+              -[:CONTAINS]->*(appRoot:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+            MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)-[:CONTAINS]->(fn:Function)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+            WITH fn, [node IN nodes(p)[1..] | node.name] AS nodeNames
             RETURN DISTINCT
               fn AS function,
-              reduce(fqn = nodes(p)[1].name, n IN nodes(p)[2..] | fqn + '/' + n.name) AS fqn;
+              apoc.text.join(nodeNames, "/") AS fqn;
             """,
             Map.of(
                 "tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));

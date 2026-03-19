@@ -257,12 +257,13 @@ public class ClazzRepository {
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->*(rd:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
-            MATCH p = (rd)-[:CONTAINS]->*(f:FileRevision)-[:CONTAINS]->(c:Clazz)
+              -[:CONTAINS]->*(appRoot:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+            MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)-[:CONTAINS]->(c:Clazz)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+            WITH c, [node IN nodes(p)[1..] | node.name] AS nodeNames
             RETURN DISTINCT
               c AS clazz,
-              reduce(fqn = nodes(p)[1].name, n IN nodes(p)[2..] | fqn + '/' + n.name) AS fqn;
+              apoc.text.join(nodeNames, "/") AS fqn;
             """,
             Map.of(
                 "tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
