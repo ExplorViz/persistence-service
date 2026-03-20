@@ -3,9 +3,16 @@ package net.explorviz.persistence.api;
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.InternalServerErrorException;
 import jakarta.ws.rs.Path;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Clazz;
@@ -23,18 +30,23 @@ import org.neo4j.ogm.session.SessionFactory;
  * run other ExplorViz services. Simply cURL endpoints or access them via browser.
  */
 @IfBuildProfile("dev")
-@Path("/test")
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
+@Path("/example")
+@SuppressWarnings({
+  "PMD.AvoidDuplicateLiterals",
+  "PMD.CloseResource",
+  "PMD.UseObjectForClearerAPI",
+  "PMD.NcssCount"
+})
 class ExampleDataResource {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
   @GET
   @Path("/trace")
-  public void createTestingDynamicData() {
+  public String createTestingDynamicData() {
     final Session session = sessionFactory.openSession();
-    session.query("""
+    session.query(
+        """
         MERGE (l:Landscape {tokenId: "mytokenvalue"})
         MERGE (l)-[:CONTAINS]->(t1:Trace {traceId: "trace1"})
         MERGE (l)-[:CONTAINS]->(t2:Trace {traceId: "trace2"})
@@ -48,7 +60,7 @@ class ExampleDataResource {
         SET t2.startTime = 1000000000002000000, t2.endTime = 1000000000003000000
         SET s3.startTime = 1000000000002500000, s3.endTime = 1000000000002900000
         SET s4.startTime = 1000000000002600000, s4.endTime = 1000000000002800000
-        
+
         MERGE (app:Application {name: "hello-world"})
         MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
         MERGE (appRoot)
@@ -63,16 +75,18 @@ class ExampleDataResource {
         MERGE (file2)-[:CONTAINS]->(func2:Function {name: "function2"})
         MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
         MERGE (:Commit {hash: "commit1"})-[:CONTAINS]->(file1)
-        
+
         MERGE (s1)-[:REPRESENTS]->(func1)
         MERGE (s2)-[:REPRESENTS]->(func2)
         MERGE (s3)-[:REPRESENTS]->(func3)<-[:REPRESENTS]-(s4);
-        """, Map.of());
+        """,
+        Map.of());
+    return "Successfully created example \"trace\"";
   }
 
   @GET
   @Path("/repo")
-  public void createTestingRepository() {
+  public String createTestingRepository() {
     final Landscape landscape = new Landscape("mytokenvalue");
 
     final Repository repository = new Repository("hello-world");
@@ -127,10 +141,12 @@ class ExampleDataResource {
     commit3.addFileRevision(fileB);
     commit3.addFileRevision(fileC);
     commit3.addFileRevision(fileModified);
-    List.of(fileA, fileB, fileC, fileD, fileModified).forEach(f -> {
-      addFunctionsToFile(f);
-      addRandomFileMetrics(f);
-    });
+    List.of(fileA, fileB, fileC, fileD, fileModified)
+        .forEach(
+            f -> {
+              addFunctionsToFile(f);
+              addRandomFileMetrics(f);
+            });
 
     final Clazz classA = new Clazz("ClassA");
     final Clazz classB = new Clazz("ClassB");
@@ -142,18 +158,22 @@ class ExampleDataResource {
     fileC.addClass(classC);
     fileD.addClass(classD);
     fileModified.addClass(classModified);
-    List.of(classA, classB, classC, classD, classModified).forEach(c -> {
-      addFunctionsToClass(c);
-      addRandomClassMetrics(c);
-    });
+    List.of(classA, classB, classC, classD, classModified)
+        .forEach(
+            c -> {
+              addFunctionsToClass(c);
+              addRandomClassMetrics(c);
+            });
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application));
+
+    return "Successfully created example \"repo\"";
   }
 
   @GET
   @Path("/monorepo")
-  public void createTestingMonorepo() {
+  public String createTestingMonorepo() {
     final Landscape landscape = new Landscape("mytokenvalue");
 
     final Repository repository = new Repository("monorepo");
@@ -221,20 +241,34 @@ class ExampleDataResource {
     commit3.addFileRevision(fileB1Modified);
     commit3.addFileRevision(fileA2);
     commit3.addFileRevision(fileB2);
-    List.of(fileA1, fileA2, fileB1, fileB2).forEach(f -> {
-      addFunctionsToFile(f);
-      addRandomFileMetrics(f);
-    });
+    List.of(fileA1, fileA2, fileB1, fileB2)
+        .forEach(
+            f -> {
+              addFunctionsToFile(f);
+              addRandomFileMetrics(f);
+            });
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application1, application2));
+
+    return "Successfully created example \"monorepo\"";
+  }
+
+  /** code-agent analysis of spring-petclinic repository, limited to the two latest commits. */
+  @GET
+  @Path("/petclinic-static")
+  public String createPetclinicStatic() {
+    final String resourceFilePath = "example-data/petclinic-static.cypher";
+    executeCypherFile(resourceFilePath);
+    return "Successfully created example \"petclinic-static\"";
   }
 
   @GET
   @Path("/purge")
-  public void purgeDatabase() {
+  public String purgeDatabase() {
     final Session session = sessionFactory.openSession();
     session.purgeDatabase();
+    return "Database purge successful";
   }
 
   private void addFunctionsToFile(final FileRevision fileRevision) {
@@ -261,5 +295,32 @@ class ExampleDataResource {
     clazz.addMetric("loc", Math.floor(Math.random() * 250));
     clazz.addMetric("cyclomatic_complexity", Math.floor(Math.random() * 10));
     clazz.addMetric("cyclomatic_complexity_weighted", Math.floor(Math.random() * 10));
+  }
+
+  /**
+   * Executes all Cypher statements in the given file. Each statement is expected to be separated by
+   * semicolon. Lines starting with // and empty lines are ignored.
+   */
+  private void executeCypherFile(final String resourceFilePath) {
+    final InputStream fileInputStream =
+        Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceFilePath);
+    if (fileInputStream == null) {
+      throw new InternalServerErrorException(
+          "Requested resource file could not be found: " + resourceFilePath);
+    }
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(fileInputStream))) {
+      final String[] cypherStatements =
+          reader
+              .lines()
+              .filter(l -> !l.startsWith("//") && !l.isBlank())
+              .collect(Collectors.joining(" "))
+              .split(";");
+      reader.close();
+      final Session session = sessionFactory.openSession();
+      Arrays.stream(cypherStatements).forEach(s -> session.query(s, Map.of()));
+    } catch (final IOException e) {
+      throw new InternalServerErrorException(
+          "Failed to load example cypher file: " + e.getMessage(), e);
+    }
   }
 }
