@@ -263,6 +263,24 @@ class ExampleDataResource {
     return "Successfully created example \"petclinic-static\"";
   }
 
+  /** trace-generator result using the "petclinic" preset. */
+  @GET
+  @Path("/petclinic-runtime")
+  public String createPetclinicRuntime() {
+    final String resourceFilePath = "example-data/petclinic-runtime.cypher";
+    executeCypherFile(resourceFilePath);
+    return "Successfully created example \"petclinic-runtime\"";
+  }
+
+  /** Combined result of code-agent and trace-generator for spring-petclinic. */
+  @GET
+  @Path("/petclinic")
+  public String createPetclinicCombined() {
+    final String resourceFilePath = "example-data/petclinic-combined.cypher";
+    executeCypherFile(resourceFilePath);
+    return "Successfully created example \"petclinic\"";
+  }
+
   @GET
   @Path("/purge")
   public String purgeDatabase() {
@@ -317,6 +335,7 @@ class ExampleDataResource {
               .split(";");
       reader.close();
       final Session session = sessionFactory.openSession();
+      session.purgeDatabase();
       Arrays.stream(cypherStatements).forEach(s -> session.query(s, Map.of()));
     } catch (final IOException e) {
       throw new InternalServerErrorException(
