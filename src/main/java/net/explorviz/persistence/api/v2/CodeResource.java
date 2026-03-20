@@ -1,10 +1,13 @@
 package net.explorviz.persistence.api.v2;
 
+import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +22,7 @@ import net.explorviz.persistence.api.v2.model.CommitComparisonDto;
 import net.explorviz.persistence.api.v2.model.CommitTreeDto;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison.ValueComparison;
+import net.explorviz.persistence.api.v2.model.TimestampDto;
 import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
 import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
 import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
@@ -37,6 +41,7 @@ import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.CommitRepository.FileComparison;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
+import net.explorviz.persistence.repository.TraceRepository;
 import org.jboss.resteasy.reactive.RestPath;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -49,6 +54,8 @@ class CodeResource {
    * Dummy branch point expected by frontend if no branch point exists (e.g. for the main branch).
    */
   private static final BranchPointDto NO_BRANCH_POINT = new BranchPointDto("NONE", "");
+  @Inject
+  TraceRepository traceRepository;
 
   @Inject
   private ApplicationRepository applicationRepository;
@@ -175,6 +182,46 @@ class CodeResource {
   }
 
   @GET
+  @Path("landscapes/{landscapeToken}/timestamps")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Multi<TimestampDto> getTimestamps(@RestPath final String landscapeToken,
+      @QueryParam("newest") Long newest, @QueryParam("oldest") Long oldest,
+      @QueryParam("commit") final String commit) {
+    final Session session = sessionFactory.openSession();
+
+    final List<TimestampDto> timestamps;
+
+    if (newest == null) {
+      newest = Long.MAX_VALUE;
+    }
+
+    if (oldest == null) {
+      oldest = 0L;
+    }
+
+    if (commit != null) {
+      timestamps =
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
+              newest, oldest, commit);
+    } else {
+      timestamps =
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
+              newest, oldest);
+    }
+
+    return Multi.createFrom().iterable(timestamps);
+  }
+
+  @DELETE
+  @Path("landscapes/{landscapeToken}/trace-data")
+  @Produces(MediaType.APPLICATION_JSON)
+  public void deleteTraceData(@RestPath final String landscapeToken) {
+    final Session session = sessionFactory.openSession();
+
+    traceRepository.deleteTraceData(session, landscapeToken);
+  }
+
+  @GET
   @Path("/structure/{landscapeToken}/{applicationName}/{commitHash}")
   @Produces(MediaType.APPLICATION_JSON)
   public LandscapeDto getStaticStructureForApplicationAndSingleCommit(
@@ -184,6 +231,7 @@ class CodeResource {
     return getStaticStructureForApplicationAndTwoCommits(landscapeToken, applicationName,
         commitHash, commitHash);
   }
+
 
   @GET
   @Path(

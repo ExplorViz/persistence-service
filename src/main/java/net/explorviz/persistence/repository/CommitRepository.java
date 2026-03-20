@@ -10,6 +10,7 @@ import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.FileRevision;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
+import net.explorviz.persistence.api.v2.model.TimestampDto;
 
 @ApplicationScoped
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
