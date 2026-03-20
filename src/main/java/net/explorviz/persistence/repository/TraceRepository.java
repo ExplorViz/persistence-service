@@ -105,6 +105,7 @@ public class TraceRepository {
             WHERE
               s.startTime >= $oldest AND s.startTime <= $newest
             WITH
+              s,
               (toInteger(s.startTime / 1000000000)) AS bucket
             RETURN bucket AS epochNano, COUNT(s) AS spanCount
             ORDER BY bucket ASC;

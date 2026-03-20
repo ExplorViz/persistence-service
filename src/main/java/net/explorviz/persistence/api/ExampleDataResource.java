@@ -188,6 +188,12 @@ class ExampleDataResource {
     Directory appOneDir = new Directory("app-one");
     Directory appTwoDir = new Directory("app-two");
 
+    application1.setRootDirectory(appOneDir);
+    application2.setRootDirectory(appTwoDir);
+
+    repoRoot.addSubdirectory(appOneDir);
+    repoRoot.addSubdirectory(appTwoDir);
+
     final String[] appOneDirNames = {"net", "explorviz", "appone"};
     final String[] appTwoDirNames = {"net", "explorviz", "apptwo"};
 

@@ -181,37 +181,6 @@ class CodeResource {
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
   }
 
-  @GET
-  @Path("landscapes/{landscapeToken}/timestamps")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Multi<TimestampDto> getTimestamps(@RestPath final String landscapeToken,
-      @QueryParam("newest") Long newest, @QueryParam("oldest") Long oldest,
-      @QueryParam("commit") final String commit) {
-    final Session session = sessionFactory.openSession();
-
-    final List<TimestampDto> timestamps;
-
-    if (newest == null) {
-      newest = Long.MAX_VALUE;
-    }
-
-    if (oldest == null) {
-      oldest = 0L;
-    }
-
-    if (commit != null) {
-      timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
-              newest, oldest, commit);
-    } else {
-      timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
-              newest, oldest);
-    }
-
-    return Multi.createFrom().iterable(timestamps);
-  }
-
   @DELETE
   @Path("landscapes/{landscapeToken}/trace-data")
   @Produces(MediaType.APPLICATION_JSON)
