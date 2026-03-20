@@ -3,10 +3,17 @@ package net.explorviz.persistence.grpc;
 import com.google.common.collect.ObjectArrays;
 import com.google.protobuf.Empty;
 import io.quarkus.grpc.GrpcService;
-import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
+import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -33,6 +40,9 @@ import org.neo4j.ogm.transaction.Transaction;
 @GrpcService
 public class SpanDataServiceImpl implements SpanDataService {
 
+  private final ExecutorService executor =
+      new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(5000));
+
   private static final Logger LOGGER = Logger.getLogger(SpanDataServiceImpl.class);
 
   @Inject private ApplicationRepository applicationRepository;
@@ -53,18 +63,32 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   @Inject private TraceRepository traceRepository;
 
-  @Blocking
+  private final AtomicLong persistedSpanCount = new AtomicLong(0L);
+  private final AtomicLong failedSpanCount = new AtomicLong(0L);
+  
   @Override
   public Uni<Empty> persistSpan(final SpanData request) {
-    final Session session = sessionFactory.openSession();
-
-    try (Transaction tx = session.beginTransaction()) {
-      saveSpanData(session, request);
-      tx.commit();
-      return Uni.createFrom().item(Empty.getDefaultInstance());
-    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
-      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
-    }
+    return Uni.createFrom().emitter(emitter -> {
+      try {
+        executor.submit(
+            () -> {
+              LOGGER.debugf("Persisting span with span ID %s", request.getSpanId());
+              final Session session = sessionFactory.openSession();
+              try (Transaction tx = session.beginTransaction()) {
+                saveSpanData(session, request);
+                tx.commit();
+                LOGGER.debugf("Persisted %d spans", persistedSpanCount.incrementAndGet());
+                emitter.complete(Empty.getDefaultInstance());
+              } catch (final NoSuchElementException | IllegalArgumentException e) {
+                LOGGER.errorf("Failed to persist SpanData: %s", e.getMessage());
+                LOGGER.debugf("Total span failures: %d", failedSpanCount.incrementAndGet());
+                emitter.fail(GrpcExceptionMapper.mapToGrpcException(e, request));
+              }
+            });
+      } catch (final RejectedExecutionException e) {
+        emitter.fail(GrpcExceptionMapper.mapToGrpcException(e, request));
+      }
+    });
   }
 
   public void saveSpanData(final Session session, final SpanData spanData) {
@@ -115,6 +139,7 @@ public class SpanDataServiceImpl implements SpanDataService {
           functionRepository
               .findFunctionByFunctionNameAndClazzId(session, functionName, clazz.getId())
               .orElse(new Function(functionName));
+
       clazz.addFunction(function);
       session.save(clazz);
     } else {
@@ -189,5 +214,19 @@ public class SpanDataServiceImpl implements SpanDataService {
 
               return fileRevision;
             });
+  }
+
+  @PreDestroy
+  @SuppressWarnings("PMD.UnusedPrivateMethod")
+  private void shutdown() {
+    executor.shutdown();
+    try {
+      if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+        executor.shutdownNow();
+      }
+    } catch (final InterruptedException e) {
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
   }
 }
