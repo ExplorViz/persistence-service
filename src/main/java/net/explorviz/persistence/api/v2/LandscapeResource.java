@@ -82,9 +82,12 @@ class LandscapeResource {
   @GET
   @Path("/timestamps")
   @Produces(MediaType.APPLICATION_JSON)
-  public Multi<TimestampDto> getTimestamps(@RestPath final String landscapeToken,
-      @QueryParam("newest") Long newest, @QueryParam("oldest") Long oldest,
-      @QueryParam("commit") final String commit) {
+  public Multi<TimestampDto> getTimestamps(
+      @RestPath final String landscapeToken,
+      @QueryParam("newest") Long newest,
+      @QueryParam("oldest") Long oldest,
+      @QueryParam("commit") final String commit,
+      @QueryParam("bucketSize") Long bucketSize) {
     final Session session = sessionFactory.openSession();
 
     final List<TimestampDto> timestamps;
@@ -100,11 +103,11 @@ class LandscapeResource {
     if (commit != null) {
       timestamps =
           traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
-              newest, oldest, commit);
+              newest, oldest, commit, bucketSize);
     } else {
       timestamps =
           traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
-              newest, oldest);
+              newest, oldest, bucketSize);
     }
 
     return Multi.createFrom().iterable(timestamps);
