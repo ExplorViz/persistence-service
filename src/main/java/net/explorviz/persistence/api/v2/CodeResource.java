@@ -54,26 +54,20 @@ class CodeResource {
    * Dummy branch point expected by frontend if no branch point exists (e.g. for the main branch).
    */
   private static final BranchPointDto NO_BRANCH_POINT = new BranchPointDto("NONE", "");
-  @Inject
-  TraceRepository traceRepository;
 
-  @Inject
-  private ApplicationRepository applicationRepository;
+  @Inject TraceRepository traceRepository;
 
-  @Inject
-  private ClazzRepository clazzRepository;
+  @Inject private ApplicationRepository applicationRepository;
 
-  @Inject
-  private CommitRepository commitRepository;
+  @Inject private ClazzRepository clazzRepository;
 
-  @Inject
-  private FileRevisionRepository fileRevisionRepository;
+  @Inject private CommitRepository commitRepository;
 
-  @Inject
-  private FunctionRepository functionRepository;
+  @Inject private FileRevisionRepository fileRevisionRepository;
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private FunctionRepository functionRepository;
+
+  @Inject private SessionFactory sessionFactory;
 
   @GET
   @Path("/applications/{landscapeToken}")
@@ -81,8 +75,8 @@ class CodeResource {
   public List<String> getStaticApplicationNamesForLandscape(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
     // TODO return all applications instead of only those with static data?
-    return applicationRepository.findStaticApplicationNamesForLandscapeToken(session,
-        landscapeToken);
+    return applicationRepository.findStaticApplicationNamesForLandscapeToken(
+        session, landscapeToken);
   }
 
   @GET
@@ -92,14 +86,15 @@ class CodeResource {
       @RestPath final String landscapeToken, @RestPath final String applicationName) {
     final Session session = sessionFactory.openSession();
 
-    if (applicationRepository.findApplicationByNameAndLandscapeToken(session, applicationName,
-        landscapeToken).isEmpty()) {
+    if (applicationRepository
+        .findApplicationByNameAndLandscapeToken(session, applicationName, landscapeToken)
+        .isEmpty()) {
       throw new NotFoundException("The requested application does not exist in the database.");
     }
 
     final List<Commit> commits =
-        commitRepository.findCommitsWithBranchForApplicationAndLandscapeToken(session,
-            landscapeToken, applicationName);
+        commitRepository.findCommitsWithBranchForApplicationAndLandscapeToken(
+            session, landscapeToken, applicationName);
 
     final Map<String, ArrayList<String>> commitsMap = new HashMap<>();
     final Map<String, BranchPointDto> branchPointMap = new HashMap<>();
@@ -118,13 +113,21 @@ class CodeResource {
       // If all parent commits are assigned to a different branch than the current commit, then we
       // treat this as the first commit unique to this branch and therefore create a branch point
       // from the first of the parent commits. Usually, there is only 1 parent commit in this case.
-      parentCommits.stream().filter(pc -> !branchName.equals(pc.getBranch().getName())).findFirst()
-          .ifPresent(parentCommit -> branchPointMap.putIfAbsent(branchName,
-              new BranchPointDto(parentCommit.getHash(), parentCommit.getBranch().getName())));
+      parentCommits.stream()
+          .filter(pc -> !branchName.equals(pc.getBranch().getName()))
+          .findFirst()
+          .ifPresent(
+              parentCommit ->
+                  branchPointMap.putIfAbsent(
+                      branchName,
+                      new BranchPointDto(
+                          parentCommit.getHash(), parentCommit.getBranch().getName())));
     }
 
-    final List<BranchDto> branches = commitsMap.entrySet().stream()
-        .map(e -> new BranchDto(e.getKey(), e.getValue(), branchPointMap.get(e.getKey()))).toList();
+    final List<BranchDto> branches =
+        commitsMap.entrySet().stream()
+            .map(e -> new BranchDto(e.getKey(), e.getValue(), branchPointMap.get(e.getKey())))
+            .toList();
 
     return new CommitTreeDto(applicationName, branches);
   }
@@ -133,7 +136,8 @@ class CodeResource {
   @Path("/metrics/{landscapeToken}/{applicationName}/{commitHash}")
   @Produces(MediaType.APPLICATION_JSON)
   public ApplicationMetricsCodeDto getStaticCodeMetricsForApplicationAndCommit(
-      @RestPath final String landscapeToken, @RestPath final String applicationName,
+      @RestPath final String landscapeToken,
+      @RestPath final String applicationName,
       @RestPath final String commitHash) {
     final Session session = sessionFactory.openSession();
 
@@ -142,21 +146,26 @@ class CodeResource {
             session, applicationName, commitHash, landscapeToken);
 
     final Map<String, Clazz> appClasses =
-        clazzRepository.findStaticClassesWithFqnForApplicationAndCommitAndLandscapeToken(session,
-            applicationName, commitHash, landscapeToken);
+        clazzRepository.findStaticClassesWithFqnForApplicationAndCommitAndLandscapeToken(
+            session, applicationName, commitHash, landscapeToken);
 
     final Map<String, Function> appFunctions =
         functionRepository.findStaticFunctionsWithFqnForApplicationAndCommitAndLandscapeToken(
             session, applicationName, commitHash, landscapeToken);
 
-    final Map<String, FileMetricCodeDto> fileMetricMap = appFiles.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, e -> new FileMetricCodeDto(e.getValue())));
+    final Map<String, FileMetricCodeDto> fileMetricMap =
+        appFiles.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> new FileMetricCodeDto(e.getValue())));
 
-    final Map<String, ClassMetricCodeDto> classMetricMap = appClasses.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, e -> new ClassMetricCodeDto(e.getValue())));
+    final Map<String, ClassMetricCodeDto> classMetricMap =
+        appClasses.entrySet().stream()
+            .collect(
+                Collectors.toMap(Map.Entry::getKey, e -> new ClassMetricCodeDto(e.getValue())));
 
-    final Map<String, MethodMetricCodeDto> methodMetricMap = appFunctions.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, e -> new MethodMetricCodeDto(e.getValue())));
+    final Map<String, MethodMetricCodeDto> methodMetricMap =
+        appFunctions.entrySet().stream()
+            .collect(
+                Collectors.toMap(Map.Entry::getKey, e -> new MethodMetricCodeDto(e.getValue())));
 
     return new ApplicationMetricsCodeDto(fileMetricMap, classMetricMap, methodMetricMap);
   }
@@ -165,17 +174,21 @@ class CodeResource {
   @Path("/structure/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}")
   @Produces(MediaType.APPLICATION_JSON)
   public LandscapeDto getStaticStructureForApplicationAndTwoCommits(
-      @RestPath final String landscapeToken, @RestPath final String applicationName,
-      @RestPath final String firstCommitHash, @RestPath final String secondCommitHash) {
+      @RestPath final String landscapeToken,
+      @RestPath final String applicationName,
+      @RestPath final String firstCommitHash,
+      @RestPath final String secondCommitHash) {
     final Session session = sessionFactory.openSession();
 
     final List<Application> applications =
-        applicationRepository.fetchApplicationsHydratedForTwoCommits(session, landscapeToken,
-            firstCommitHash, secondCommitHash);
+        applicationRepository.fetchApplicationsHydratedForTwoCommits(
+            session, landscapeToken, firstCommitHash, secondCommitHash);
 
     final List<ApplicationDto> applicationDtoList =
-        applications.stream().filter(a -> applicationName.equals(a.getName()))
-            .map(ApplicationDto::new).toList();
+        applications.stream()
+            .filter(a -> applicationName.equals(a.getName()))
+            .map(ApplicationDto::new)
+            .toList();
 
     final NodeDto node = new NodeDto("", "", applicationDtoList);
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
@@ -194,64 +207,74 @@ class CodeResource {
   @Path("/structure/{landscapeToken}/{applicationName}/{commitHash}")
   @Produces(MediaType.APPLICATION_JSON)
   public LandscapeDto getStaticStructureForApplicationAndSingleCommit(
-      @RestPath final String landscapeToken, @RestPath final String applicationName,
+      @RestPath final String landscapeToken,
+      @RestPath final String applicationName,
       @RestPath final String commitHash) {
     // Re-use query for two-commit case by supplying same hash twice
-    return getStaticStructureForApplicationAndTwoCommits(landscapeToken, applicationName,
-        commitHash, commitHash);
+    return getStaticStructureForApplicationAndTwoCommits(
+        landscapeToken, applicationName, commitHash, commitHash);
   }
-
 
   @GET
   @Path(
       "/commit-comparison/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}")
   @Produces(MediaType.APPLICATION_JSON)
-  public CommitComparisonDto getCommitComparison(@RestPath final String landscapeToken,
-      @RestPath final String applicationName, @RestPath final String firstCommitHash,
+  public CommitComparisonDto getCommitComparison(
+      @RestPath final String landscapeToken,
+      @RestPath final String applicationName,
+      @RestPath final String firstCommitHash,
       @RestPath final String secondCommitHash) {
     final Session session = sessionFactory.openSession();
 
     final List<String> modifiedFiles =
-        commitRepository.findModifiedFileFqns(session, landscapeToken, applicationName,
-            firstCommitHash, secondCommitHash);
+        commitRepository.findModifiedFileFqns(
+            session, landscapeToken, applicationName, firstCommitHash, secondCommitHash);
 
     final List<String> addedFiles =
-        commitRepository.findAddedFileFqns(session, landscapeToken, applicationName,
-            firstCommitHash, secondCommitHash);
+        commitRepository.findAddedFileFqns(
+            session, landscapeToken, applicationName, firstCommitHash, secondCommitHash);
 
     final List<String> deletedFiles =
-        commitRepository.findDeletedFileFqns(session, landscapeToken, applicationName,
-            firstCommitHash, secondCommitHash);
+        commitRepository.findDeletedFileFqns(
+            session, landscapeToken, applicationName, firstCommitHash, secondCommitHash);
 
     final List<String> addedPackages =
-        commitRepository.findAddedDirectoryFqns(session, landscapeToken, applicationName,
-            firstCommitHash, secondCommitHash);
+        commitRepository.findAddedDirectoryFqns(
+            session, landscapeToken, applicationName, firstCommitHash, secondCommitHash);
 
     final List<String> deletedPackages =
-        commitRepository.findDeletedDirectoryFqns(session, landscapeToken, applicationName,
-            firstCommitHash, secondCommitHash);
+        commitRepository.findDeletedDirectoryFqns(
+            session, landscapeToken, applicationName, firstCommitHash, secondCommitHash);
 
     final List<FileComparison> metricResults =
-        commitRepository.findFilesWithCounterpart(session, landscapeToken, applicationName,
-            firstCommitHash, secondCommitHash);
+        commitRepository.findFilesWithCounterpart(
+            session, landscapeToken, applicationName, firstCommitHash, secondCommitHash);
 
     final List<EntityMetricsComparison> entityMetricsComparisons =
-        metricResults.stream().map(result -> {
+        metricResults.stream()
+            .map(
+                result -> {
+                  final Map<String, Double> newMetrics = result.fileFirstCommit().getMetrics();
+                  final Map<String, Double> oldMetrics =
+                      (result.fileSecondCommit() != null)
+                          ? result.fileSecondCommit().getMetrics()
+                          : Map.of();
 
-          final Map<String, Double> newMetrics = result.fileFirstCommit().getMetrics();
-          final Map<String, Double> oldMetrics = (result.fileSecondCommit() != null)
-              ? result.fileSecondCommit().getMetrics()
-              : Map.of();
+                  final Map<String, ValueComparison> metricComparisons =
+                      newMetrics.entrySet().stream()
+                          .collect(
+                              Collectors.toMap(
+                                  Map.Entry::getKey,
+                                  entry -> {
+                                    final String oldValue =
+                                        Objects.toString(oldMetrics.get(entry.getKey()), null);
+                                    final String newValue = entry.getValue().toString();
+                                    return new ValueComparison(oldValue, newValue);
+                                  }));
 
-          final Map<String, ValueComparison> metricComparisons =
-              newMetrics.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> {
-                final String oldValue = Objects.toString(oldMetrics.get(entry.getKey()), null);
-                final String newValue = entry.getValue().toString();
-                return new ValueComparison(oldValue, newValue);
-              }));
-
-          return new EntityMetricsComparison(result.fileFqn(), metricComparisons);
-        }).toList();
+                  return new EntityMetricsComparison(result.fileFqn(), metricComparisons);
+                })
+            .toList();
 
     return new CommitComparisonDto(modifiedFiles, addedFiles, deletedFiles, addedPackages,
         deletedPackages, entityMetricsComparisons);

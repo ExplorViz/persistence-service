@@ -14,12 +14,13 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class TraceRepository {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
   public Optional<Trace> findTraceById(final Session session, final String traceId) {
     return Optional.ofNullable(
-        session.queryForObject(Trace.class, "MATCH (t:Trace {traceId: $traceId}) RETURN t;",
+        session.queryForObject(
+            Trace.class,
+            "MATCH (t:Trace {traceId: $traceId}) RETURN t;",
             Map.of("traceId", traceId)));
   }
 
@@ -77,44 +78,70 @@ public class TraceRepository {
     return findTraceById(session, traceId).orElse(new Trace(traceId));
   }
 
-  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(final Session session,
-      final String landscapeToken, final long newest, final long oldest, final String commitHash) {
-    return session.queryDto("""
+  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(
+      final Session session,
+      final String landscapeToken,
+      final long newest,
+      final long oldest,
+      final String commitHash,
+      final long bucketSize) {
+    return session.queryDto(
+        """
         MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(t:Trace)
           -[:CONTAINS]->(s:Span)
         WHERE
           (s)-[:REPRESENT]->(:Function)
             <-[:CONTAINS]-(:FileRevision)
-            <-[:CONTAINS]-(:Commit {hash: $commitHash) AND
+            <-[:CONTAINS]-(:Commit {hash: $commitHash}) AND
           s.startTime >= $oldest AND s.startTime <= $newest
         WITH
-          (toInteger(s.startTime / 1000000000)) AS bucket
+          (toInteger(s.startTime / $bucketSize)) AS bucket
         RETURN bucket AS epochNano, COUNT(s) AS spanCount
         ORDER BY bucket ASC;
-        """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest, "commitHash",
-        commitHash), TimestampDto.class);
+        """,
+        Map.of(
+            "tokenId", landscapeToken,
+            "newest", newest,
+            "oldest", oldest,
+            "commitHash", commitHash,
+            "bucketSize", bucketSize),
+        TimestampDto.class);
   }
 
-  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(final Session session,
-      final String landscapeToken, final long newest, final long oldest) {
-    return session.queryDto("""
+  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(
+      final Session session,
+      final String landscapeToken,
+      final long newest,
+      final long oldest,
+      final long bucketSize) {
+    return session.queryDto(
+        """
             MATCH (l:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(t:Trace)
               -[:CONTAINS]->(s:Span)
             WHERE
               s.startTime >= $oldest AND s.startTime <= $newest
             WITH
-              s,
-              (toInteger(s.startTime / 1000000000)) AS bucket
+              (toInteger(s.startTime / $bucketSize)) AS bucket
             RETURN bucket AS epochNano, COUNT(s) AS spanCount
             ORDER BY bucket ASC;
-            """, Map.of("tokenId", landscapeToken, "newest", newest, "oldest", oldest),
+            """,
+        Map.of(
+            "tokenId",
+            landscapeToken,
+            "newest",
+            newest,
+            "oldest",
+            oldest,
+            "bucketSize",
+            bucketSize),
         TimestampDto.class);
   }
 
   public void deleteTraceData(final Session session, final String landscapeToken) {
-    session.query("""
+    session.query(
+        """
         MATCH (:Landscape {tokenId: tokenId})
           -[:CONTAINS]->(t:Trace)
           -[:CONTAINS]->(s:Span)
@@ -129,6 +156,7 @@ public class TraceRepository {
         YIELD nodes
         UNWIND nodes as n
         DETACH DELETE n, t, s, f, fr;
-        """, Map.of("tokenId", landscapeToken));
+        """,
+        Map.of("tokenId", landscapeToken));
   }
 }
