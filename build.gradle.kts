@@ -41,6 +41,11 @@ sourceSets["main"].java {
 tasks.withType<Test> {
     systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
     jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"

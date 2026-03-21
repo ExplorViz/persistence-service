@@ -25,17 +25,17 @@ import org.neo4j.ogm.session.SessionFactory;
 public class FileRevisionRepository {
 
   private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT = """
-      MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
-            <-[:HAS_ROOT]-(app:Application  {name: $appName})
+      MATCH (l:Landscape {tokenId: $tokenId})
+      MATCH (app:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
+      WHERE (appRootDir)-[*]-(l)
       OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
-            -[:CONTAINS]->*(lastNode:Directory|FileRevision)
+        -[:CONTAINS]->*(lastNode:Directory|FileRevision)
       WHERE
         (appRootDir)-[:CONTAINS]->(fqnRoot) AND
         all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
-        (length(p) + 1 < size($pathSegments) XOR "FileRevision" IN labels(lastNode)) AND
-        NOT EXISTS {
-            (:Commit)-[:CONTAINS]->(lastNode)
-          }
+        (size(nodes(p)) < size($pathSegments) XOR "FileRevision" IN labels(lastNode)) AND
+        size(nodes(p)) <= size($pathSegments) AND
+        NOT (:Commit)-[:CONTAINS]->(lastNode)
       RETURN
         coalesce(lastNode, appRootDir) AS existingNode,
         $pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
@@ -221,15 +221,14 @@ public class FileRevisionRepository {
       final Session session, final String applicationName, final String[] pathSegments,
       final String landscapeToken) {
     return Optional.ofNullable(session.queryForObject(FileRevision.class, """
-            MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
-                  <-[:HAS_ROOT]-(:Application {name: $appName})
+            MATCH (l:Landscape {tokenId: $tokenId})
+            MATCH (:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
+            WHERE (l)-[*]-(appRootDir:Directory)
             MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               length(p) = size($pathSegments) AND
               all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
-              NOT EXISTS {
-                (:Commit)-[:CONTAINS]->(file)
-              }
+              NOT (:Commit)-[:CONTAINS]->(file)
             RETURN file;""",
         Map.of("tokenId", landscapeToken, "appName", applicationName, "pathSegments",
             pathSegments)));
@@ -251,12 +250,13 @@ public class FileRevisionRepository {
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->*(rd:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
-            MATCH p = (rd)-[:CONTAINS]->*(f:FileRevision)
+              -[:CONTAINS]->*(appRoot:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+            MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+            WITH f, [node IN nodes(p)[1..] | node.name] AS nodeNames
             RETURN DISTINCT
               f AS file,
-              reduce(pth = nodes(p)[1].name, n IN nodes(p)[2..] | pth + '/' + n.name) AS filePath;
+              apoc.text.join(nodeNames, "/") AS filePath;
             """,
         Map.of("tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
 

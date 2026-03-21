@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
 import net.explorviz.persistence.api.v2.model.BranchPointDto;
-import net.explorviz.persistence.api.v2.model.CommitComparison;
+import net.explorviz.persistence.api.v2.model.CommitComparisonDto;
 import net.explorviz.persistence.api.v2.model.CommitTreeDto;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison.ValueComparison;
@@ -314,12 +314,10 @@ class CodeResource {
                 })
             .toList();
 
-    return new CommitComparison(
-        modifiedFiles,
-        addedFiles,
-        deletedFiles,
-        addedPackages,
-        deletedPackages,
-        entityMetricsComparisons);
+          return new EntityMetricsComparison(result.fileFqn(), metricComparisons);
+        }).toList();
+
+    return new CommitComparisonDto(modifiedFiles, addedFiles, deletedFiles, addedPackages,
+        deletedPackages, entityMetricsComparisons);
   }
 }

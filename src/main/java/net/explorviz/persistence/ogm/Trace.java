@@ -34,8 +34,24 @@ public class Trace {
     endTime = Math.max(endTime, span.getEndTime());
   }
 
+  public String getTraceId() {
+    return traceId;
+  }
+
+  public Set<Span> getSpans() {
+    return spans;
+  }
+
+  public long getStartTime() {
+    return startTime;
+  }
+
   public void setStartTime(final long startTime) {
     this.startTime = startTime;
+  }
+
+  public long getEndTime() {
+    return endTime;
   }
 
   public void setEndTime(final long endTime) {

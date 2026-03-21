@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import java.util.List;
+import java.util.Map;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Clazz;
@@ -19,6 +20,10 @@ import net.explorviz.persistence.ogm.Trace;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
+/**
+ * Contains dev-exclusive endpoints for populating the database with testing data without having to
+ * run other ExplorViz services. Simply cURL endpoints or access them via browser.
+ */
 @IfBuildProfile("dev")
 @Path("/test")
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
@@ -26,6 +31,46 @@ class ExampleDataResource {
 
   @Inject
   private SessionFactory sessionFactory;
+
+  @GET
+  @Path("/trace")
+  public void createTestingDynamicData() {
+    final Session session = sessionFactory.openSession();
+    session.query("""
+        MERGE (l:Landscape {tokenId: "mytokenvalue"})
+        MERGE (l)-[:CONTAINS]->(t1:Trace {traceId: "trace1"})
+        MERGE (l)-[:CONTAINS]->(t2:Trace {traceId: "trace2"})
+        SET t1.startTime = 1000000000000000000, t1.endTime = 1000000000001000000
+        SET t2.startTime = 1000000000002000000, t2.endTime = 1000000000003000000
+        MERGE (t1)-[:CONTAINS]->(s1:Span {spanId: "span1"})
+        MERGE (t2)-[:CONTAINS]->(s2:Span {spanId: "span2"})
+        MERGE (t2)-[:CONTAINS]->(s3:Span {spanId: "span3"})-[:HAS_PARENT]->(s2)
+        MERGE (t2)-[:CONTAINS]->(s4:Span {spanId: "span4"})-[:HAS_PARENT]->(s3)
+        SET s1.startTime = 1000000000000000000, s1.endTime = 1000000000001000000
+        SET t2.startTime = 1000000000002000000, t2.endTime = 1000000000003000000
+        SET s3.startTime = 1000000000002500000, s3.endTime = 1000000000002900000
+        SET s4.startTime = 1000000000002600000, s4.endTime = 1000000000002800000
+        
+        MERGE (app:Application {name: "hello-world"})
+        MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
+        MERGE (appRoot)
+          -[:CONTAINS]->(:Directory {name: "net"})
+          -[:CONTAINS]->(:Directory {name: "explorviz"})
+          -[:CONTAINS]->(outerDir:Directory {name: "helloworld"})
+          -[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+        MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "File1.java"})
+        MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "File2.java"})
+        MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "File3.java"})
+        MERGE (file1)-[:CONTAINS]->(func1:Function {name: "function1"})
+        MERGE (file2)-[:CONTAINS]->(func2:Function {name: "function2"})
+        MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
+        MERGE (:Commit {hash: "commit1"})-[:CONTAINS]->(file1)
+        
+        MERGE (s1)-[:REPRESENTS]->(func1)
+        MERGE (s2)-[:REPRESENTS]->(func2)
+        MERGE (s3)-[:REPRESENTS]->(func3)<-[:REPRESENTS]-(s4);
+        """, Map.of());
+  }
 
   @GET
   @Path("/repo")
@@ -142,6 +187,12 @@ class ExampleDataResource {
 
     Directory appOneDir = new Directory("app-one");
     Directory appTwoDir = new Directory("app-two");
+
+    application1.setRootDirectory(appOneDir);
+    application2.setRootDirectory(appTwoDir);
+
+    repoRoot.addSubdirectory(appOneDir);
+    repoRoot.addSubdirectory(appTwoDir);
 
     final String[] appOneDirNames = {"net", "explorviz", "appone"};
     final String[] appTwoDirNames = {"net", "explorviz", "apptwo"};
