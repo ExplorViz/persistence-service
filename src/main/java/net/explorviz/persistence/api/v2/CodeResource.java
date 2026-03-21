@@ -257,7 +257,7 @@ class CodeResource {
   @Path(
       "/commit-comparison/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}")
   @Produces(MediaType.APPLICATION_JSON)
-  public CommitComparison getCommitComparison(
+  public CommitComparisonDto getCommitComparison(
       @RestPath final String landscapeToken,
       @RestPath final String applicationName,
       @RestPath final String firstCommitHash,
@@ -313,9 +313,6 @@ class CodeResource {
                   return new EntityMetricsComparison(result.fileFqn(), metricComparisons);
                 })
             .toList();
-
-          return new EntityMetricsComparison(result.fileFqn(), metricComparisons);
-        }).toList();
 
     return new CommitComparisonDto(modifiedFiles, addedFiles, deletedFiles, addedPackages,
         deletedPackages, entityMetricsComparisons);
