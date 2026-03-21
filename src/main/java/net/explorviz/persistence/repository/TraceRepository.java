@@ -27,16 +27,19 @@ public class TraceRepository {
   /**
    * Find all traces in a landscape within the given time range.
    *
-   * @param session        OGM session object
+   * @param session OGM session object
    * @param landscapeToken String identifier of the visualization landscape
-   * @param from           Lower bound of time range to include (epoch nanosecond value)
-   * @param to             Upper bound of time range to include (epoch nanosecond value)
+   * @param from Lower bound of time range to include (epoch nanosecond value)
+   * @param to Upper bound of time range to include (epoch nanosecond value)
    * @return List of traces in the landscape within the time range, hydrated to include all
    *     contained spans and the functions they represent
    */
-  public List<Trace> findHydratedTraces(final Session session, final String landscapeToken,
-      final long from, final long to) {
-    return Lists.newArrayList(session.query(Trace.class, """
+  public List<Trace> findHydratedTraces(
+      final Session session, final String landscapeToken, final long from, final long to) {
+    return Lists.newArrayList(
+        session.query(
+            Trace.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)
         WHERE
           t.startTime >= $from AND t.endTime <= $to
@@ -46,7 +49,8 @@ public class TraceRepository {
         YIELD relationships
         UNWIND relationships as r
         RETURN startNode(r), r, endNode(r);
-        """, Map.of("tokenId", landscapeToken, "from", from, "to", to)));
+        """,
+            Map.of("tokenId", landscapeToken, "from", from, "to", to)));
   }
 
   /**
@@ -55,14 +59,17 @@ public class TraceRepository {
    * trace, there will be at most one such associated commit hash to be found, and therefore returns
    * the first match it discovers.
    *
-   * @param session        OGM session object
+   * @param session OGM session object
    * @param landscapeToken String identifier of the visualization landscape
-   * @param traceId        OpenTelemetry trace ID
+   * @param traceId OpenTelemetry trace ID
    * @return Optional describing the commit hash string. Empty if no match is found
    */
-  public Optional<String> findCommitHashForTrace(final Session session, final String landscapeToken,
-      final String traceId) {
-    return Optional.ofNullable(session.queryForObject(String.class, """
+  public Optional<String> findCommitHashForTrace(
+      final Session session, final String landscapeToken, final String traceId) {
+    return Optional.ofNullable(
+        session.queryForObject(
+            String.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace {traceId: $traceId})
         MATCH (t)
           -[:CONTAINS]->(:Span)
@@ -71,7 +78,8 @@ public class TraceRepository {
           <-[:CONTAINS]-(c:Commit)
         LIMIT 1
         RETURN c.hash;
-        """, Map.of("tokenId", landscapeToken, "traceId", traceId)));
+        """,
+            Map.of("tokenId", landscapeToken, "traceId", traceId)));
   }
 
   public Trace getOrCreateTrace(final Session session, final String traceId) {
@@ -96,7 +104,7 @@ public class TraceRepository {
             <-[:CONTAINS]-(:Commit {hash: $commitHash}) AND
           s.startTime >= $oldest AND s.startTime <= $newest
         WITH
-          (toInteger(s.startTime / $bucketSize)) AS bucket
+          s, (toInteger(s.startTime / $bucketSize)) AS bucket
         RETURN bucket AS epochNano, COUNT(s) AS spanCount
         ORDER BY bucket ASC;
         """,
@@ -123,7 +131,7 @@ public class TraceRepository {
             WHERE
               s.startTime >= $oldest AND s.startTime <= $newest
             WITH
-              (toInteger(s.startTime / $bucketSize)) AS bucket
+              s, (toInteger(s.startTime / $bucketSize)) AS bucket
             RETURN bucket AS epochNano, COUNT(s) AS spanCount
             ORDER BY bucket ASC;
             """,
