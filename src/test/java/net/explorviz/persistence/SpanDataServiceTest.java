@@ -8,16 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ObjectArrays;
-import com.google.protobuf.Empty;
-import io.quarkus.grpc.GrpcClient;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.explorviz.persistence.avro.SpanData;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Clazz;
@@ -27,8 +25,7 @@ import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
-import net.explorviz.persistence.proto.SpanData;
-import net.explorviz.persistence.proto.SpanDataService;
+import net.explorviz.persistence.messaging.SpanDataConsumer;
 import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
@@ -42,20 +39,16 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @QuarkusTest
 class SpanDataServiceTest {
-  @GrpcClient
-  SpanDataService spanDataService;
 
-  @Inject
-  CommitRepository commitRepository;
+  @Inject SpanDataConsumer spanDataConsumer;
 
-  @Inject
-  FileRevisionRepository fileRevisionRepository;
+  @Inject CommitRepository commitRepository;
 
-  @Inject
-  LandscapeRepository landscapeRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject
-  SessionFactory sessionFactory;
+  @Inject LandscapeRepository landscapeRepository;
+
+  @Inject SessionFactory sessionFactory;
 
   private Session session;
   private String landscapeToken;
@@ -91,13 +84,20 @@ class SpanDataServiceTest {
 
     @Test
     void testPersistSpan() {
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -110,7 +110,10 @@ class SpanDataServiceTest {
       params.put("fileName", baseFileName);
       params.put("funName", baseFunctionName);
 
-      Application result = session.queryForObject(Application.class, """
+      Application result =
+          session.queryForObject(
+              Application.class,
+              """
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
                 -[:CONTAINS]->(:Directory {name: $dirOne})
@@ -121,33 +124,99 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          RETURN app;""", params);
+          RETURN app;""",
+              params);
 
       assertNotNull(result);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(1).applications(1).directories(4)
-              .files(1).functions(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(1)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .functions(1)
+              .build());
     }
 
-    /**
-     * Persisting the same span twice should create no additional nodes.
-     */
+    /** Persisting the same span twice should create no additional nodes. */
     @Test
     void testPersistSpanIdempotent() {
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      String dbStructureQuery =
+          """
+          RETURN EXISTS {
+            MATCH (app:Application {name: $appName})
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS]->(:Directory {name: $dirOne})
+              -[:CONTAINS]->(:Directory {name: $dirTwo})
+              -[:CONTAINS]->(:Directory {name: $dirThree})
+              -[:CONTAINS]->(:FileRevision {name: $fileName})
+              -[:CONTAINS]->(:Function {name: $funName})
+              <-[:REPRESENTS]-(:Span {spanId: $spanId})
+              <-[:CONTAINS]-(:Trace {traceId: $traceId})
+              <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+          } as exists;
+          """;
 
-      reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      String dbNodeCountQuery =
+        """
+        RETURN COUNT { MATCH (n) RETURN n };
+        """;
 
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(1).applications(1).directories(4)
-              .files(1).functions(1).build());
+      Map<String, Object> params = new HashMap<>();
+      params.put("landscapeToken", landscapeToken);
+      params.put("appName", baseAppName);
+      params.put("traceId", baseTraceId);
+      params.put("spanId", baseSpanId);
+      params.put("dirOne", baseFilePath.get(0));
+      params.put("dirTwo", baseFilePath.get(1));
+      params.put("dirThree", baseFilePath.get(2));
+      params.put("fileName", baseFileName);
+      params.put("funName", baseFunctionName);
+
+      spanDataConsumer.consume(testSpanData);
+
+      Boolean dbIsCorrectAfterFirstConsumeCall =
+          session.queryForObject(Boolean.class, dbStructureQuery, params);
+      Long nodeCountAfterFirstConsumeCall =
+          session.queryForObject(Long.class, dbNodeCountQuery, Map.of());
+
+      spanDataConsumer.consume(testSpanData);
+
+      Boolean dbIsCorrectAfterSecondConsumeCall =
+          session.queryForObject(Boolean.class, dbStructureQuery, params);
+      Long nodeCountAfterSecondConsumeCall =
+          session.queryForObject(Long.class, dbNodeCountQuery, Map.of());
+
+      assertTrue(dbIsCorrectAfterFirstConsumeCall);
+      assertTrue(dbIsCorrectAfterSecondConsumeCall);
+      assertEquals(nodeCountAfterFirstConsumeCall, nodeCountAfterSecondConsumeCall);
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(1)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .functions(1)
+              .build());
     }
 
     @Test
@@ -155,21 +224,35 @@ class SpanDataServiceTest {
       String traceIdTwo = "trace2";
       String spanIdTwo = "span2";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      SpanData testSpanDataTwo = SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(traceIdTwo)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanDataTwo =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(spanIdTwo)
+              .setTraceId(traceIdTwo)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -184,7 +267,10 @@ class SpanDataServiceTest {
       params.put("fileName", baseFileName);
       params.put("funName", baseFunctionName);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -196,21 +282,30 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
                 <-[:CONTAINS]-(trace1:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(l:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (l)-[:CONTAINS]->(trace2:Trace {traceId: $traceIdTwo})
                 -[:CONTAINS]->(span2:Span {spanId: $spanIdTwo})
                 -[:REPRESENTS]->(fun)
-          
+
           WHERE trace1 <> trace2
             AND span1 <> span2
             AND NOT EXISTS { MATCH (trace1)-[:CONTAINS]->(span2) }
             AND NOT EXISTS { MATCH (trace2)-[:CONTAINS]->(span1) }
-          } as exists;""", params);
+          } as exists;""",
+              params);
 
       assertNotNull(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(2).spans(2).applications(1).directories(4)
-              .files(1).functions(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(2)
+              .spans(2)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .functions(1)
+              .build());
     }
 
     @Test
@@ -221,22 +316,35 @@ class SpanDataServiceTest {
       List<String> filePathTwo =
           ImmutableList.<String>builder().addAll(baseDirNames).add(fileNameTwo).build();
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       SpanData testSpanDataTwo =
-          SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(baseTraceId).setParentId(baseSpanId)
-              .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-              .setFunctionName(functionNameTwo).setFilePath(String.join("/", filePathTwo))
-              .setStartTime(2).setEndTime(4).build();
+          SpanData.newBuilder()
+              .setSpanId(spanIdTwo)
+              .setTraceId(baseTraceId)
+              .setParentId(baseSpanId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", filePathTwo))
+              .setStartTime(2)
+              .setEndTime(4)
+              .build();
 
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -252,7 +360,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("funName2", functionNameTwo);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -264,20 +375,29 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
                 <-[:CONTAINS]-(t:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (file2:FileRevision {name: $fileNameTwo})-[:CONTAINS]->(fun2:Function {name: $funName2})
           MATCH (fun2)<-[:REPRESENTS]-(span2:Span {spanId: $spanId2})
                 <-[:CONTAINS]-(t)
           MATCH (span2)-[:HAS_PARENT]->(span1)
-          
+
           WHERE fun1 <> fun2
           } AS exists
-          """, params);
+          """,
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(2).applications(1).directories(4)
-              .files(2).functions(2).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(2)
+              .applications(1)
+              .directories(4)
+              .files(2)
+              .functions(2)
+              .build());
     }
 
     @Test
@@ -285,22 +405,36 @@ class SpanDataServiceTest {
       String spanIdTwo = "span2";
       String functionNameTwo = "yourMethod";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       SpanData testSpanDataTwo =
-          SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(baseTraceId).setParentId(baseSpanId)
-              .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-              .setFunctionName(functionNameTwo).setFilePath(String.join("/", baseFilePath))
-              .setStartTime(2).setEndTime(4).build();
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(spanIdTwo)
+              .setTraceId(baseTraceId)
+              .setParentId(baseSpanId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(2)
+              .setEndTime(4)
+              .build();
 
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -315,7 +449,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("funName2", functionNameTwo);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -327,20 +464,29 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
                 <-[:CONTAINS]-(t:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (file)-[:CONTAINS]->(fun2:Function {name: $funName2})
           MATCH (fun2)<-[:REPRESENTS]-(span2:Span {spanId: $spanId2})
                 <-[:CONTAINS]-(t)
           MATCH (span2)-[:HAS_PARENT]->(span1)
-          
+
           WHERE fun1 <> fun2
           } AS exists
-          """, params);
+          """,
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(2).applications(1).directories(4)
-              .files(1).functions(2).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(2)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .functions(2)
+              .build());
     }
 
     /**
@@ -351,13 +497,21 @@ class SpanDataServiceTest {
     void testPersistSpanWithCommitWithoutStaticData() {
       String commitHash = "commit1";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setCommitHash(commitHash)
-          .setFilePath(String.join("/", baseFilePath)).setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setCommitHash(commitHash)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -370,7 +524,10 @@ class SpanDataServiceTest {
       params.put("fileName", baseFileName);
       params.put("funName", baseFunctionName);
 
-      Application result = session.queryForObject(Application.class, """
+      Application result =
+          session.queryForObject(
+              Application.class,
+              """
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
                 -[:CONTAINS]->(:Directory {name: $dirOne})
@@ -381,18 +538,32 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          RETURN app;""", params);
+          RETURN app;""",
+              params);
 
-      Commit commit = session.queryForObject(Commit.class, """
+      Commit commit =
+          session.queryForObject(
+              Commit.class,
+              """
           MATCH (c:Commit {hash: $commitHash})
           RETURN c;
-          """, Map.of("commitHash", commitHash));
+          """,
+              Map.of("commitHash", commitHash));
 
       assertNotNull(result);
       assertNull(commit);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(1).applications(1).directories(4)
-              .files(1).functions(1).commits(0).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(1)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .functions(1)
+              .commits(0)
+              .build());
     }
 
     @Test
@@ -400,25 +571,42 @@ class SpanDataServiceTest {
       String functionNameTwo = "acting";
       String fileNameTwo = "TheClass.java";
       List<String> filePathTwo =
-          ImmutableList.<String>builder().addAll(baseDirNames).add("inner").add(fileNameTwo)
+          ImmutableList.<String>builder()
+              .addAll(baseDirNames)
+              .add("inner")
+              .add(fileNameTwo)
               .build();
       String spanIdTwo = "span2";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      SpanData testSpanDataTwo = SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(functionNameTwo).setFilePath(String.join("/", filePathTwo))
-          .setStartTime(1).setEndTime(5).build();
+      SpanData testSpanDataTwo =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(spanIdTwo)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", filePathTwo))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -435,7 +623,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("funNameTwo", functionNameTwo);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -447,30 +638,42 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
                 <-[:CONTAINS]-(t:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (sharedDir)-[:CONTAINS]->(:Directory {name: $dirFour})
                 -[:CONTAINS]->(file2:FileRevision {name: $fileNameTwo})
                 -[:CONTAINS]->(fun2:Function {name: $funNameTwo})
                 <-[:REPRESENTS]-(span2:Span {spanId: $spanIdTwo})
                 <-[:CONTAINS]-(t)
           } AS exists
-          """, params);
+          """,
+              params);
 
-      Result result = session.query("""
+      Result result =
+          session.query(
+              """
           RETURN
             COUNT {(:Directory {name: $dirOne})} AS dirOne,
             COUNT {(:Directory {name: $dirTwo})} AS dirTwo,
             COUNT {(:Directory {name: $dirThree})} AS dirThree,
-            COUNT {(:Directory {name: $dirFour})} AS dirFour""", params);
+            COUNT {(:Directory {name: $dirFour})} AS dirFour""",
+              params);
 
       Map<String, Object> countMap = result.queryResults().iterator().next();
       assertEquals(1, (Long) countMap.get("dirOne"));
       assertEquals(1, (Long) countMap.get("dirTwo"));
       assertEquals(1, (Long) countMap.get("dirThree"));
       assertEquals(1, (Long) countMap.get("dirFour"));
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(2).applications(1).directories(5)
-              .files(2).functions(2).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(2)
+              .applications(1)
+              .directories(5)
+              .files(2)
+              .functions(2)
+              .build());
       assertTrue(databaseIsCorrect);
     }
 
@@ -478,13 +681,21 @@ class SpanDataServiceTest {
     void testPersistSpanWithClassPathWithoutCommitHashWithNoClassesExisting() {
       String[] classPath = {"A", "B", "C"};
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPath)).setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -500,7 +711,10 @@ class SpanDataServiceTest {
       params.put("classNameThree", classPath[2]);
       params.put("funName", baseFunctionName);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -515,12 +729,22 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          } as exists;""", params);
+          } as exists;""",
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(1).applications(1).directories(4)
-              .files(1).classes(3).functions(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(1)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .classes(3)
+              .functions(1)
+              .build());
     }
 
     @Test
@@ -529,21 +753,37 @@ class SpanDataServiceTest {
       String spanIdTwo = "span2";
       String functionNameTwo = "function2";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPath)).setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      SpanData testSpanDataTwo = SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(functionNameTwo).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPath)).setStartTime(1).setEndTime(5).build();
+      SpanData testSpanDataTwo =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(spanIdTwo)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -561,7 +801,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("funNameTwo", functionNameTwo);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -576,19 +819,29 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
                 <-[:CONTAINS]-(t:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (c)-[:CONTAINS]->(f2:Function {name: $funNameTwo})
                   <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
                   <-[:CONTAINS]-(t)
-          
+
           WHERE f1 <> f2
             AND s1 <> s2
-          } as exists""", params);
+          } as exists""",
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(2).applications(1).directories(4)
-              .files(1).classes(3).functions(2).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(2)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .classes(3)
+              .functions(2)
+              .build());
     }
 
     @Test
@@ -598,21 +851,37 @@ class SpanDataServiceTest {
       String spanIdTwo = "span2";
       String functionNameTwo = "function2";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPath)).setStartTime(1).setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      SpanData testSpanDataTwo = SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(functionNameTwo).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPathTwo)).setStartTime(1).setEndTime(5).build();
+      SpanData testSpanDataTwo =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(spanIdTwo)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPathTwo))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -630,7 +899,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("funNameTwo", functionNameTwo);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -644,21 +916,31 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
                 <-[:CONTAINS]-(t:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (c)-[:CONTAINS]->(c3:Clazz {name: $classNameThree})
                   -[:CONTAINS]->(f2:Function {name: $funNameTwo})
                   <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
                   <-[:CONTAINS]-(t)
-          
+
           WHERE f1 <> f2
             AND s1 <> s2
             AND c2 <> c3
-          } as exists""", params);
+          } as exists""",
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(2).applications(1).directories(4)
-              .files(1).classes(3).functions(2).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(2)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .classes(3)
+              .functions(2)
+              .build());
     }
 
     @Test
@@ -666,14 +948,22 @@ class SpanDataServiceTest {
       String[] classPath = {"A", "B", "C"};
       String commitHash = "commit1";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPath)).setCommitHash(commitHash).setStartTime(1)
-          .setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPath))
+              .setCommitHash(commitHash)
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -689,7 +979,10 @@ class SpanDataServiceTest {
       params.put("classNameThree", classPath[2]);
       params.put("funName", baseFunctionName);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -704,12 +997,22 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          } as exists;""", params);
+          } as exists;""",
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(1).applications(1).directories(4)
-              .files(1).classes(3).functions(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(1)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .classes(3)
+              .functions(1)
+              .build());
     }
 
     @Test
@@ -719,23 +1022,39 @@ class SpanDataServiceTest {
       String functionNameTwo = "function2";
       String commitHash = "commit1";
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPath)).setCommitHash(commitHash).setStartTime(1)
-          .setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPath))
+              .setCommitHash(commitHash)
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      SpanData testSpanDataTwo = SpanData.newBuilder().setSpanId(spanIdTwo).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(functionNameTwo).setFilePath(String.join("/", baseFilePath))
-          .setClassName(String.join(".", classPath)).setCommitHash(commitHash).setStartTime(1)
-          .setEndTime(5).build();
+      SpanData testSpanDataTwo =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(spanIdTwo)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", baseFilePath))
+              .setClassName(String.join(".", classPath))
+              .setCommitHash(commitHash)
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -753,7 +1072,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("funNameTwo", functionNameTwo);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -768,23 +1090,31 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
                 <-[:CONTAINS]-(t:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (c)-[:CONTAINS]->(f2:Function {name: $funNameTwo})
                   <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
                   <-[:CONTAINS]-(t)
-          
+
           WHERE f1 <> f2
             AND s1 <> s2
-          } as exists""", params);
+          } as exists""",
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).traces(1).spans(2).applications(1).directories(4)
-              .files(1).classes(3).functions(2).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .traces(1)
+              .spans(2)
+              .applications(1)
+              .directories(4)
+              .files(1)
+              .classes(3)
+              .functions(2)
+              .build());
     }
-
   }
-
 
   @Nested
   class WithStaticData {
@@ -856,31 +1186,44 @@ class SpanDataServiceTest {
       params.put("fileHash", baseFileHash);
       params.put("commitHash", baseCommitHash);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (:Landscape {tokenId: $landscapeToken})
                 -[:CONTAINS]->(repo:Repository {name: $repoName})
                 -[:CONTAINS]->(:Commit {hash: $commitHash})
                 -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(:Function {name: $funName})
-          
+
           MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
                 <-[:BELONGS_TO]-(commit)
-          
+
           MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
                 -[:CONTAINS]->(:Directory {name: $dirOne})
                 -[:CONTAINS]->(:Directory {name: $dirTwo})
                 -[:CONTAINS]->(:Directory {name: $dirThree})
                 -[:CONTAINS]->(file)
-          
+
           MATCH (:Application {name: $appName})-[:HAS_ROOT]->(root)
           } as exists;
-          """, params);
+          """,
+              params);
 
       assertNotNull(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(1)
-              .applications(1).directories(4).functions(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(1)
+              .applications(1)
+              .directories(4)
+              .functions(1)
+              .build());
     }
 
     @Test
@@ -888,13 +1231,20 @@ class SpanDataServiceTest {
       List<String> filePath = new ArrayList<>(baseDirNames);
       Collections.addAll(filePath, baseFileName);
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", filePath)).setStartTime(1)
-          .setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", filePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -909,7 +1259,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("fileHash", baseFileHash);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (app:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory {name: $repoRoot})
@@ -921,20 +1274,32 @@ class SpanDataServiceTest {
                 <-[:REPRESENTS]-(span:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           MATCH (d)-[:CONTAINS]->(fileS:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(funS:Function {name: $funName})
-          
+
           WHERE NOT EXISTS { MATCH (:Span)-[:REPRESENTS]->(funS) }
             AND fileD.hash IS NULL
             AND funS <> funD
           } as exists;
-          """, params);
+          """,
+              params);
 
       assertNotNull(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(2)
-              .applications(1).directories(4).functions(2).spans(1).traces(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(2)
+              .applications(1)
+              .directories(4)
+              .functions(2)
+              .spans(1)
+              .traces(1)
+              .build());
     }
 
     /**
@@ -946,13 +1311,21 @@ class SpanDataServiceTest {
       List<String> filePath = new ArrayList<>(baseDirNames);
       Collections.addAll(filePath, baseFileName);
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", filePath)).setStartTime(1)
-          .setEndTime(5).setCommitHash(baseCommitHash).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", filePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .setCommitHash(baseCommitHash)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -967,7 +1340,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("commitHash", baseCommitHash);
 
-      Commit foundCommit = session.queryForObject(Commit.class, """
+      Commit foundCommit =
+          session.queryForObject(
+              Commit.class,
+              """
           MATCH (:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
                 -[:CONTAINS]->(:Directory {name: $dirOne})
@@ -979,11 +1355,23 @@ class SpanDataServiceTest {
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
           MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
-          RETURN commit;""", params);
+          RETURN commit;""",
+              params);
 
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(1)
-              .applications(1).directories(4).functions(1).spans(1).traces(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(1)
+              .applications(1)
+              .directories(4)
+              .functions(1)
+              .spans(1)
+              .traces(1)
+              .build());
       assertNotNull(foundCommit);
     }
 
@@ -992,13 +1380,20 @@ class SpanDataServiceTest {
       List<String> filePath = new ArrayList<>(baseDirNames);
       Collections.addAll(filePath, baseFileName);
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", filePath)).setStartTime(1)
-          .setEndTime(5).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", filePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -1013,7 +1408,10 @@ class SpanDataServiceTest {
       params.put("funName", baseFunctionName);
       params.put("commitHash", baseCommitHash);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -1023,24 +1421,36 @@ class SpanDataServiceTest {
                 -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(fun:Function {name: $funName})
           MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
-          
+
           MATCH (dir)-[:CONTAINS]->(fileDyn:FileRevision {name: $fileName})
                 -[:CONTAINS]->(funDyn:Function {name: $funName})
                 <-[:REPRESENTS]-(span:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(fileDyn) }
             AND NOT EXISTS { MATCH (file)-[:CONTAINS]->(funDyn) }
             AND NOT EXISTS { MATCH (fileDyn)-[:CONTAINS]->(fun) }
             AND fileDyn.hash IS NULL
             AND file <> fileDyn
             AND fun <> funDyn
-          } as exists;""", params);
+          } as exists;""",
+              params);
 
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(2)
-              .applications(1).directories(4).functions(2).spans(1).traces(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(2)
+              .applications(1)
+              .directories(4)
+              .functions(2)
+              .spans(1)
+              .traces(1)
+              .build());
       assertNotNull(databaseIsCorrect);
     }
 
@@ -1053,20 +1463,37 @@ class SpanDataServiceTest {
       List<String> filePathTwo = new ArrayList<>(baseDirNames);
       Collections.addAll(filePathTwo, unknownFileName);
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(unknownFunctionName).setFilePath(String.join("/", filePath))
-          .setStartTime(1).setEndTime(5).setCommitHash(baseCommitHash).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(unknownFunctionName)
+              .setFilePath(String.join("/", filePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .setCommitHash(baseCommitHash)
+              .build();
 
-      SpanData testSpanDataTwo = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(baseFunctionName).setFilePath(String.join("/", filePathTwo))
-          .setStartTime(1).setEndTime(5).setCommitHash(baseCommitHash).build();
+      SpanData testSpanDataTwo =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(baseFunctionName)
+              .setFilePath(String.join("/", filePathTwo))
+              .setStartTime(1)
+              .setEndTime(5)
+              .setCommitHash(baseCommitHash)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
-      reply = spanDataService.persistSpan(testSpanDataTwo).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
+
+      spanDataConsumer.consume(testSpanDataTwo);
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -1083,7 +1510,10 @@ class SpanDataServiceTest {
       params.put("unknownFunName", unknownFunctionName);
       params.put("unknownFileName", unknownFileName);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -1093,17 +1523,17 @@ class SpanDataServiceTest {
                 -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(fun1:Function {name: $funName})
           MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
-          
+
           MATCH (dir)-[:CONTAINS]->(file2:FileRevision {name: $fileName})
                 <-[:REPRESENTS]-(span:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
           MATCH (file2)-[:CONTAINS]->(fun2:Function {name: $unknownFunName})
-          
+
           MATCH (dir)-[:CONTAINS]->(file3:FileRevision {name: $unknownFileName})
                 <-[:REPRESENTS]-(span)
           MATCH (file3)-[:CONTAINS]->(fun3:Function {name: $funName})
-          
+
           WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file2) }
             AND NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file3) }
             AND fun1 <> fun2
@@ -1111,12 +1541,24 @@ class SpanDataServiceTest {
             AND fun2 <> fun3
             AND file2.hash IS NULL
             AND file <> file2
-          } as exists;""", params);
+          } as exists;""",
+              params);
 
       assertNotNull(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(3)
-              .applications(1).directories(4).functions(3).spans(1).traces(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(3)
+              .applications(1)
+              .directories(4)
+              .functions(3)
+              .spans(1)
+              .traces(1)
+              .build());
     }
 
     @Test
@@ -1127,10 +1569,19 @@ class SpanDataServiceTest {
       String innerFunctionName = "innerFun";
       Collections.addAll(filePath, innerDir, innerFileName);
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(innerFunctionName).setFilePath(String.join("/", filePath))
-          .setStartTime(1).setEndTime(5).setCommitHash(baseCommitHash).build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(innerFunctionName)
+              .setFilePath(String.join("/", filePath))
+              .setStartTime(1)
+              .setEndTime(5)
+              .setCommitHash(baseCommitHash)
+              .build();
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -1148,7 +1599,10 @@ class SpanDataServiceTest {
       params.put("innerFile", innerFileName);
       params.put("innerFunction", innerFunctionName);
 
-      Boolean oldDatabaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean oldDatabaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -1158,17 +1612,20 @@ class SpanDataServiceTest {
                 -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(fun:Function {name: $funName})
           MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
-          
+
           WHERE NOT EXISTS { MATCH (dir)-[:CONTAINS]->(:Directory {name: $innerDir}) }
             AND NOT EXISTS { MATCH (:Span)-[:REPRESENTS]->(file) }
             AND NOT EXISTS { MATCH (:FileRevision {name: $innerFile}) }
             AND NOT EXISTS { MATCH (:Function {name: $innerFunction}) }
-          } as exists;""", params);
+          } as exists;""",
+              params);
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (:Application {name: $appName})
                 -[:HAS_ROOT]->(:Directory)
@@ -1178,26 +1635,38 @@ class SpanDataServiceTest {
                 -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(fun:Function {name: $funName})
           MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
-          
+
           MATCH (dir)-[:CONTAINS]->(:Directory {name: $innerDir})
                 -[:CONTAINS]->(innerFile:FileRevision {name: $innerFile})
                 -[:CONTAINS]->(innerFun:Function {name: $innerFunction})
                 <-[:REPRESENTS]-(span:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          
+
           WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(innerFile) }
             AND NOT EXISTS { MATCH (file)-[:CONTAINS]->(innerFun) }
             AND NOT EXISTS { MATCH (innerFile)-[:CONTAINS]->(fun) }
             AND innerFile.hash IS NULL
             AND file <> innerFile
             AND fun <> innerFun
-          } as exists;""", params);
+          } as exists;""",
+              params);
 
       assertNotNull(oldDatabaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(2)
-              .applications(1).directories(5).functions(2).spans(1).traces(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(2)
+              .applications(1)
+              .directories(5)
+              .functions(2)
+              .spans(1)
+              .traces(1)
+              .build());
       assertNotNull(databaseIsCorrect);
     }
 
@@ -1213,10 +1682,14 @@ class SpanDataServiceTest {
       List<String> filePath = new ArrayList<>(baseDirNames);
       Collections.addAll(filePath, baseFileName);
 
-      FileRevision file = session.queryForObject(FileRevision.class, """
+      FileRevision file =
+          session.queryForObject(
+              FileRevision.class,
+              """
           MATCH (f:FileRevision {name: $fileName, hash: $fileHash})
           RETURN f;
-          """, Map.of("fileName", baseFileName, "fileHash", baseFileHash));
+          """,
+              Map.of("fileName", baseFileName, "fileHash", baseFileHash));
 
       Clazz clazz = new Clazz(className);
       clazz.addFunction(new Function(functionNameTwo));
@@ -1241,40 +1714,55 @@ class SpanDataServiceTest {
       params.put("traceId", baseTraceId);
       params.put("spanId", baseSpanId);
 
-      Boolean preparedDatabaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean preparedDatabaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (:Landscape {tokenId: $landscapeToken})
                 -[:CONTAINS]->(repo:Repository {name: $repoName})
                 -[:CONTAINS]->(:Commit {hash: $commitHash})
                 -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(:Function {name: $funName})
-          
+
           MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
                 <-[:BELONGS_TO]-(commit)
-          
+
           MATCH (file)-[:CONTAINS]->(:Clazz {name: $className})
                 -[:CONTAINS]->(:Function {name: $funNameTwo})
-          
+
           MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
                 -[:CONTAINS]->(:Directory {name: $dirOne})
                 -[:CONTAINS]->(:Directory {name: $dirTwo})
                 -[:CONTAINS]->(:Directory {name: $dirThree})
                 -[:CONTAINS]->(file)
-          
+
           MATCH (:Application {name: $appName})-[:HAS_ROOT]->(root)
           } as exists;
-          """, params);
+          """,
+              params);
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(functionNameTwo).setFilePath(String.join("/", filePath))
-          .setClassName(className).setCommitHash(baseCommitHash).setStartTime(1).setEndTime(5)
-          .build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", filePath))
+              .setClassName(className)
+              .setCommitHash(baseCommitHash)
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(:Clazz {name: $className})
@@ -1283,13 +1771,26 @@ class SpanDataServiceTest {
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
           } as exists;
-          """, params);
+          """,
+              params);
 
       assertTrue(preparedDatabaseIsCorrect);
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(1)
-              .applications(1).directories(4).functions(2).classes(1).spans(1).traces(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(1)
+              .applications(1)
+              .directories(4)
+              .functions(2)
+              .classes(1)
+              .spans(1)
+              .traces(1)
+              .build());
     }
 
     @Test
@@ -1317,49 +1818,73 @@ class SpanDataServiceTest {
       params.put("traceId", baseTraceId);
       params.put("spanId", baseSpanId);
 
-      SpanData testSpanData = SpanData.newBuilder().setSpanId(baseSpanId).setTraceId(baseTraceId)
-          .setApplicationName(baseAppName).setLandscapeTokenId(landscapeToken)
-          .setFunctionName(functionNameTwo).setFilePath(String.join("/", filePath))
-          .setClassName(className).setCommitHash(baseCommitHash).setStartTime(1).setEndTime(5)
-          .build();
+      SpanData testSpanData =
+          SpanData.newBuilder()
+              .setParentId("")
+              .setSpanId(baseSpanId)
+              .setTraceId(baseTraceId)
+              .setApplicationName(baseAppName)
+              .setLandscapeTokenId(landscapeToken)
+              .setFunctionName(functionNameTwo)
+              .setFilePath(String.join("/", filePath))
+              .setClassName(className)
+              .setCommitHash(baseCommitHash)
+              .setStartTime(1)
+              .setEndTime(5)
+              .build();
 
-      Empty reply = spanDataService.persistSpan(testSpanData).await().atMost(Duration.ofSeconds(5));
-      assertNotNull(reply);
+      spanDataConsumer.consume(testSpanData);
 
-      Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
+      Boolean databaseIsCorrect =
+          session.queryForObject(
+              Boolean.class,
+              """
           RETURN EXISTS {
           MATCH (l:Landscape {tokenId: $landscapeToken})
                 -[:CONTAINS]->(repo:Repository {name: $repoName})
                 -[:CONTAINS]->(:Commit {hash: $commitHash})
                 -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
                 -[:CONTAINS]->(:Function {name: $funName})
-          
+
           MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
                 <-[:BELONGS_TO]-(commit)
-          
+
           MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
                 -[:CONTAINS]->(:Directory {name: $dirOne})
                 -[:CONTAINS]->(:Directory {name: $dirTwo})
                 -[:CONTAINS]->(d:Directory {name: $dirThree})
                 -[:CONTAINS]->(file)
-          
+
           MATCH (d)-[:CONTAINS]->(file2:FileRevision {name: $fileName})
                 -[:CONTAINS]->(:Clazz {name: $className})
                 -[:CONTAINS]->(:Function {name: $funNameTwo})
                 <-[:REPRESENTS]-(:Span {spanId: $spanId})
                 <-[:CONTAINS]-(:Trace {traceId: $traceId})
                 <-[:CONTAINS]-(l)
-          
+
           MATCH (:Application {name: $appName})-[:HAS_ROOT]->(root)
-          
+
           WHERE file <> file2
           } as exists;
-          """, params);
+          """,
+              params);
 
       assertTrue(databaseIsCorrect);
-      assertNodeCounts(session,
-          ExpectedCounts.builder().landscapes(1).repositories(1).branches(1).commits(1).files(2)
-              .applications(1).directories(4).functions(2).classes(1).spans(1).traces(1).build());
+      assertNodeCounts(
+          session,
+          ExpectedCounts.builder()
+              .landscapes(1)
+              .repositories(1)
+              .branches(1)
+              .commits(1)
+              .files(2)
+              .applications(1)
+              .directories(4)
+              .functions(2)
+              .classes(1)
+              .spans(1)
+              .traces(1)
+              .build());
     }
   }
 }
