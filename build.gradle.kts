@@ -37,6 +37,7 @@ dependencies {
 
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.rest-assured:rest-assured")
+    testImplementation("io.smallrye.reactive:smallrye-reactive-messaging-in-memory")
 }
 
 group = "net.explorviz"
