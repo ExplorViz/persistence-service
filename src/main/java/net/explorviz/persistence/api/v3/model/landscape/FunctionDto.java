@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
 import java.util.Objects;
+import net.explorviz.persistence.api.v3.model.landscape.FlatBaseModel.FlatConvertible;
 
 /**
  * Represents a function / method in source code.
@@ -25,11 +26,7 @@ public record FunctionDto(@JsonUnwrapped FlatBaseModel flatBaseModel, String par
   /**
    * Must be implemented by any object which can be represented as a function during flattening.
    */
-  public interface FunctionConvertible {
-    String getId();
-
-    String getName();
-
+  public interface FunctionConvertible extends FlatConvertible {
     Map<String, Double> getMetrics();
   }
 }

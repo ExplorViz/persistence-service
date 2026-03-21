@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import net.explorviz.persistence.api.v3.model.landscape.BuildingDto.BuildingConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.DistrictDto.DistrictConvertible;
+import net.explorviz.persistence.api.v3.model.landscape.FlatBaseModel.FlatConvertible;
 
 /**
  * Outermost grouping container for all objects which are visualized inside a landscape. Cities
@@ -42,11 +43,7 @@ public record CityDto(@JsonUnwrapped FlatBaseModel flatBaseModel, List<String> d
   /**
    * Must be implemented by any object which can be represented as a city during flattening.
    */
-  public interface CityConvertible {
-    String getId();
-
-    String getName();
-
+  public interface CityConvertible extends FlatConvertible {
     Stream<DistrictConvertible> getDistricts();
 
     Stream<BuildingConvertible> getBuildings();

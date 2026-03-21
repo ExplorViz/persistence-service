@@ -2,6 +2,7 @@ package net.explorviz.persistence.api.v3.model.conversion;
 
 import java.util.Map;
 import java.util.stream.Stream;
+import net.explorviz.persistence.api.v3.model.TypeOfAnalysis;
 import net.explorviz.persistence.api.v3.model.landscape.BuildingDto.BuildingConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.CityDto.CityConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.ClazzDto.ClassConvertible;
@@ -13,16 +14,57 @@ import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 
-/** Provides wrapper classes for turning OGM Application objects into FlatLandscape city models. */
+/**
+ * Provides wrapper classes for turning single OGM Application objects into FlatLandscape city
+ * models. Optionally allows specifying the origin of data for the whole city, but does not include
+ * any information about commit comparison.
+ */
 public final class DefaultApplicationToCityConverter {
 
   private DefaultApplicationToCityConverter() {}
 
-  public static CityConvertible convert(final Application ogmApp) {
-    return new ApplicationWrapper(ogmApp);
+  /**
+   * Creates a {@link CityConvertible} out of the provided application. Uses the following mapping:
+   *
+   * <ul>
+   *   <li>OGM Application -> City
+   *   <li>OGM Directory -> District
+   *   <li>OGM FileRevision -> Building
+   *   <li>OGM Clazz -> Clazz
+   *   <li>OGM Function -> Function
+   * </ul>
+   *
+   * <p>The supplied originOfData is set for each converted model object.
+   *
+   * @param ogmApp OGM Application object. Should be hydrated to the desired depth.
+   * @param originOfData The origin of data to set for each created model object.
+   * @return A {@link CityConvertible} according to the above mapping.
+   */
+  public static CityConvertible convert(
+      final Application ogmApp, final TypeOfAnalysis originOfData) {
+    return new ApplicationWrapper(ogmApp, originOfData);
   }
 
-  private record ApplicationWrapper(Application ogmApp) implements CityConvertible {
+  /**
+   * Creates a {@link CityConvertible} out of the provided application. Uses the following mapping:
+   *
+   * <ul>
+   *   <li>OGM Application -> City
+   *   <li>OGM Directory -> District
+   *   <li>OGM FileRevision -> Building
+   *   <li>OGM Clazz -> Clazz
+   *   <li>OGM Function -> Function
+   * </ul>
+   *
+   * @param ogmApp OGM Application object. Should be hydrated to the desired depth.
+   * @return A {@link CityConvertible} according to the above mapping.
+   */
+  public static CityConvertible convert(final Application ogmApp) {
+    return convert(ogmApp, null);
+  }
+
+  private record ApplicationWrapper(Application ogmApp, TypeOfAnalysis originOfData)
+      implements CityConvertible {
 
     @Override
     public String getId() {
@@ -35,17 +77,25 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
+    public TypeOfAnalysis getOriginOfData() {
+      return originOfData;
+    }
+
+    @Override
     public Stream<DistrictConvertible> getDistricts() {
-      return ogmApp.getRootDirectory().getSubdirectories().stream().map(DirectoryWrapper::new);
+      return ogmApp.getRootDirectory().getSubdirectories().stream()
+          .map(d -> new DirectoryWrapper(d, originOfData));
     }
 
     @Override
     public Stream<BuildingConvertible> getBuildings() {
-      return ogmApp.getRootDirectory().getFileRevisions().stream().map(FileRevisionWrapper::new);
+      return ogmApp.getRootDirectory().getFileRevisions().stream()
+          .map(f -> new FileRevisionWrapper(f, originOfData));
     }
   }
 
-  private record DirectoryWrapper(Directory ogmDir) implements DistrictConvertible {
+  private record DirectoryWrapper(Directory ogmDir, TypeOfAnalysis originOfData)
+      implements DistrictConvertible {
 
     @Override
     public String getId() {
@@ -58,17 +108,23 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
+    public TypeOfAnalysis getOriginOfData() {
+      return originOfData;
+    }
+
+    @Override
     public Stream<DistrictConvertible> getDistricts() {
-      return ogmDir.getSubdirectories().stream().map(DirectoryWrapper::new);
+      return ogmDir.getSubdirectories().stream().map(d -> new DirectoryWrapper(d, originOfData));
     }
 
     @Override
     public Stream<BuildingConvertible> getBuildings() {
-      return ogmDir.getFileRevisions().stream().map(FileRevisionWrapper::new);
+      return ogmDir.getFileRevisions().stream().map(f -> new FileRevisionWrapper(f, originOfData));
     }
   }
 
-  private record FileRevisionWrapper(FileRevision ogmFile) implements BuildingConvertible {
+  private record FileRevisionWrapper(FileRevision ogmFile, TypeOfAnalysis originOfData)
+      implements BuildingConvertible {
 
     @Override
     public String getId() {
@@ -81,17 +137,23 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
+    public TypeOfAnalysis getOriginOfData() {
+      return originOfData;
+    }
+
+    @Override
     public Stream<ClassConvertible> getClasses() {
-      return ogmFile.getClasses().stream().map(ClassWrapper::new);
+      return ogmFile.getClasses().stream().map(c -> new ClassWrapper(c, originOfData));
     }
 
     @Override
     public Stream<FunctionConvertible> getFunctions() {
-      return ogmFile.getFunctions().stream().map(FunctionWrapper::new);
+      return ogmFile.getFunctions().stream().map(f -> new FunctionWrapper(f, originOfData));
     }
   }
 
-  private record ClassWrapper(Clazz ogmClass) implements ClassConvertible {
+  private record ClassWrapper(Clazz ogmClass, TypeOfAnalysis originOfData)
+      implements ClassConvertible {
 
     @Override
     public String getId() {
@@ -104,13 +166,18 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
+    public TypeOfAnalysis getOriginOfData() {
+      return originOfData;
+    }
+
+    @Override
     public Stream<ClassConvertible> getInnerClasses() {
-      return ogmClass.getInnerClasses().stream().map(ClassWrapper::new);
+      return ogmClass.getInnerClasses().stream().map(c -> new ClassWrapper(c, originOfData));
     }
 
     @Override
     public Stream<FunctionConvertible> getFunctions() {
-      return ogmClass.getFunctions().stream().map(FunctionWrapper::new);
+      return ogmClass.getFunctions().stream().map(f -> new FunctionWrapper(f, originOfData));
     }
 
     @Override
@@ -119,7 +186,8 @@ public final class DefaultApplicationToCityConverter {
     }
   }
 
-  private record FunctionWrapper(Function ogmFunc) implements FunctionConvertible {
+  private record FunctionWrapper(Function ogmFunc, TypeOfAnalysis originOfData)
+      implements FunctionConvertible {
 
     @Override
     public String getId() {
@@ -129,6 +197,11 @@ public final class DefaultApplicationToCityConverter {
     @Override
     public String getName() {
       return ogmFunc.getName();
+    }
+
+    @Override
+    public TypeOfAnalysis getOriginOfData() {
+      return originOfData;
     }
 
     @Override

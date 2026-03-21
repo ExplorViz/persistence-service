@@ -27,13 +27,22 @@ public record FlatBaseModel(String id, String name, @JsonInclude(Include.NON_NUL
     Objects.requireNonNull(id);
     Objects.requireNonNull(name);
   }
+  
+  /**
+   * Must be implemented by any object which can be represented as a flat model.
+   */
+  public interface FlatConvertible {
+    String getId();
 
-  public FlatBaseModel(final String id, final String name) {
-    this(id, name, null, null, null);
-  }
+    String getName();
 
-  public FlatBaseModel(final String id, final String name, final String fqn) {
-    this(id, name, fqn, null, null);
+    default TypeOfAnalysis getOriginOfData() {
+      return null;
+    }
+
+    default CommitComparison getCommitComparison() {
+      return null;
+    }
   }
 }
 

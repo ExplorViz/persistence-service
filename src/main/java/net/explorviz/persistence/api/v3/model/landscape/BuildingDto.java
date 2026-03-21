@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import net.explorviz.persistence.api.v3.model.landscape.ClazzDto.ClassConvertible;
+import net.explorviz.persistence.api.v3.model.landscape.FlatBaseModel.FlatConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.FunctionDto.FunctionConvertible;
 import net.explorviz.persistence.proto.Language;
 
@@ -45,11 +46,7 @@ public record BuildingDto(@JsonUnwrapped FlatBaseModel flatBaseModel, String par
   /**
    * Must be implemented by any object which can be represented as a building during flattening.
    */
-  public interface BuildingConvertible {
-    String getId();
-
-    String getName();
-
+  public interface BuildingConvertible extends FlatConvertible {
     Stream<ClassConvertible> getClasses();
 
     Stream<FunctionConvertible> getFunctions();

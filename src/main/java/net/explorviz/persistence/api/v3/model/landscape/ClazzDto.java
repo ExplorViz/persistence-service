@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
+import net.explorviz.persistence.api.v3.model.landscape.FlatBaseModel.FlatConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.FunctionDto.FunctionConvertible;
 
 /**
@@ -27,11 +28,7 @@ public record ClazzDto(@JsonUnwrapped FlatBaseModel flatBaseModel, List<String> 
   /**
    * Must be implemented by any object which can be represented as a class during flattening.
    */
-  public interface ClassConvertible {
-    String getId();
-
-    String getName();
-
+  public interface ClassConvertible extends FlatConvertible {
     Stream<ClassConvertible> getInnerClasses();
 
     Stream<FunctionConvertible> getFunctions();

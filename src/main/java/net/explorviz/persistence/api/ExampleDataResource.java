@@ -35,7 +35,8 @@ import org.neo4j.ogm.session.SessionFactory;
   "PMD.AvoidDuplicateLiterals",
   "PMD.CloseResource",
   "PMD.UseObjectForClearerAPI",
-  "PMD.NcssCount"
+  "PMD.NcssCount",
+  "PMD.TooManyMethods"
 })
 class ExampleDataResource {
 

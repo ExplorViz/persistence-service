@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 import net.explorviz.persistence.api.v3.model.landscape.BuildingDto.BuildingConvertible;
+import net.explorviz.persistence.api.v3.model.landscape.FlatBaseModel.FlatConvertible;
 
 /**
  * Inner grouping container / divider which groups buildings and subdistricts within a city to
@@ -38,11 +39,7 @@ public record DistrictDto(@JsonUnwrapped FlatBaseModel flatBaseModel, String par
   /**
    * Must be implemented by any object which can be represented as a district during flattening.
    */
-  public interface DistrictConvertible {
-    String getId();
-
-    String getName();
-
+  public interface DistrictConvertible extends FlatConvertible {
     Stream<DistrictConvertible> getDistricts();
 
     Stream<BuildingConvertible> getBuildings();

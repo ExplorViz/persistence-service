@@ -6,6 +6,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
+import net.explorviz.persistence.api.v3.model.TypeOfAnalysis;
 import net.explorviz.persistence.api.v3.model.conversion.DefaultApplicationToCityConverter;
 import net.explorviz.persistence.api.v3.model.conversion.LandscapeFlattener;
 import net.explorviz.persistence.api.v3.model.landscape.FlatLandscapeDto;
@@ -25,7 +26,7 @@ class LandscapeResource {
 
   @Inject CommitRepository commitRepository;
 
-  /** Retrieve structure data gathered only from runtime analysis. */
+  /** Retrieve all structure data gathered from runtime analysis. */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @Path("/structure/runtime")
@@ -36,7 +37,10 @@ class LandscapeResource {
         applicationRepository.fetchAllApplicationsHydratedForRuntimeData(session, landscapeToken);
 
     return LandscapeFlattener.flattenLandscape(
-        landscapeToken, ogmApps.stream().map(DefaultApplicationToCityConverter::convert).toList());
+        landscapeToken,
+        ogmApps.stream()
+            .map(a -> DefaultApplicationToCityConverter.convert(a, TypeOfAnalysis.RUNTIME))
+            .toList());
   }
 
   /**
@@ -62,6 +66,9 @@ class LandscapeResource {
             session, landscapeToken, repositoryName, commitHash);
 
     return LandscapeFlattener.flattenLandscape(
-        landscapeToken, ogmApps.stream().map(DefaultApplicationToCityConverter::convert).toList());
+        landscapeToken,
+        ogmApps.stream()
+            .map(a -> DefaultApplicationToCityConverter.convert(a, TypeOfAnalysis.STATIC))
+            .toList());
   }
 }

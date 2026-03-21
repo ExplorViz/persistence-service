@@ -169,7 +169,12 @@ public final class LandscapeFlattener {
 
     final CityDto city =
         new CityDto(
-            new FlatBaseModel(cityConvertible.getId(), cityConvertible.getName()),
+            new FlatBaseModel(
+                cityConvertible.getId(),
+                cityConvertible.getName(),
+                "",
+                cityConvertible.getOriginOfData(),
+                cityConvertible.getCommitComparison()),
             districtIds,
             buildingIds,
             context.districts.stream().map(d -> d.flatBaseModel().id()).toList(),
@@ -194,7 +199,9 @@ public final class LandscapeFlattener {
             new FlatBaseModel(
                 districtConvertible.getId(),
                 districtConvertible.getName(),
-                appendToFqn(context.parentFqn, districtConvertible.getName())),
+                appendToFqn(context.parentFqn, districtConvertible.getName()),
+                districtConvertible.getOriginOfData(),
+                districtConvertible.getCommitComparison()),
             context.parentCityId,
             context.parentDistrictId,
             subdistrictIds,
@@ -218,7 +225,9 @@ public final class LandscapeFlattener {
             new FlatBaseModel(
                 buildingConvertible.getId(),
                 buildingConvertible.getName(),
-                appendToFqn(context.parentFqn(), buildingConvertible.getName())),
+                appendToFqn(context.parentFqn(), buildingConvertible.getName()),
+                buildingConvertible.getOriginOfData(),
+                buildingConvertible.getCommitComparison()),
             context.parentCityId,
             context.parentDistrictId,
             buildingConvertible.getLanguage(),
@@ -243,7 +252,9 @@ public final class LandscapeFlattener {
             new FlatBaseModel(
                 classConvertible.getId(),
                 classConvertible.getName(),
-                appendToFqn(context.parentFqn(), classConvertible.getName())),
+                appendToFqn(context.parentFqn(), classConvertible.getName()),
+                classConvertible.getOriginOfData(),
+                classConvertible.getCommitComparison()),
             innerClassIds,
             functionIds,
             classConvertible.getMetrics());
@@ -261,7 +272,9 @@ public final class LandscapeFlattener {
             new FlatBaseModel(
                 functionConvertible.getId(),
                 functionConvertible.getName(),
-                appendToFqn(context.parentFqn, functionConvertible.getName())),
+                appendToFqn(context.parentFqn, functionConvertible.getName()),
+                functionConvertible.getOriginOfData(),
+                functionConvertible.getCommitComparison()),
             context.parentId,
             functionConvertible.getMetrics());
 
