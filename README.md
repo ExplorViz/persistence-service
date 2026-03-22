@@ -7,7 +7,7 @@ The service uses Quarkus, the Supersonic Subatomic Java Framework.
 
 The service also uses [neo4j](https://neo4j.com/) and the [neo4j-ogm library](https://neo4j.com/docs/ogm-manual/current/).
 
-The persistence-service communicates with the [code-agent](https://git.se.informatik.uni-kiel.de/ExplorViz/code/code-agent) and the [span-service](https://git.se.informatik.uni-kiel.de/ExplorViz/code/span-service) via gRPC and provides a REST-API for the [frontend](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend).
+The persistence-service communicates with the [code-agent](https://git.se.informatik.uni-kiel.de/ExplorViz/code/code-agent) via gRPC and with the [span-service](https://git.se.informatik.uni-kiel.de/ExplorViz/code/span-service) via Apache Kafka. It provides a REST-API for the [frontend](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend).
 
 # Table of Contents
 - [Database Model](#database-model)
