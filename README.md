@@ -81,7 +81,8 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 ### Commit
 | Field      | Type       |
 | ---------- | ---------- |
-| **hash**   | **string** |
+| **id**     | **Long**   |
+| hash       | string     |
 | author     | string     |
 | authorDate | Instant    |
 | commitDate | Instant    |
@@ -152,19 +153,22 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 ### Span
 | Field      | Type       |
 | ---------- | ---------- |
-| **spanId** | **string** |
+| **id**     | **Long** |
+|   spanId   |   string   |
 | start_time | long       |
 | end_time   | long       |
 
 ### Tag
 | Field    | Type       |
 | -------- | ---------- |
-| **name** | **string** |
+| **id**    | **Long** |
+|   name   |   string   |
 
 ### Trace
 | Field       | Type       |
 | ----------- | ---------- |
-| **traceId** | **string** |
+| **id**      | **Long**   |
+|   traceId   |   string   |
 | start_time  | long       |
 | end_time    | long       |
 
