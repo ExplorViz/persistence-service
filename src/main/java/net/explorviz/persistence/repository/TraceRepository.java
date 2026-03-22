@@ -150,20 +150,26 @@ public class TraceRepository {
   public void deleteTraceData(final Session session, final String landscapeToken) {
     session.query(
         """
-        MATCH (:Landscape {tokenId: tokenId})
+        MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(t:Trace)
           -[:CONTAINS]->(s:Span)
+        OPTIONAL MATCH (s)
+          -[:REPRESENTS]->(f:Function)
+        DETACH DELETE t, s
         MATCH (fr:FileRevision)
-          -[:CONTAINS]->(f:Function)
+          -[:CONTAINS]->(f)
         WHERE
-          (s)-[:REPRESENTS]->(f) AND
           NOT (:Commit)-[:CONTAINS]->(fr)
         CALL apoc.path.subgraphAll(fr, {
           relationshipFilter: "CONTAINS>"
         })
         YIELD nodes
         UNWIND nodes as n
-        DETACH DELETE n, t, s, f, fr;
+        DETACH DELETE n, f, fr
+        OPTIONAL MATCH (d:Directory|Application)
+        WHERE
+         NOT (d)-[:CONTAINS|HAS_ROOT*]->(:FileRevision)
+        DETACH DELETE d;
         """,
         Map.of("tokenId", landscapeToken));
   }

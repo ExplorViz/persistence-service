@@ -196,7 +196,6 @@ class CodeResource {
 
   @DELETE
   @Path("landscapes/{landscapeToken}/trace-data")
-  @Produces(MediaType.APPLICATION_JSON)
   public void deleteTraceData(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
 

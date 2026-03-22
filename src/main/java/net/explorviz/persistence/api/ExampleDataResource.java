@@ -40,16 +40,16 @@ class ExampleDataResource {
         MERGE (l:Landscape {tokenId: "mytokenvalue"})
         MERGE (l)-[:CONTAINS]->(t1:Trace {traceId: "trace1"})
         MERGE (l)-[:CONTAINS]->(t2:Trace {traceId: "trace2"})
-        SET t1.startTime = 1000000000000000000, t1.endTime = 1000000000001000000
-        SET t2.startTime = 1000000000002000000, t2.endTime = 1000000000003000000
+        SET t1.startTime = 1000000000, t1.endTime = 1001000000
+        SET t2.startTime = 2000000000, t2.endTime = 4002800000
         MERGE (t1)-[:CONTAINS]->(s1:Span {spanId: "span1"})
         MERGE (t2)-[:CONTAINS]->(s2:Span {spanId: "span2"})
         MERGE (t2)-[:CONTAINS]->(s3:Span {spanId: "span3"})-[:HAS_PARENT]->(s2)
         MERGE (t2)-[:CONTAINS]->(s4:Span {spanId: "span4"})-[:HAS_PARENT]->(s3)
-        SET s1.startTime = 1000000000000000000, s1.endTime = 1000000000001000000
-        SET t2.startTime = 1000000000002000000, t2.endTime = 1000000000003000000
-        SET s3.startTime = 1000000000002500000, s3.endTime = 1000000000002900000
-        SET s4.startTime = 1000000000002600000, s4.endTime = 1000000000002800000
+        SET s1.startTime = 1000000000, s1.endTime = 1001000000
+        SET s2.startTime = 2000000000, s2.endTime = 2003000000
+        SET s3.startTime = 2500000000, s3.endTime = 3002900000
+        SET s4.startTime = 3000000000, s4.endTime = 4002800000
         
         MERGE (app:Application {name: "hello-world"})
         MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
@@ -64,7 +64,10 @@ class ExampleDataResource {
         MERGE (file1)-[:CONTAINS]->(func1:Function {name: "function1"})
         MERGE (file2)-[:CONTAINS]->(func2:Function {name: "function2"})
         MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
-        MERGE (:Commit {hash: "commit1"})-[:CONTAINS]->(file1)
+        MERGE (l)
+          -[:CONTAINS]->(:Repository {name: "repo1"})
+          -[:CONTAINS]->(:Commit {hash: "commit1"})
+          -[:CONTAINS]->(file1)
         
         MERGE (s1)-[:REPRESENTS]->(func1)
         MERGE (s2)-[:REPRESENTS]->(func2)
@@ -273,7 +276,7 @@ class ExampleDataResource {
 
   private void addRandomSpan(final Trace trace, final String name) {
     final Span span = new Span(name);
-    final long randNumb = (long)(Math.random() * 100000000000.0) + 1000000000000000000L;
+    final long randNumb = (long)(Math.random() * 100_000_000_000.0);
     span.setStartTime(randNumb);
     span.setEndTime(randNumb + 1);
     trace.addChildSpan(span);

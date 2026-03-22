@@ -5,7 +5,6 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.Objects;
@@ -30,20 +29,15 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings("PMD.UseObjectForClearerAPI")
 class LandscapeResource {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  @Inject
-  private ApplicationRepository applicationRepository;
+  @Inject private ApplicationRepository applicationRepository;
 
-  @Inject
-  private CommitRepository commitRepository;
+  @Inject private CommitRepository commitRepository;
 
-  @Inject
-  private RepositoryRepository repositoryRepository;
+  @Inject private RepositoryRepository repositoryRepository;
 
-  @Inject
-  private TraceRepository traceRepository;
+  @Inject private TraceRepository traceRepository;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -61,8 +55,8 @@ class LandscapeResource {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @Path("/dynamic")
-  public List<TraceDto> getDynamicData(@RestPath final String landscapeToken,
-      @RestQuery final Long from, @RestQuery final Long to) {
+  public List<TraceDto> getDynamicData(
+      @RestPath final String landscapeToken, @RestQuery final Long from, @RestQuery final Long to) {
 
     final Session session = sessionFactory.openSession();
 
@@ -72,11 +66,14 @@ class LandscapeResource {
     final List<Trace> ogmTraces =
         traceRepository.findHydratedTraces(session, landscapeToken, fromTimestamp, toTimestamp);
 
-    return ogmTraces.stream().map(t -> {
-      final Optional<String> commitHash =
-          traceRepository.findCommitHashForTrace(session, landscapeToken, t.getTraceId());
-      return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
-    }).toList();
+    return ogmTraces.stream()
+        .map(
+            t -> {
+              final Optional<String> commitHash =
+                  traceRepository.findCommitHashForTrace(session, landscapeToken, t.getTraceId());
+              return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
+            })
+        .toList();
   }
 
   @GET
@@ -84,10 +81,10 @@ class LandscapeResource {
   @Produces(MediaType.APPLICATION_JSON)
   public Multi<TimestampDto> getTimestamps(
       @RestPath final String landscapeToken,
-      @QueryParam("newest") Long newest,
-      @QueryParam("oldest") Long oldest,
-      @QueryParam("commit") final String commit,
-      @QueryParam("bucketSize") Long bucketSize) {
+      @RestQuery Long newest,
+      @RestQuery Long oldest,
+      @RestQuery final String commit,
+      @RestQuery Long bucketSize) {
     final Session session = sessionFactory.openSession();
 
     final List<TimestampDto> timestamps;
@@ -100,14 +97,20 @@ class LandscapeResource {
       oldest = 0L;
     }
 
+    if (bucketSize == null || bucketSize <= 0) {
+      bucketSize = 1_000_000_000L;
+    } else {
+      bucketSize *= 1_000_000_000L;
+    }
+
     if (commit != null) {
       timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
-              newest, oldest, commit, bucketSize);
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
+              session, landscapeToken, newest, oldest, commit, bucketSize);
     } else {
       timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
-              newest, oldest, bucketSize);
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
+              session, landscapeToken, newest, oldest, bucketSize);
     }
 
     return Multi.createFrom().iterable(timestamps);
