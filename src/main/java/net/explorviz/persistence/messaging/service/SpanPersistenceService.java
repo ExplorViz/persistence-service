@@ -49,11 +49,11 @@ public class SpanPersistenceService {
   @Inject private TraceRepository traceRepository;
 
   public void saveSpanData(final Session session, final SpanData spanData) {
-    final Span span = new Span(spanData);
+    final Span span =
+        spanRepository.findSpanById(session, spanData.getSpanId()).orElse(new Span(spanData));
 
     if (!spanData.getParentId().isEmpty()) {
-      final Span parentSpan =
-          spanRepository.getOrCreateSpan(session, spanData.getParentId());
+      final Span parentSpan = spanRepository.getOrCreateSpan(session, spanData.getParentId());
       span.setParentSpan(parentSpan);
     }
 
@@ -61,8 +61,7 @@ public class SpanPersistenceService {
     trace.addChildSpan(span);
 
     final Landscape landscape =
-        landscapeRepository.getOrCreateLandscape(
-            session, spanData.getLandscapeTokenId());
+        landscapeRepository.getOrCreateLandscape(session, spanData.getLandscapeTokenId());
     landscape.addTrace(trace);
 
     final Function function;
@@ -92,9 +91,7 @@ public class SpanPersistenceService {
               .orElseGet(
                   () ->
                       clazzRepository.createClazzPathAndReturnLastClazz(
-                          session,
-                          spanData.getClassName().split("\\."),
-                          fileRevision.getId()));
+                          session, spanData.getClassName().split("\\."), fileRevision.getId()));
 
       function =
           functionRepository
@@ -146,18 +143,13 @@ public class SpanPersistenceService {
       final Session session, final SpanData spanData, final String[] splitFileFqn) {
     return fileRevisionRepository
         .findFileRevisionFromAppNameAndPathWithoutCommit(
-            session,
-            spanData.getApplicationName(),
-            splitFileFqn,
-            spanData.getLandscapeTokenId())
+            session, spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId())
         .orElseGet(
             () -> {
               final Application application =
                   applicationRepository
                       .findApplicationByNameAndLandscapeToken(
-                          session,
-                          spanData.getApplicationName(),
-                          spanData.getLandscapeTokenId())
+                          session, spanData.getApplicationName(), spanData.getLandscapeTokenId())
                       .orElse(new Application(spanData.getApplicationName()));
 
               FileRevision fileRevision;
