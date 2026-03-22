@@ -381,7 +381,7 @@
       "type": "CONTAINS",
       "properties": {},
       "style": {
-        "detail-position": "above",
+        "detail-position": "inline",
         "detail-orientation": "perpendicular",
         "type-background-color": "#cccccc",
         "type-border-width": 2
