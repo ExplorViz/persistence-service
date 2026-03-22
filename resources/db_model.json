@@ -211,7 +211,8 @@
       "properties": {},
       "style": {
         "label-display": "bare",
-        "node-color": "#68bc00"
+        "node-color": "#68bc00",
+        "label-color": "#ffffff"
       }
     },
     {
@@ -228,7 +229,7 @@
       "style": {
         "label-display": "bare",
         "node-color": "#68bc00",
-        "label-color": "#000000"
+        "label-color": "#ffffff"
       }
     },
     {
@@ -261,7 +262,8 @@
       "properties": {},
       "style": {
         "label-display": "bare",
-        "node-color": "#68bc00"
+        "node-color": "#68bc00",
+        "label-color": "#ffffff"
       }
     },
     {
@@ -277,7 +279,8 @@
       "properties": {},
       "style": {
         "label-display": "bare",
-        "node-color": "#68bc00"
+        "node-color": "#68bc00",
+        "label-color": "#ffffff"
       }
     },
     {
@@ -293,7 +296,8 @@
       "properties": {},
       "style": {
         "label-display": "bare",
-        "node-color": "#68bc00"
+        "node-color": "#68bc00",
+        "label-color": "#ffffff"
       }
     }
   ],
