@@ -51,8 +51,8 @@ class ExampleDataResource {
         SET s3.startTime = 2500000000, s3.endTime = 3002900000
         SET s4.startTime = 3000000000, s4.endTime = 4002800000
         
-        MERGE (app:Application {name: "hello-world"})
-        MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
+        MERGE (app1:Application {name: "hello-world1"})
+        MERGE (app1)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
         MERGE (appRoot)
           -[:CONTAINS]->(:Directory {name: "net"})
           -[:CONTAINS]->(:Directory {name: "explorviz"})
@@ -65,9 +65,14 @@ class ExampleDataResource {
         MERGE (file2)-[:CONTAINS]->(func2:Function {name: "function2"})
         MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
         MERGE (l)
-          -[:CONTAINS]->(:Repository {name: "repo1"})
+          -[:CONTAINS]->(r1:Repository {name: "repo1"})
           -[:CONTAINS]->(:Commit {hash: "commit1"})
           -[:CONTAINS]->(file1)
+        MERGE (r1)
+          -[:HAS_ROOT]->(outerDir)
+          
+        MERGE (app2:Application {name: "hello-world2"})
+        MERGE (app2)-[:HAS_ROOT]->(outerDir)
         
         MERGE (s1)-[:REPRESENTS]->(func1)
         MERGE (s2)-[:REPRESENTS]->(func2)
