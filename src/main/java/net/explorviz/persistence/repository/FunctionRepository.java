@@ -194,10 +194,12 @@ public class FunctionRepository {
     final Result result =
         session.query(
             """
-            MATCH (:Landscape {tokenId: $tokenId})
+            MATCH (l:Landscape {tokenId: $tokenId})
+            MATCH (a:Application {name: $appName})-[:HAS_ROOT]->(appRoot:Directory)
+            WHERE (l)
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->*(appRoot:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+              -[:CONTAINS*0..]->*(appRoot)
             MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)-[:CONTAINS]->(fn:Function)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
             WITH fn, [node IN nodes(p)[1..] | node.name] AS nodeNames

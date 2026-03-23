@@ -203,8 +203,9 @@ public class FileRevisionRepository {
       final Session session, final String applicationName, final String commitHash,
       final String[] pathSegments, final String landscapeToken) {
     return Optional.ofNullable(session.queryForObject(FileRevision.class, """
-            MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
-                  <-[:HAS_ROOT]-(:Application {name: $appName})
+            MATCH (l:Landscape {tokenId: $tokenId})
+            MATCH (:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
+            WHERE (l)-[*]-(appRootDir)
             MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               length(p) = size($pathSegments) AND
@@ -247,10 +248,12 @@ public class FileRevisionRepository {
     final Map<String, FileRevision> filePathToFileRevisionMap = new HashMap<>();
 
     final Result result = session.query("""
-            MATCH (:Landscape {tokenId: $tokenId})
+            MATCH (l:Landscape {tokenId: $tokenId})
+            MATCH (a:Application {name: $appName})-[:HAS_ROOT]->(appRoot:Directory)
+            WHERE (l)
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->*(appRoot:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+              -[:CONTAINS*0..]->(appRoot)
             MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
             WITH f, [node IN nodes(p)[1..] | node.name] AS nodeNames

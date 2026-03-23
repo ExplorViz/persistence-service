@@ -97,10 +97,12 @@ public class ApplicationRepository {
   public List<String> findStaticApplicationNamesForLandscapeToken(final Session session,
       final String landscapeToken) {
     return Lists.newArrayList(session.query(String.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
+        MATCH (a:Application)
+        WHERE (l)
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(a:Application)
+          -[:CONTAINS*]->(:Directory)<-[:HAS_ROOT]-(a)
         RETURN DISTINCT a.name;
         """, Map.of("tokenId", landscapeToken)));
   }

@@ -60,10 +60,12 @@ public class CommitRepository {
   public List<Commit> findCommitsWithBranchForApplicationAndLandscapeToken(final Session session,
       final String landscapeToken, final String applicationName) {
     return Lists.newArrayList(session.query(Commit.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(repo:Repository)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(:Application {name: $appName})
+        MATCH (l:Landscape {tokenId: $tokenId})
+        MATCH (a:Application {name: $appName})
+        WHERE
+          (l)-[*]-(a)
+        MATCH (repo:Repository)<-[:CONTAINS]-(l)
+        WHERE (repo)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
         MATCH (repo)-[:CONTAINS]->(c:Commit)
         OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
         OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
