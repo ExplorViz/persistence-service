@@ -106,10 +106,4 @@ public class ApplicationRepository {
         RETURN DISTINCT a.name;
         """, Map.of("tokenId", landscapeToken)));
   }
-
-  public Application getOrCreateApplication(final Session session, final String name,
-      final String tokenId) {
-    return findApplicationByNameAndLandscapeToken(session, name, tokenId).orElse(
-        new Application(name));
-  }
 }
