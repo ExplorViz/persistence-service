@@ -30,8 +30,8 @@ public class ClazzRepository {
             Clazz.class,
             """
             MATCH (l:Landscape {tokenId: $tokenId})
-            MATCH (app:Application {name: $appName})-[:HAS_ROOT]->(appRoot:Directory)
-            WHERE (l)-[*]-(appRoot)
+              -[:CONTAINS]->(app:Application {name: $appName})
+              -[:HAS_ROOT]->(appRoot:Directory)
             MATCH p = (pathRoot:Directory|FileRevision)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               (appRoot)-[:CONTAINS]->(pathRoot) AND
@@ -256,7 +256,8 @@ public class ClazzRepository {
         session.query(
             """
             MATCH (l:Landscape {tokenId: $tokenId})
-            MATCH (a:Application {name: $appName})-[:HAS_ROOT]->(appRoot:Directory)
+              -[:CONTAINS]->(a:Application {name: $appName})
+              -[:HAS_ROOT]->(appRoot:Directory)
             WHERE (l)
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)

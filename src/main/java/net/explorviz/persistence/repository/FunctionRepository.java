@@ -17,11 +17,15 @@ public class FunctionRepository {
 
   private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_STATEMENT =
       """
-      MATCH (:Landscape {tokenId: $tokenId})
+      MATCH (l:Landscape {tokenId: $tokenId})
+      MATCH (func:Function {name: $name})
+      WHERE (l)
         -[:CONTAINS]->(:Trace)
         -[:CONTAINS]->(:Span)
-        -[:REPRESENTS]->(func:Function {name: $name})
-      MATCH (:Application {name: $appName})-[:HAS_ROOT]->(appRoot:Directory)
+        -[:REPRESENTS]->(func)
+      MATCH (l)
+        -[:CONTAINS]->(:Application {name: $appName})
+        -[:HAS_ROOT]->(appRoot:Directory)
       MATCH p = (fqnRoot:Directory|FileRevision)-[:CONTAINS]->*(file:FileRevision)
       WHERE
         (appRoot)-[:CONTAINS]->(fqnRoot) AND
@@ -34,10 +38,12 @@ public class FunctionRepository {
   private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_AND_COMMIT_HASH_STATEMENT =
       """
       MATCH (l:Landscape {tokenId: $tokenId})
+        -[:CONTAINS]->(:Application {name: $appName})
+        -[:HAS_ROOT]->(appRoot:Directory)
+      WHERE (l)
         -[:CONTAINS]->(:Repository)
         -[:HAS_ROOT]->(:Directory)
-        -[:CONTAINS]->*(appRoot:Directory)
-        <-[:HAS_ROOT]-(app:Application {name: $appName})
+        -[:CONTAINS*0..]->(appRoot:Directory)
       MATCH p = (fqnRoot:Directory|FileRevision)
         -[:CONTAINS]->*(file:FileRevision)
         -[:CONTAINS]->(func:Function)
@@ -195,7 +201,8 @@ public class FunctionRepository {
         session.query(
             """
             MATCH (l:Landscape {tokenId: $tokenId})
-            MATCH (a:Application {name: $appName})-[:HAS_ROOT]->(appRoot:Directory)
+              -[:CONTAINS]->(a:Application {name: $appName})
+              -[:HAS_ROOT]->(appRoot:Directory)
             WHERE (l)
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)

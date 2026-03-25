@@ -21,9 +21,8 @@ public class ApplicationRepository {
       final String name, final String tokenId) {
     return Optional.ofNullable(session.queryForObject(Application.class, """
         MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (app:Application {name: $name})-[h:HAS_ROOT]->(appRoot:Directory)
-        WHERE
-          (appRoot)-[*]-(l)
+          -[:CONTAINS]->(app:Application {name: $name})
+          -[h:HAS_ROOT]->(appRoot:Directory)
         RETURN app, h, appRoot;
         """, Map.of("tokenId", tokenId, "name", name)));
   }
@@ -36,10 +35,7 @@ public class ApplicationRepository {
   public List<Application> fetchAllFullyHydratedApplications(final Session session,
       final String landscapeToken) {
     return Lists.newArrayList(session.query(Application.class, """
-        MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (a:Application)
-        WHERE
-          (a)-[*]-(l)
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application)
         CALL apoc.path.subgraphAll(a, {
           relationshipFilter: "HAS_ROOT>|CONTAINS>"
         })
@@ -97,8 +93,7 @@ public class ApplicationRepository {
   public List<String> findStaticApplicationNamesForLandscapeToken(final Session session,
       final String landscapeToken) {
     return Lists.newArrayList(session.query(String.class, """
-        MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (a:Application)
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application)
         WHERE (l)
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
