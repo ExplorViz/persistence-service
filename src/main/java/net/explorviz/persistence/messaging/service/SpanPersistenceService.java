@@ -66,9 +66,9 @@ public class SpanPersistenceService {
 
     final Function function;
     if (spanData.getCommitHash() != null) {
-      function = resolveFunctionFqn(session, spanData, spanData.getCommitHash());
+      function = resolveFunctionFqn(session, spanData, spanData.getCommitHash(), landscape);
     } else {
-      function = resolveFunctionFqn(session, spanData);
+      function = resolveFunctionFqn(session, spanData, landscape);
     }
 
     span.setFunction(function);
@@ -76,11 +76,13 @@ public class SpanPersistenceService {
     session.save(List.of(span, trace, landscape, function));
   }
 
-  private Function resolveFunctionFqn(final Session session, final SpanData spanData) {
+  private Function resolveFunctionFqn(
+      final Session session, final SpanData spanData, final Landscape landscape) {
     final String[] splitFilePath = spanData.getFilePath().split("/");
     final String functionName = spanData.getFunctionName();
 
-    final FileRevision fileRevision = resolveFileRevision(session, spanData, splitFilePath);
+    final FileRevision fileRevision =
+        resolveFileRevision(session, spanData, splitFilePath, landscape);
     final Function function;
 
     if (spanData.getClassName() != null) {
@@ -113,7 +115,10 @@ public class SpanPersistenceService {
   }
 
   private Function resolveFunctionFqn(
-      final Session session, final SpanData spanData, final String commitHash) {
+      final Session session,
+      final SpanData spanData,
+      final String commitHash,
+      final Landscape landscape) {
     final String[] splitFilePath = spanData.getFilePath().split("/");
     final String functionName = spanData.getFunctionName();
 
@@ -126,7 +131,7 @@ public class SpanPersistenceService {
               spanData.getLandscapeTokenId(),
               commitHash,
               spanData.getClassName().split("\\."))
-          .orElseGet(() -> resolveFunctionFqn(session, spanData));
+          .orElseGet(() -> resolveFunctionFqn(session, spanData, landscape));
     } else {
       return functionRepository
           .findFunction(
@@ -135,12 +140,15 @@ public class SpanPersistenceService {
               ObjectArrays.concat(splitFilePath, functionName),
               commitHash,
               spanData.getLandscapeTokenId())
-          .orElseGet(() -> resolveFunctionFqn(session, spanData));
+          .orElseGet(() -> resolveFunctionFqn(session, spanData, landscape));
     }
   }
 
   private FileRevision resolveFileRevision(
-      final Session session, final SpanData spanData, final String[] splitFileFqn) {
+      final Session session,
+      final SpanData spanData,
+      final String[] splitFileFqn,
+      final Landscape landscape) {
     return fileRevisionRepository
         .findFileRevisionFromAppNameAndPathWithoutCommit(
             session, spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId())
@@ -151,6 +159,7 @@ public class SpanPersistenceService {
                       .findApplicationByNameAndLandscapeToken(
                           session, spanData.getApplicationName(), spanData.getLandscapeTokenId())
                       .orElse(new Application(spanData.getApplicationName()));
+              landscape.addApplication(application);
 
               FileRevision fileRevision;
 

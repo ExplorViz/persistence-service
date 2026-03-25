@@ -64,7 +64,7 @@ public class StateDataServiceImpl implements StateDataService {
       stateDataBuilder.setCommitId(commitId);
 
       return Uni.createFrom().item(stateDataBuilder.build());
-    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
+    } catch (Exception e) { // NOPMD - intentional: Handling in GrpcExceptionMapper
       return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
     }
   }
@@ -103,6 +103,7 @@ public class StateDataServiceImpl implements StateDataService {
                       .findApplicationByNameAndLandscapeToken(
                           session, k, stateData.getLandscapeToken())
                       .orElse(new Application(k));
+              landscape.addApplication(application);
 
               if (v.isEmpty()) {
                 application.setRootDirectory(repository.getRootDirectory());

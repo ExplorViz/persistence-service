@@ -26,8 +26,8 @@ public class FileRevisionRepository {
 
   private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT = """
       MATCH (l:Landscape {tokenId: $tokenId})
-      MATCH (app:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
-      WHERE (appRootDir)-[*]-(l)
+        -[:CONTAINS]->(app:Application {name: $appName})
+        -[:HAS_ROOT]->(appRootDir:Directory)
       OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
         -[:CONTAINS]->*(lastNode:Directory|FileRevision)
       WHERE
@@ -204,8 +204,8 @@ public class FileRevisionRepository {
       final String[] pathSegments, final String landscapeToken) {
     return Optional.ofNullable(session.queryForObject(FileRevision.class, """
             MATCH (l:Landscape {tokenId: $tokenId})
-            MATCH (:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
-            WHERE (l)-[*]-(appRootDir)
+              -[:CONTAINS]->(:Application {name: $appName})
+              -[:HAS_ROOT]->(appRootDir:Directory)
             MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               length(p) = size($pathSegments) AND
@@ -223,8 +223,8 @@ public class FileRevisionRepository {
       final String landscapeToken) {
     return Optional.ofNullable(session.queryForObject(FileRevision.class, """
             MATCH (l:Landscape {tokenId: $tokenId})
-            MATCH (:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
-            WHERE (l)-[*]-(appRootDir:Directory)
+              -[:CONTAINS]->(:Application {name: $appName})
+              -[:HAS_ROOT]->(appRootDir:Directory)
             MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               length(p) = size($pathSegments) AND
@@ -249,7 +249,8 @@ public class FileRevisionRepository {
 
     final Result result = session.query("""
             MATCH (l:Landscape {tokenId: $tokenId})
-            MATCH (a:Application {name: $appName})-[:HAS_ROOT]->(appRoot:Directory)
+              -[:CONTAINS]->(:Application {name: $appName})
+              -[:HAS_ROOT]->(appRoot:Directory)
             WHERE (l)
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
