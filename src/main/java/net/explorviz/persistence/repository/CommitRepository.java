@@ -60,10 +60,7 @@ public class CommitRepository {
   public List<Commit> findCommitsWithBranchForApplicationAndLandscapeToken(final Session session,
       final String landscapeToken, final String applicationName) {
     return Lists.newArrayList(session.query(Commit.class, """
-        MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (a:Application {name: $appName})
-        WHERE
-          (l)-[*]-(a)
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application {name: $appName})
         MATCH (repo:Repository)<-[:CONTAINS]-(l)
         WHERE (repo)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
         MATCH (repo)-[:CONTAINS]->(c:Commit)
@@ -81,13 +78,13 @@ public class CommitRepository {
   public List<String> findModifiedFileFqns(final Session session, final String landscapeToken,
       final String applicationName, final String firstCommitHash, final String secondCommitHash) {
     return Lists.newArrayList(session.query(String.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)
@@ -111,13 +108,13 @@ public class CommitRepository {
   public List<String> findAddedFileFqns(final Session session, final String landscapeToken,
       final String applicationName, final String firstCommitHash, final String secondCommitHash) {
     return Lists.newArrayList(session.query(String.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)
@@ -141,13 +138,13 @@ public class CommitRepository {
   public List<String> findDeletedFileFqns(final Session session, final String landscapeToken,
       final String applicationName, final String firstCommitHash, final String secondCommitHash) {
     return Lists.newArrayList(session.query(String.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)
@@ -172,13 +169,13 @@ public class CommitRepository {
   public List<String> findAddedDirectoryFqns(final Session session, final String landscapeToken,
       final String applicationName, final String firstCommitHash, final String secondCommitHash) {
     return Lists.newArrayList(session.query(String.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS*0..]->(d:Directory)
@@ -198,13 +195,13 @@ public class CommitRepository {
   public List<String> findDeletedDirectoryFqns(final Session session, final String landscapeToken,
       final String applicationName, final String firstCommitHash, final String secondCommitHash) {
     return Lists.newArrayList(session.query(String.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS*0..]->(d:Directory)
@@ -227,13 +224,13 @@ public class CommitRepository {
       final String landscapeToken, final String applicationName, final String firstCommitHash,
       final String secondCommitHash) {
     return session.queryDto("""
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)

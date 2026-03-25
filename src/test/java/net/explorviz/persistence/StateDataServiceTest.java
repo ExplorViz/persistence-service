@@ -95,10 +95,11 @@ class StateDataServiceTest {
         """, Map.of("tokenId", landscapeToken, "repoName", repoName));
 
     Application application = session.queryForObject(Application.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
               -[:HAS_ROOT]->(:Directory {name: $repoName})
               <-[:HAS_ROOT]-(a:Application {name: $appName})
+              <-[:CONTAINS]-(l)
         RETURN a;
         """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appName));
 
@@ -136,23 +137,25 @@ class StateDataServiceTest {
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
     Application applicationOne = session.queryForObject(Application.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
               -[:HAS_ROOT]->(:Directory {name: $repoName})
               -[:CONTAINS]->(:Directory {name: 'src'})
               -[:CONTAINS]->(:Directory {name: $appName})
               <-[:HAS_ROOT]-(a:Application {name: $appName})
+              <-[:CONTAINS]-(l)
         RETURN a;
         """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appNameOne));
 
     Application applicationTwo = session.queryForObject(Application.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
               -[:HAS_ROOT]->(:Directory {name: $repoName})
               -[:CONTAINS]->(:Directory {name: 'src'})
               -[:CONTAINS]->(:Directory {name: 'org'})
               -[:CONTAINS]->(:Directory {name: $appName})
               <-[:HAS_ROOT]-(a:Application {name: $appName})
+              <-[:CONTAINS]-(l)
         RETURN a;
         """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appNameTwo));
 
@@ -226,10 +229,11 @@ class StateDataServiceTest {
         """, Map.of("tokenId", landscapeToken, "repoName", repoName));
 
     Application application = session.queryForObject(Application.class, """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
               -[:HAS_ROOT]->(:Directory {name: $repoName})
               <-[:HAS_ROOT]-(a:Application {name: $appName})
+              <-[:CONTAINS]-(l)
         RETURN a;
         """, Map.of("tokenId", landscapeToken, "repoName", repoName, "appName", appName));
 
@@ -286,12 +290,14 @@ class StateDataServiceTest {
           -[:CONTAINS]->(r1:Repository {name: $repoNameOne})
           -[:HAS_ROOT]->(:Directory {name: $repoNameOne})
           <-[:HAS_ROOT]-(:Application {name: $appNameOne})
+          <-[:CONTAINS]-(l)
         MATCH (r1)-[:CONTAINS]->(b1:Branch {name: $branchName})
         
         MATCH (l)
           -[:CONTAINS]->(r2:Repository {name: $repoNameTwo})
           -[:HAS_ROOT]->(:Directory {name: $repoNameTwo})
           <-[:HAS_ROOT]-(:Application {name: $appNameTwo})
+          <-[:CONTAINS]-(l)
         MATCH (r2)-[:CONTAINS]->(b2:Branch {name: $branchName})
         
         WHERE b1 <> b2
