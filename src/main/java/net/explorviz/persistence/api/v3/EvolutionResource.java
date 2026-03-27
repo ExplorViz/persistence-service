@@ -2,10 +2,21 @@ package net.explorviz.persistence.api.v3;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import net.explorviz.persistence.api.v3.model.BranchDto;
+import net.explorviz.persistence.api.v3.model.BranchPointDto;
+import net.explorviz.persistence.api.v3.model.CommitTreeDto;
+import net.explorviz.persistence.ogm.Commit;
+import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.RepositoryRepository;
 import org.jboss.resteasy.reactive.RestPath;
 import org.neo4j.ogm.session.Session;
@@ -13,7 +24,16 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @Path("/v3/landscapes/{landscapeToken}")
 class EvolutionResource {
+
+  /**
+   * Dummy branch point expected by frontend if no branch point exists (e.g. for the main branch).
+   */
+  private static final BranchPointDto NO_BRANCH_POINT = new BranchPointDto("NONE", "");
+
   @Inject SessionFactory sessionFactory;
+
+  @Inject CommitRepository commitRepository;
+
   @Inject RepositoryRepository repositoryRepository;
 
   @GET
@@ -22,5 +42,64 @@ class EvolutionResource {
   public List<String> getRepositoryNames(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
     return repositoryRepository.fetchAllRepositoryNamesInLandscape(session, landscapeToken);
+  }
+
+  @GET
+  @Path("/commit-tree/{repositoryName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public CommitTreeDto getCommitTreeForApplicationAndLandscape(
+      @RestPath final String landscapeToken, @RestPath final String repositoryName) {
+    final Session session = sessionFactory.openSession();
+
+    if (repositoryRepository
+        .findRepositoryByNameAndLandscapeToken(session, repositoryName, landscapeToken)
+        .isEmpty()) {
+      throw new NotFoundException(
+          "The requested repository does not exist in the database for the given landscape token.");
+    }
+
+    final List<Commit> commits =
+        commitRepository.findCommitsWithBranchForRepositoryAndLandscapeToken(
+            session, landscapeToken, repositoryName);
+
+    final Map<String, Set<String>> branchToCommitMap = new HashMap<>();
+    final Map<String, BranchPointDto> branchToBranchPointMap = new HashMap<>();
+
+    for (final Commit commit : commits) {
+      final String branchName = commit.getBranch().getName();
+
+      branchToCommitMap.computeIfAbsent(branchName, k -> new HashSet<>()).add(commit.getHash());
+
+      final Set<Commit> parentCommits = commit.getParentCommits();
+      if (parentCommits.isEmpty()) {
+        branchToBranchPointMap.putIfAbsent(branchName, NO_BRANCH_POINT);
+        continue;
+      }
+
+      // If all parent commits are assigned to a different branch than the current commit, then we
+      // treat this as the first commit unique to this branch and therefore create a branch point
+      // from the first of the parent commits. Usually, there is only 1 parent commit in this case.
+      final boolean hasParentInSameBranch =
+          parentCommits.stream().anyMatch(pc -> branchName.equals(pc.getBranch().getName()));
+
+      if (!hasParentInSameBranch) {
+        final Optional<Commit> parentCommitOptional = parentCommits.stream().findAny();
+        parentCommitOptional.ifPresent(
+            parentCommit ->
+                branchToBranchPointMap.putIfAbsent(
+                    branchName,
+                    new BranchPointDto(
+                        parentCommit.getHash(), parentCommit.getBranch().getName())));
+      }
+    }
+
+    final List<BranchDto> branches =
+        branchToCommitMap.entrySet().stream()
+            .map(
+                e ->
+                    new BranchDto(e.getKey(), e.getValue(), branchToBranchPointMap.get(e.getKey())))
+            .toList();
+
+    return new CommitTreeDto(repositoryName, branches);
   }
 }
