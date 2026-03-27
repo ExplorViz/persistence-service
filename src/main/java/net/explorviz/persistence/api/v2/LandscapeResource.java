@@ -83,8 +83,7 @@ class LandscapeResource {
       @RestPath final String landscapeToken,
       @RestQuery Long newest,
       @RestQuery Long oldest,
-      @RestQuery final String commit,
-      @RestQuery Long bucketSize) {
+      @RestQuery final String commit) {
     final Session session = sessionFactory.openSession();
 
     final List<TimestampDto> timestamps;
@@ -97,20 +96,14 @@ class LandscapeResource {
       oldest = 0L;
     }
 
-    if (bucketSize == null || bucketSize <= 0) {
-      bucketSize = 1_000_000_000L;
-    } else {
-      bucketSize *= 1_000_000_000L;
-    }
-
     if (commit != null) {
       timestamps =
           traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
-              session, landscapeToken, newest, oldest, commit, bucketSize);
+              session, landscapeToken, newest, oldest, commit, 1_000_000_000L);
     } else {
       timestamps =
           traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
-              session, landscapeToken, newest, oldest, bucketSize);
+              session, landscapeToken, newest, oldest, 1_000_000_000L);
     }
 
     return Multi.createFrom().iterable(timestamps);
