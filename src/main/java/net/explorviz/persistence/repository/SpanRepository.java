@@ -11,28 +11,22 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class SpanRepository {
 
-  @Inject
-  private ApplicationRepository applicationRepository;
+  @Inject private ApplicationRepository applicationRepository;
 
-  @Inject
-  private FileRevisionRepository fileRevisionRepository;
+  @Inject private FileRevisionRepository fileRevisionRepository;
 
-  @Inject
-  private FunctionRepository functionRepository;
+  @Inject private FunctionRepository functionRepository;
 
-  @Inject
-  private LandscapeRepository landscapeRepository;
+  @Inject private LandscapeRepository landscapeRepository;
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  @Inject
-  private TraceRepository traceRepository;
+  @Inject private TraceRepository traceRepository;
 
   public Optional<Span> findSpanById(final Session session, final String spanId) {
     return Optional.ofNullable(
-        session.queryForObject(Span.class, "MATCH (s:Span {spanId: $spanId}) RETURN s;",
-            Map.of("spanId", spanId)));
+        session.queryForObject(
+            Span.class, "MATCH (s:Span {spanId: $spanId}) RETURN s;", Map.of("spanId", spanId)));
   }
 
   public Optional<Span> findSpanById(final String spanId) {

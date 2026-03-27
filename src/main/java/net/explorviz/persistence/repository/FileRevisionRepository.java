@@ -41,20 +41,15 @@ public class FileRevisionRepository {
         $pathSegments[coalesce(length(p)+1, 0)..] AS remainingPath
       ORDER BY length(p) DESC
       LIMIT 1;""";
-
+  private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
   @Inject
   private SessionFactory sessionFactory;
-
   @Inject
   private ApplicationRepository applicationRepository;
-
   @Inject
   private DirectoryRepository directoryRepository;
-
   @Inject
   private LandscapeRepository landscapeRepository;
-
-  private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
 
   private FileRevision createRemainingFilePath(final Session session,
       final Directory startingDirectory, final String[] remainingPath) {

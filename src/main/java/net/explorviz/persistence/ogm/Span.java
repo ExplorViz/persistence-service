@@ -65,4 +65,12 @@ public class Span {
   public long getEndTime() {
     return endTime;
   }
+
+  public void setStartTime(final long startTime) {
+    this.startTime = startTime;
+  }
+
+  public void setEndTime(final long endTime) {
+    this.endTime = endTime;
+  }
 }

@@ -206,6 +206,14 @@ List<TraceDto> getDynamicData(String landscapeToken, Long from, Long to);
 ```
 Returns all traces associated with a landscape in a specified time period.
 
+### GET /v2/landscapes/{landscapeToken}/timestamps
+```Java
+Multi<TimestampDto> getTimestamps(
+        String landscapeToken, @QueryParam("newest") Long newest, @QueryParam("oldest") Long oldest,
+        @QueryParam("commit") String commit);
+```
+Returns timestamps associated with a landscape and a commit within a specified time period.
+
 ### GET /v2/code/applications/{landscapeToken}
 ```Java
 List<String> getStaticApplicationNamesForLandscape(String landscapeToken);
@@ -245,14 +253,6 @@ CommitComparison getCommitComparison(
         String landscapeToken, String applicationName, String firstCommitHash, String secondCommitHash);
 ```
 Returns a comparison object of two commits associated with a landscape and an application.
-
-### GET /v2/code/landscapes/{landscapeToken}/timestamps
-```Java
-Multi<TimestampDto> getTimestamps(
-        String landscapeToken, @QueryParam("newest") Long newest, @QueryParam("oldest") Long oldest,
-        @QueryParam("commit") String commit);
-```
-Returns timestamps associated with a landscape and a commit within a specified time period.
 
 ### DELETE /v2/code/landscapes/{landscapeToken}/trace-data
 ```Java

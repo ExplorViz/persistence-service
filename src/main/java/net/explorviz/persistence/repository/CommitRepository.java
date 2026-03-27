@@ -15,22 +15,18 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class CommitRepository {
 
-  // TODO might be more appropriate for FileRevisionRepository
-  public record FileComparison(String fileFqn, FileRevision fileFirstCommit,
-                               FileRevision fileSecondCommit) {
-  }
-
-
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
   /**
    * Find latest commit for which we have seen a CommitData message and also a FileData message for
    * every file included in the commit.
    */
-  public Optional<Commit> findLatestFullyPersistedCommit(final Session session,
-      final String repoName, final String tokenId, final String branchName) {
-    return Optional.ofNullable(session.queryForObject(Commit.class, """
+  public Optional<Commit> findLatestFullyPersistedCommit(
+      final Session session, final String repoName, final String tokenId, final String branchName) {
+    return Optional.ofNullable(
+        session.queryForObject(
+            Commit.class,
+            """
         MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(:Repository {name: $repoName})
           -[:CONTAINS]->(c:Commit)
@@ -41,17 +37,22 @@ public class CommitRepository {
           NOT isEmpty(filesInCommit)
         RETURN c
         ORDER BY c.commitDate
-        LIMIT 1;""", Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
+        LIMIT 1;""",
+            Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }
 
-  public Optional<Commit> findCommitByHashAndLandscapeToken(final Session session,
-      final String commitHash, final String tokenId) {
-    return Optional.ofNullable(session.queryForObject(Commit.class, """
+  public Optional<Commit> findCommitByHashAndLandscapeToken(
+      final Session session, final String commitHash, final String tokenId) {
+    return Optional.ofNullable(
+        session.queryForObject(
+            Commit.class,
+            """
         MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(:Repository)
           -[:CONTAINS]->(c:Commit {hash: $commitHash})
         RETURN c;
-        """, Map.of("tokenId", tokenId, "commitHash", commitHash)));
+        """,
+            Map.of("tokenId", tokenId, "commitHash", commitHash)));
   }
 
   /**
@@ -67,7 +68,8 @@ public class CommitRepository {
         OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
         OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
         RETURN DISTINCT c, r, b, h;
-        """, Map.of("tokenId", landscapeToken, "appName", applicationName)));
+        """,
+            Map.of("tokenId", landscapeToken, "appName", applicationName)));
   }
 
   /**
@@ -97,8 +99,16 @@ public class CommitRepository {
             WHERE f.name = f2.name AND f <> f2
           }
         RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """, Map.of("tokenId", landscapeToken, "appName", applicationName, "firstCommitHash",
-        firstCommitHash, "secondCommitHash", secondCommitHash)));
+        """,
+            Map.of(
+                "tokenId",
+                landscapeToken,
+                "appName",
+                applicationName,
+                "firstCommitHash",
+                firstCommitHash,
+                "secondCommitHash",
+                secondCommitHash)));
   }
 
   /**
@@ -127,8 +137,16 @@ public class CommitRepository {
             WHERE f.name = f2.name AND f <> f2
           }
         RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """, Map.of("tokenId", landscapeToken, "appName", applicationName, "firstCommitHash",
-        firstCommitHash, "secondCommitHash", secondCommitHash)));
+        """,
+            Map.of(
+                "tokenId",
+                landscapeToken,
+                "appName",
+                applicationName,
+                "firstCommitHash",
+                firstCommitHash,
+                "secondCommitHash",
+                secondCommitHash)));
   }
 
   /**
@@ -157,8 +175,16 @@ public class CommitRepository {
             WHERE f.name = f2.name AND f <> f2
           }
         RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """, Map.of("tokenId", landscapeToken, "appName", applicationName, "firstCommitHash",
-        firstCommitHash, "secondCommitHash", secondCommitHash)));
+        """,
+            Map.of(
+                "tokenId",
+                landscapeToken,
+                "appName",
+                applicationName,
+                "firstCommitHash",
+                firstCommitHash,
+                "secondCommitHash",
+                secondCommitHash)));
   }
 
   /**
@@ -183,8 +209,16 @@ public class CommitRepository {
           (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c2) AND
           NOT (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """, Map.of("tokenId", landscapeToken, "appName", applicationName, "firstCommitHash",
-        firstCommitHash, "secondCommitHash", secondCommitHash)));
+        """,
+            Map.of(
+                "tokenId",
+                landscapeToken,
+                "appName",
+                applicationName,
+                "firstCommitHash",
+                firstCommitHash,
+                "secondCommitHash",
+                secondCommitHash)));
   }
 
   /**
@@ -209,10 +243,17 @@ public class CommitRepository {
           (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1) AND
           NOT (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c2)
         RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """, Map.of("tokenId", landscapeToken, "appName", applicationName, "firstCommitHash",
-        firstCommitHash, "secondCommitHash", secondCommitHash)));
+        """,
+            Map.of(
+                "tokenId",
+                landscapeToken,
+                "appName",
+                applicationName,
+                "firstCommitHash",
+                firstCommitHash,
+                "secondCommitHash",
+                secondCommitHash)));
   }
-
 
   /**
    * Finds all file revisions which are part of the provided application and are contained in the
@@ -220,8 +261,11 @@ public class CommitRepository {
    * present in the second commit, it is also returned, allowing the comparison of file attributes.
    * Note that if the exact same file revision is part of both commits, it is returned twice.
    */
-  public List<FileComparison> findFilesWithCounterpart(final Session session,
-      final String landscapeToken, final String applicationName, final String firstCommitHash,
+  public List<FileComparison> findFilesWithCounterpart(
+      final Session session,
+      final String landscapeToken,
+      final String applicationName,
+      final String firstCommitHash,
       final String secondCommitHash) {
     return session.queryDto("""
         MATCH (l:Landscape {tokenId: $tokenId})
@@ -243,13 +287,26 @@ public class CommitRepository {
           apoc.text.join([node IN nodes(p)[1..] | node.name], "/") AS fileFqn,
           f AS fileFirstCommit,
           f2 AS fileSecondCommit;
-        """, Map.of("tokenId", landscapeToken, "appName", applicationName, "firstCommitHash",
-        firstCommitHash, "secondCommitHash", secondCommitHash), FileComparison.class);
+        """,
+        Map.of(
+            "tokenId",
+            landscapeToken,
+            "appName",
+            applicationName,
+            "firstCommitHash",
+            firstCommitHash,
+            "secondCommitHash",
+            secondCommitHash),
+        FileComparison.class);
   }
 
-  public Commit getOrCreateCommit(final Session session, final String commitHash,
-      final String tokenId) {
-    return findCommitByHashAndLandscapeToken(session, commitHash, tokenId).orElse(
-        new Commit(commitHash));
+  public Commit getOrCreateCommit(
+      final Session session, final String commitHash, final String tokenId) {
+    return findCommitByHashAndLandscapeToken(session, commitHash, tokenId)
+        .orElse(new Commit(commitHash));
   }
+
+  // TODO might be more appropriate for FileRevisionRepository
+  public record FileComparison(
+      String fileFqn, FileRevision fileFirstCommit, FileRevision fileSecondCommit) {}
 }
