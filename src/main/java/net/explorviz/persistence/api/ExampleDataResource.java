@@ -51,8 +51,8 @@ class ExampleDataResource {
         SET s3.startTime = 2500000000, s3.endTime = 3002900000
         SET s4.startTime = 3000000000, s4.endTime = 4002800000
         
-        MERGE (app1:Application {name: "hello-world1"})
-        MERGE (app1)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
+        MERGE (l)-[:CONTAINS]->(app:Application {name: "hello-world"})
+        MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
         MERGE (appRoot)
           -[:CONTAINS]->(:Directory {name: "net"})
           -[:CONTAINS]->(:Directory {name: "explorviz"})
@@ -106,6 +106,7 @@ class ExampleDataResource {
     repository.addCommit(commit3);
 
     final Application application = new Application("hello-world");
+    landscape.addApplication(application);
 
     Directory currentDir = new Directory("hello-world");
     repository.setRootDirectory(currentDir);
@@ -188,6 +189,8 @@ class ExampleDataResource {
 
     final Application application1 = new Application("app-one");
     final Application application2 = new Application("app-two");
+    landscape.addApplication(application1);
+    landscape.addApplication(application2);
 
     final Directory repoRoot = new Directory("monorepo");
     repository.setRootDirectory(repoRoot);

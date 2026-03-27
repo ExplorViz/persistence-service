@@ -1,6 +1,7 @@
 package net.explorviz.persistence.ogm;
 
-import net.explorviz.persistence.proto.SpanData;
+import net.explorviz.persistence.avro.SpanData;
+import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
@@ -8,6 +9,9 @@ import org.neo4j.ogm.annotation.Relationship;
 @NodeEntity
 public class Span {
   @Id
+  @GeneratedValue
+  private Long id;
+
   private String spanId;
 
   private long startTime;
