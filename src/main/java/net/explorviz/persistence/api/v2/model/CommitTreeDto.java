@@ -9,5 +9,4 @@ import java.util.List;
  * @param name Application name
  * @param branches Branches of this application
  */
-public record CommitTreeDto(String name, List<BranchDto> branches) {
-}
+public record CommitTreeDto(String name, List<BranchDto> branches) {}

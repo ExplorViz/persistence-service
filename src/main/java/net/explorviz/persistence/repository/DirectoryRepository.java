@@ -10,7 +10,8 @@ import org.neo4j.ogm.session.Session;
 
 @ApplicationScoped
 public class DirectoryRepository {
-  private static final String FIND_LONGEST_PATH_MATCH_STATIC_DATA = """
+  private static final String FIND_LONGEST_PATH_MATCH_STATIC_DATA =
+      """
       WITH $pathSegments AS pathSegments
       MATCH (l:Landscape {tokenId: $tokenId})
         -[:CONTAINS]->(r:Repository {name: $repoName})
@@ -26,10 +27,16 @@ public class DirectoryRepository {
       LIMIT 1;
       """;
 
-  private Map<String, Object> findLongestPathMatchStaticData(final Session session,
-      final String[] pathSegments, final String repoName, final String landscapeTokenId) {
-    final Result result = session.query(FIND_LONGEST_PATH_MATCH_STATIC_DATA,
-        Map.of("tokenId", landscapeTokenId, "repoName", repoName, "pathSegments", pathSegments));
+  private Map<String, Object> findLongestPathMatchStaticData(
+      final Session session,
+      final String[] pathSegments,
+      final String repoName,
+      final String landscapeTokenId) {
+    final Result result =
+        session.query(
+            FIND_LONGEST_PATH_MATCH_STATIC_DATA,
+            Map.of(
+                "tokenId", landscapeTokenId, "repoName", repoName, "pathSegments", pathSegments));
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
     if (!resultIterator.hasNext()) {
@@ -39,8 +46,11 @@ public class DirectoryRepository {
     return resultIterator.next();
   }
 
-  public Directory createDirectoryStructureAndReturnLastDirStaticData(final Session session,
-      final String[] filePath, final String repoName, final String landscapeTokenId) {
+  public Directory createDirectoryStructureAndReturnLastDirStaticData(
+      final Session session,
+      final String[] filePath,
+      final String repoName,
+      final String landscapeTokenId) {
     final Map<String, Object> resultMap =
         findLongestPathMatchStaticData(session, filePath, repoName, landscapeTokenId);
     final Directory existingDir =

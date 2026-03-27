@@ -6,35 +6,41 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.explorviz.persistence.api.v2.model.TimestampDto;
 import net.explorviz.persistence.ogm.Trace;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class TraceRepository {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
   public Optional<Trace> findTraceById(final Session session, final String traceId) {
     return Optional.ofNullable(
-        session.queryForObject(Trace.class, "MATCH (t:Trace {traceId: $traceId}) RETURN t;",
+        session.queryForObject(
+            Trace.class,
+            "MATCH (t:Trace {traceId: $traceId}) RETURN t;",
             Map.of("traceId", traceId)));
   }
 
   /**
    * Find all traces in a landscape within the given time range.
    *
-   * @param session        OGM session object
+   * @param session OGM session object
    * @param landscapeToken String identifier of the visualization landscape
-   * @param from           Lower bound of time range to include (epoch nanosecond value)
-   * @param to             Upper bound of time range to include (epoch nanosecond value)
+   * @param from Lower bound of time range to include (epoch nanosecond value)
+   * @param to Upper bound of time range to include (epoch nanosecond value)
    * @return List of traces in the landscape within the time range, hydrated to include all
    *     contained spans and the functions they represent
    */
-  public List<Trace> findHydratedTraces(final Session session, final String landscapeToken,
-      final long from, final long to) {
-    return Lists.newArrayList(session.query(Trace.class, """
+  public List<Trace> findHydratedTraces(
+      final Session session, final String landscapeToken, final long from, final long to) {
+    return Lists.newArrayList(
+        session.query(
+            Trace.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)
         WHERE
           t.startTime >= $from AND t.endTime <= $to
@@ -44,7 +50,8 @@ public class TraceRepository {
         YIELD relationships
         UNWIND relationships as r
         RETURN startNode(r), r, endNode(r);
-        """, Map.of("tokenId", landscapeToken, "from", from, "to", to)));
+        """,
+            Map.of("tokenId", landscapeToken, "from", from, "to", to)));
   }
 
   /**
@@ -53,14 +60,17 @@ public class TraceRepository {
    * trace, there will be at most one such associated commit hash to be found, and therefore returns
    * the first match it discovers.
    *
-   * @param session        OGM session object
+   * @param session OGM session object
    * @param landscapeToken String identifier of the visualization landscape
-   * @param traceId        OpenTelemetry trace ID
+   * @param traceId OpenTelemetry trace ID
    * @return Optional describing the commit hash string. Empty if no match is found
    */
-  public Optional<String> findCommitHashForTrace(final Session session, final String landscapeToken,
-      final String traceId) {
-    return Optional.ofNullable(session.queryForObject(String.class, """
+  public Optional<String> findCommitHashForTrace(
+      final Session session, final String landscapeToken, final String traceId) {
+    return Optional.ofNullable(
+        session.queryForObject(
+            String.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace {traceId: $traceId})
         MATCH (t)
           -[:CONTAINS]->(:Span)
@@ -69,10 +79,99 @@ public class TraceRepository {
           <-[:CONTAINS]-(c:Commit)
         LIMIT 1
         RETURN c.hash;
-        """, Map.of("tokenId", landscapeToken, "traceId", traceId)));
+        """,
+            Map.of("tokenId", landscapeToken, "traceId", traceId)));
   }
 
   public Trace getOrCreateTrace(final Session session, final String traceId) {
     return findTraceById(session, traceId).orElse(new Trace(traceId));
+  }
+
+  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(
+      final Session session,
+      final String landscapeToken,
+      final long newest,
+      final long oldest,
+      final String commitHash,
+      final long bucketSize) {
+    return session.queryDto(
+        """
+        MATCH (l:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(t:Trace)
+          -[:CONTAINS]->(s:Span)
+        WHERE
+          (s)-[:REPRESENTS]->(:Function)
+            <-[:CONTAINS]-(:FileRevision)
+            <-[:CONTAINS]-(:Commit {hash: $commitHash}) AND
+          s.startTime >= $oldest AND s.startTime <= $newest
+        WITH
+          s, (toInteger(s.startTime / $bucketSize)) AS bucket
+        RETURN bucket AS epochNano, COUNT(s) AS spanCount
+        ORDER BY bucket ASC;
+        """,
+        Map.of(
+            "tokenId", landscapeToken,
+            "newest", newest,
+            "oldest", oldest,
+            "commitHash", commitHash,
+            "bucketSize", bucketSize),
+        TimestampDto.class);
+  }
+
+  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(
+      final Session session,
+      final String landscapeToken,
+      final long newest,
+      final long oldest,
+      final long bucketSize) {
+    return session.queryDto(
+        """
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(t:Trace)
+              -[:CONTAINS]->(s:Span)
+            WHERE
+              s.startTime >= $oldest AND s.startTime <= $newest
+            WITH
+              s, (toInteger(s.startTime / $bucketSize)) AS bucket
+            RETURN bucket AS epochNano, COUNT(s) AS spanCount
+            ORDER BY bucket ASC;
+            """,
+        Map.of(
+            "tokenId",
+            landscapeToken,
+            "newest",
+            newest,
+            "oldest",
+            oldest,
+            "bucketSize",
+            bucketSize),
+        TimestampDto.class);
+  }
+
+  public void deleteTraceData(final Session session, final String landscapeToken) {
+    session.query(
+        """
+        MATCH (:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(t:Trace)
+          -[:CONTAINS]->(s:Span)
+        OPTIONAL MATCH (s)
+          -[:REPRESENTS]->(f:Function)
+        DETACH DELETE t, s
+        MATCH (fr:FileRevision)
+          -[:CONTAINS]->(f)
+        WHERE
+          NOT (:Commit)-[:CONTAINS]->(fr)
+        CALL apoc.path.subgraphAll(fr, {
+          relationshipFilter: "CONTAINS>"
+        })
+        YIELD nodes
+        UNWIND nodes as n
+        DETACH DELETE n, f, fr
+        OPTIONAL MATCH (d:Directory|Application)
+        WHERE
+         NOT (d)-[:CONTAINS|HAS_ROOT*]->(:FileRevision)
+        DETACH DELETE d;
+        """,
+        Map.of("tokenId", landscapeToken));
   }
 }

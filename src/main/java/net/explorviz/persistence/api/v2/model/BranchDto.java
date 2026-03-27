@@ -9,5 +9,4 @@ import java.util.List;
  * @param commits Hashes of commits in this branch
  * @param branchPoint Commit of different branch where this branch originated from
  */
-public record BranchDto(String name, List<String> commits, BranchPointDto branchPoint) {
-}
+public record BranchDto(String name, List<String> commits, BranchPointDto branchPoint) {}
