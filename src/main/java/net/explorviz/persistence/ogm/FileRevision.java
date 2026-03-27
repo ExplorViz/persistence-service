@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import net.explorviz.persistence.proto.Language;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
@@ -12,7 +14,7 @@ import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class FileRevision {
+public class FileRevision implements Comparable<FileRevision> {
   @Id
   @GeneratedValue
   private Long id;
@@ -41,10 +43,10 @@ public class FileRevision {
   private int deletedLines;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Clazz> classes = new HashSet<>();
+  private final SortedSet<Clazz> classes = new TreeSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Function> functions = new HashSet<>();
+  private final SortedSet<Function> functions = new TreeSet<>();
 
   public FileRevision() {
     // Empty constructor required by Neo4j OGM
@@ -59,27 +61,12 @@ public class FileRevision {
     this.name = name;
   }
 
-  public FileRevision(final String name, final Set<Function> functions) {
-    this.name = name;
-    this.functions = functions;
-  }
-
-  public FileRevision(final String hash, final String name, final Set<Function> functions) {
-    this.hash = hash;
-    this.name = name;
-    this.functions = functions;
-  }
-
   public void addClass(final Clazz clazz) {
-    final Set<Clazz> newClasses = new HashSet<>(classes);
-    newClasses.add(clazz);
-    classes = Set.copyOf(newClasses);
+    classes.add(clazz);
   }
 
   public void addFunction(final Function function) {
-    final Set<Function> newFunctions = new HashSet<>(functions);
-    newFunctions.add(function);
-    functions = Set.copyOf(newFunctions);
+    functions.add(function);
   }
 
   public Long getId() {
@@ -94,12 +81,12 @@ public class FileRevision {
     return this.name;
   }
 
-  public Set<Clazz> getClasses() {
-    return this.classes;
+  public SortedSet<Clazz> getClasses() {
+    return new TreeSet<>(classes);
   }
 
-  public Set<Function> getFunctions() {
-    return this.functions;
+  public SortedSet<Function> getFunctions() {
+    return new TreeSet<>(functions);
   }
 
   public void setHash(final String hash) {
@@ -180,5 +167,10 @@ public class FileRevision {
 
   public Map<String, Double> getMetrics() {
     return this.metrics;
+  }
+
+  @Override
+  public int compareTo(final FileRevision other) {
+    return name.compareTo(other.name);
   }
 }

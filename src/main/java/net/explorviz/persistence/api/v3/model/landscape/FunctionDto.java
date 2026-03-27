@@ -1,32 +1,36 @@
 package net.explorviz.persistence.api.v3.model.landscape;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Map;
 import java.util.Objects;
+import net.explorviz.persistence.api.v3.model.MetricValue;
 import net.explorviz.persistence.api.v3.model.landscape.FlatBaseModel.FlatConvertible;
 
 /**
  * Represents a function / method in source code.
  *
  * @param flatBaseModel Container for attributes shared by all flat data objects
- * @param parentId      ID of the flat data model to which this function belongs
- * @param metrics       Code metrics for this function, i.e. numerical measurements gathered through
- *                      analysis, such as cyclomatic complexity or lines of code
+ * @param parentId ID of the flat data model to which this function belongs
+ * @param metrics Code metrics for this function, i.e. numerical measurements gathered through
+ *     analysis, such as cyclomatic complexity or lines of code
  */
 @RegisterForReflection
-public record FunctionDto(@JsonUnwrapped FlatBaseModel flatBaseModel, String parentId,
-                          Map<String, Double> metrics) {
+public record FunctionDto(
+    @JsonUnwrapped FlatBaseModel flatBaseModel,
+    String parentId,
+    @JsonInclude(Include.NON_EMPTY) Map<String, MetricValue> metrics) {
+
   public FunctionDto {
     Objects.requireNonNull(flatBaseModel);
     Objects.requireNonNull(parentId);
     Objects.requireNonNull(metrics);
   }
 
-  /**
-   * Must be implemented by any object which can be represented as a function during flattening.
-   */
+  /** Must be implemented by any object which can be represented as a function during flattening. */
   public interface FunctionConvertible extends FlatConvertible {
-    Map<String, Double> getMetrics();
+    Map<String, MetricValue> getMetrics();
   }
 }

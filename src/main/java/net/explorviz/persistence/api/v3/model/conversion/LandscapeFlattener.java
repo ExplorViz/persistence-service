@@ -2,7 +2,6 @@ package net.explorviz.persistence.api.v3.model.conversion;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -148,10 +147,8 @@ public final class LandscapeFlattener {
   private static void flattenCity(
       final CityConvertible cityConvertible, final FlatteningResult resultContainer) {
 
-    final List<String> districtIds =
-        cityConvertible.getDistricts().map(DistrictConvertible::getId).toList();
-    final List<String> buildingIds =
-        cityConvertible.getBuildings().map(BuildingConvertible::getId).toList();
+    final Collection<? extends DistrictConvertible> districts = cityConvertible.getDistricts();
+    final Collection<? extends BuildingConvertible> buildings = cityConvertible.getBuildings();
 
     final Context context =
         new Context(
@@ -164,8 +161,8 @@ public final class LandscapeFlattener {
             new HashSet<>(),
             new HashSet<>());
 
-    cityConvertible.getDistricts().forEach(d -> flattenDistrict(d, context));
-    cityConvertible.getBuildings().forEach(b -> flattenBuilding(b, context));
+    districts.forEach(d -> flattenDistrict(d, context));
+    buildings.forEach(b -> flattenBuilding(b, context));
 
     final CityDto city =
         new CityDto(
@@ -175,8 +172,8 @@ public final class LandscapeFlattener {
                 "",
                 cityConvertible.getOriginOfData(),
                 cityConvertible.getCommitComparison()),
-            districtIds,
-            buildingIds,
+            districts.stream().map(DistrictConvertible::getId).toList(),
+            buildings.stream().map(BuildingConvertible::getId).toList(),
             context.districts.stream().map(d -> d.flatBaseModel().id()).toList(),
             context.buildings.stream().map(b -> b.flatBaseModel().id()).toList());
 
@@ -189,10 +186,9 @@ public final class LandscapeFlattener {
 
   private static void flattenDistrict(
       final DistrictConvertible districtConvertible, final Context context) {
-    final List<String> subdistrictIds =
-        districtConvertible.getDistricts().map(DistrictConvertible::getId).toList();
-    final List<String> buildingIds =
-        districtConvertible.getBuildings().map(BuildingConvertible::getId).toList();
+    final Collection<? extends DistrictConvertible> subdistricts =
+        districtConvertible.getDistricts();
+    final Collection<? extends BuildingConvertible> buildings = districtConvertible.getBuildings();
 
     final DistrictDto district =
         new DistrictDto(
@@ -204,21 +200,19 @@ public final class LandscapeFlattener {
                 districtConvertible.getCommitComparison()),
             context.parentCityId,
             context.parentDistrictId,
-            subdistrictIds,
-            buildingIds);
+            subdistricts.stream().map(DistrictConvertible::getId).toList(),
+            buildings.stream().map(BuildingConvertible::getId).toList());
 
     final Context childrenContext = context.withParent(district);
 
-    districtConvertible.getDistricts().forEach(d -> flattenDistrict(d, childrenContext));
-    districtConvertible.getBuildings().forEach(b -> flattenBuilding(b, childrenContext));
+    subdistricts.forEach(d -> flattenDistrict(d, childrenContext));
+    buildings.forEach(b -> flattenBuilding(b, childrenContext));
   }
 
   private static void flattenBuilding(
       final BuildingConvertible buildingConvertible, final Context context) {
-    final List<String> classIds =
-        buildingConvertible.getClasses().map(ClassConvertible::getId).toList();
-    final List<String> functionIds =
-        buildingConvertible.getFunctions().map(FunctionConvertible::getId).toList();
+    final Collection<? extends ClassConvertible> classes = buildingConvertible.getClasses();
+    final Collection<? extends FunctionConvertible> functions = buildingConvertible.getFunctions();
 
     final BuildingDto building =
         new BuildingDto(
@@ -231,8 +225,8 @@ public final class LandscapeFlattener {
             context.parentCityId,
             context.parentDistrictId,
             buildingConvertible.getLanguage(),
-            classIds,
-            functionIds,
+            classes.stream().map(ClassConvertible::getId).toList(),
+            functions.stream().map(FunctionConvertible::getId).toList(),
             buildingConvertible.getMetrics());
 
     final Context childrenContext = context.withParent(building);
@@ -242,10 +236,8 @@ public final class LandscapeFlattener {
   }
 
   private static void flattenClass(final ClassConvertible classConvertible, final Context context) {
-    final List<String> innerClassIds =
-        classConvertible.getInnerClasses().map(ClassConvertible::getId).toList();
-    final List<String> functionIds =
-        classConvertible.getFunctions().map(FunctionConvertible::getId).toList();
+    final Collection<? extends ClassConvertible> innerClasses = classConvertible.getInnerClasses();
+    final Collection<? extends FunctionConvertible> functions = classConvertible.getFunctions();
 
     final ClazzDto clazz =
         new ClazzDto(
@@ -255,8 +247,8 @@ public final class LandscapeFlattener {
                 appendToFqn(context.parentFqn(), classConvertible.getName()),
                 classConvertible.getOriginOfData(),
                 classConvertible.getCommitComparison()),
-            innerClassIds,
-            functionIds,
+            innerClasses.stream().map(ClassConvertible::getId).toList(),
+            functions.stream().map(FunctionConvertible::getId).toList(),
             classConvertible.getMetrics());
 
     final Context childrenContext = context.withParent(clazz);

@@ -1,7 +1,9 @@
 package net.explorviz.persistence.api.v3.model.conversion;
 
+import java.util.Collection;
 import java.util.Map;
-import java.util.stream.Stream;
+import net.explorviz.persistence.api.v3.model.CommitComparison;
+import net.explorviz.persistence.api.v3.model.MetricValue;
 import net.explorviz.persistence.api.v3.model.TypeOfAnalysis;
 import net.explorviz.persistence.api.v3.model.landscape.BuildingDto.BuildingConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.CityDto.CityConvertible;
@@ -13,11 +15,12 @@ import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
+import net.explorviz.persistence.proto.Language;
 
 /**
  * Provides wrapper classes for turning single OGM Application objects into FlatLandscape city
- * models. Optionally allows specifying the origin of data for the whole city, but does not include
- * any information about commit comparison.
+ * models. Optionally allows specifying a fixed origin of data and commit comparison value for the
+ * whole city.
  */
 public final class DefaultApplicationToCityConverter {
 
@@ -42,7 +45,7 @@ public final class DefaultApplicationToCityConverter {
    */
   public static CityConvertible convert(
       final Application ogmApp, final TypeOfAnalysis originOfData) {
-    return new ApplicationWrapper(ogmApp, originOfData);
+    return new ApplicationWrapper(ogmApp, originOfData, null);
   }
 
   /**
@@ -63,7 +66,8 @@ public final class DefaultApplicationToCityConverter {
     return convert(ogmApp, null);
   }
 
-  private record ApplicationWrapper(Application ogmApp, TypeOfAnalysis originOfData)
+  record ApplicationWrapper(
+      Application ogmApp, TypeOfAnalysis originOfData, CommitComparison commitComparison)
       implements CityConvertible {
 
     @Override
@@ -82,19 +86,27 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
-    public Stream<DistrictConvertible> getDistricts() {
-      return ogmApp.getRootDirectory().getSubdirectories().stream()
-          .map(d -> new DirectoryWrapper(d, originOfData));
+    public CommitComparison getCommitComparison() {
+      return commitComparison;
     }
 
     @Override
-    public Stream<BuildingConvertible> getBuildings() {
+    public Collection<? extends DistrictConvertible> getDistricts() {
+      return ogmApp.getRootDirectory().getSubdirectories().stream()
+          .map(d -> new DirectoryWrapper(d, originOfData, commitComparison))
+          .toList();
+    }
+
+    @Override
+    public Collection<? extends BuildingConvertible> getBuildings() {
       return ogmApp.getRootDirectory().getFileRevisions().stream()
-          .map(f -> new FileRevisionWrapper(f, originOfData));
+          .map(f -> new FileRevisionWrapper(f, originOfData, commitComparison))
+          .toList();
     }
   }
 
-  private record DirectoryWrapper(Directory ogmDir, TypeOfAnalysis originOfData)
+  record DirectoryWrapper(
+      Directory ogmDir, TypeOfAnalysis originOfData, CommitComparison commitComparison)
       implements DistrictConvertible {
 
     @Override
@@ -113,17 +125,27 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
-    public Stream<DistrictConvertible> getDistricts() {
-      return ogmDir.getSubdirectories().stream().map(d -> new DirectoryWrapper(d, originOfData));
+    public CommitComparison getCommitComparison() {
+      return commitComparison;
     }
 
     @Override
-    public Stream<BuildingConvertible> getBuildings() {
-      return ogmDir.getFileRevisions().stream().map(f -> new FileRevisionWrapper(f, originOfData));
+    public Collection<? extends DistrictConvertible> getDistricts() {
+      return ogmDir.getSubdirectories().stream()
+          .map(d -> new DirectoryWrapper(d, originOfData, commitComparison))
+          .toList();
+    }
+
+    @Override
+    public Collection<? extends BuildingConvertible> getBuildings() {
+      return ogmDir.getFileRevisions().stream()
+          .map(f -> new FileRevisionWrapper(f, originOfData, commitComparison))
+          .toList();
     }
   }
 
-  private record FileRevisionWrapper(FileRevision ogmFile, TypeOfAnalysis originOfData)
+  record FileRevisionWrapper(
+      FileRevision ogmFile, TypeOfAnalysis originOfData, CommitComparison commitComparison)
       implements BuildingConvertible {
 
     @Override
@@ -142,17 +164,37 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
-    public Stream<ClassConvertible> getClasses() {
-      return ogmFile.getClasses().stream().map(c -> new ClassWrapper(c, originOfData));
+    public CommitComparison getCommitComparison() {
+      return commitComparison;
     }
 
     @Override
-    public Stream<FunctionConvertible> getFunctions() {
-      return ogmFile.getFunctions().stream().map(f -> new FunctionWrapper(f, originOfData));
+    public Collection<? extends ClassConvertible> getClasses() {
+      return ogmFile.getClasses().stream()
+          .map(c -> new ClassWrapper(c, originOfData, commitComparison))
+          .toList();
+    }
+
+    @Override
+    public Collection<? extends FunctionConvertible> getFunctions() {
+      return ogmFile.getFunctions().stream()
+          .map(f -> new FunctionWrapper(f, originOfData, commitComparison))
+          .toList();
+    }
+
+    @Override
+    public Language getLanguage() {
+      return ogmFile.getLanguage();
+    }
+
+    @Override
+    public Map<String, MetricValue> getMetrics() {
+      return MetricValue.fromMap(ogmFile.getMetrics());
     }
   }
 
-  private record ClassWrapper(Clazz ogmClass, TypeOfAnalysis originOfData)
+  record ClassWrapper(
+      Clazz ogmClass, TypeOfAnalysis originOfData, CommitComparison commitComparison)
       implements ClassConvertible {
 
     @Override
@@ -171,22 +213,32 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
-    public Stream<ClassConvertible> getInnerClasses() {
-      return ogmClass.getInnerClasses().stream().map(c -> new ClassWrapper(c, originOfData));
+    public CommitComparison getCommitComparison() {
+      return commitComparison;
     }
 
     @Override
-    public Stream<FunctionConvertible> getFunctions() {
-      return ogmClass.getFunctions().stream().map(f -> new FunctionWrapper(f, originOfData));
+    public Collection<? extends ClassConvertible> getInnerClasses() {
+      return ogmClass.getInnerClasses().stream()
+          .map(c -> new ClassWrapper(c, originOfData, commitComparison))
+          .toList();
     }
 
     @Override
-    public Map<String, Double> getMetrics() {
-      return ogmClass.getMetrics();
+    public Collection<? extends FunctionConvertible> getFunctions() {
+      return ogmClass.getFunctions().stream()
+          .map(f -> new FunctionWrapper(f, originOfData, commitComparison))
+          .toList();
+    }
+
+    @Override
+    public Map<String, MetricValue> getMetrics() {
+      return MetricValue.fromMap(ogmClass.getMetrics());
     }
   }
 
-  private record FunctionWrapper(Function ogmFunc, TypeOfAnalysis originOfData)
+  record FunctionWrapper(
+      Function ogmFunc, TypeOfAnalysis originOfData, CommitComparison commitComparison)
       implements FunctionConvertible {
 
     @Override
@@ -205,8 +257,13 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
-    public Map<String, Double> getMetrics() {
-      return ogmFunc.getMetrics();
+    public CommitComparison getCommitComparison() {
+      return commitComparison;
+    }
+
+    @Override
+    public Map<String, MetricValue> getMetrics() {
+      return MetricValue.fromMap(ogmFunc.getMetrics());
     }
   }
 }

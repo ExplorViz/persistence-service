@@ -5,10 +5,15 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import net.explorviz.persistence.api.v3.model.CommitComparison;
 import net.explorviz.persistence.api.v3.model.TypeOfAnalysis;
+import net.explorviz.persistence.api.v3.model.conversion.CommitComparisonApplicationToCityConverter;
 import net.explorviz.persistence.api.v3.model.conversion.DefaultApplicationToCityConverter;
 import net.explorviz.persistence.api.v3.model.conversion.LandscapeFlattener;
+import net.explorviz.persistence.api.v3.model.landscape.CityDto.CityConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.FlatLandscapeDto;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.repository.ApplicationRepository;
@@ -70,5 +75,56 @@ class LandscapeResource {
         ogmApps.stream()
             .map(a -> DefaultApplicationToCityConverter.convert(a, TypeOfAnalysis.STATIC))
             .toList());
+  }
+
+  /**
+   * Retrieve union of structure data for the two provided commits within the given repository. The
+   * {@link CommitComparison} value is set relative to the second commit, i.e. "DELETED" is written
+   * if some component is present in the first commit, but not the second.
+   *
+   * @param landscapeToken String identifier of the landscape
+   * @param repositoryName Name of the repository for which to retrieve structure data
+   * @param firstCommitHash Identifier of the first git commit against which to compare the second
+   * @param secondCommitHash Identifier of the second git commit for which to retrieve structure.
+   *     All {@link CommitComparison} values are given relative to this commit
+   * @return A flat landscape containing the union of the applications in the specified repository
+   */
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("/structure/static/{repositoryName}/{firstCommitHash}-{secondCommitHash}")
+  public FlatLandscapeDto getCombinedStaticStructureData(
+      @RestPath final String landscapeToken,
+      @RestPath final String repositoryName,
+      @RestPath final String firstCommitHash,
+      @RestPath final String secondCommitHash) {
+    final Session session = sessionFactory.openSession();
+
+    final List<Application> firstCommitApps =
+        applicationRepository.fetchHydratedApplicationsInRepositoryForCommit(
+            session, landscapeToken, repositoryName, firstCommitHash);
+
+    final List<Application> secondCommitApps =
+        applicationRepository.fetchHydratedApplicationsInRepositoryForCommit(
+            session, landscapeToken, repositoryName, secondCommitHash);
+
+    final List<CityConvertible> cityConvertibles = new ArrayList<>();
+
+    firstCommitApps.forEach(
+        firstCommitApp -> {
+          final Optional<Application> secondApp =
+              secondCommitApps.stream()
+                  .filter(a -> a.getName().equals(firstCommitApp.getName()))
+                  .findAny();
+
+          cityConvertibles.add(
+              secondApp
+                  .map(
+                      secondCommitApp ->
+                          CommitComparisonApplicationToCityConverter.convert(
+                              firstCommitApp, secondCommitApp))
+                  .orElseGet(() -> DefaultApplicationToCityConverter.convert(firstCommitApp)));
+        });
+
+    return LandscapeFlattener.flattenLandscape(landscapeToken, cityConvertibles);
   }
 }
