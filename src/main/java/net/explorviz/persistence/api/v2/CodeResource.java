@@ -1,13 +1,11 @@
 package net.explorviz.persistence.api.v2;
 
-import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,7 +20,6 @@ import net.explorviz.persistence.api.v2.model.CommitComparisonDto;
 import net.explorviz.persistence.api.v2.model.CommitTreeDto;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison;
 import net.explorviz.persistence.api.v2.model.EntityMetricsComparison.ValueComparison;
-import net.explorviz.persistence.api.v2.model.TimestampDto;
 import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
 import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
 import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
@@ -55,7 +52,8 @@ class CodeResource {
    */
   private static final BranchPointDto NO_BRANCH_POINT = new BranchPointDto("NONE", "");
 
-  @Inject TraceRepository traceRepository;
+
+  @Inject private TraceRepository traceRepository;
 
   @Inject private ApplicationRepository applicationRepository;
 
@@ -275,7 +273,12 @@ class CodeResource {
                 })
             .toList();
 
-    return new CommitComparisonDto(modifiedFiles, addedFiles, deletedFiles, addedPackages,
-        deletedPackages, entityMetricsComparisons);
+    return new CommitComparisonDto(
+        modifiedFiles,
+        addedFiles,
+        deletedFiles,
+        addedPackages,
+        deletedPackages,
+        entityMetricsComparisons);
   }
 }

@@ -11,12 +11,13 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class LandscapeRepository {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
   public Optional<Landscape> findLandscapeByTokenId(final Session session, final String tokenId) {
     return Optional.ofNullable(
-        session.queryForObject(Landscape.class, "MATCH (l:Landscape {tokenId: $tokenId}) RETURN l;",
+        session.queryForObject(
+            Landscape.class,
+            "MATCH (l:Landscape {tokenId: $tokenId}) RETURN l;",
             Map.of("tokenId", tokenId)));
   }
 

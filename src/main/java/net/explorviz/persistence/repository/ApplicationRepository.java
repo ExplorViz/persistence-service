@@ -14,18 +14,21 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class ApplicationRepository {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  public Optional<Application> findApplicationByNameAndLandscapeToken(final Session session,
-      final String name, final String tokenId) {
-    return Optional.ofNullable(session.queryForObject(Application.class, """
+  public Optional<Application> findApplicationByNameAndLandscapeToken(
+      final Session session, final String name, final String tokenId) {
+    return Optional.ofNullable(
+        session.queryForObject(
+            Application.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})
         MATCH (app:Application {name: $name})-[h:HAS_ROOT]->(appRoot:Directory)
         WHERE
           (appRoot)-[*]-(l)
         RETURN app, h, appRoot;
-        """, Map.of("tokenId", tokenId, "name", name)));
+        """,
+            Map.of("tokenId", tokenId, "name", name)));
   }
 
   /**
@@ -33,9 +36,12 @@ public class ApplicationRepository {
    * meaning all files and corresponding directories are fetched. This includes fully hydrated
    * functions and classes. Empty if no Application is matched.
    */
-  public List<Application> fetchAllFullyHydratedApplications(final Session session,
-      final String landscapeToken) {
-    return Lists.newArrayList(session.query(Application.class, """
+  public List<Application> fetchAllFullyHydratedApplications(
+      final Session session, final String landscapeToken) {
+    return Lists.newArrayList(
+        session.query(
+            Application.class,
+            """
         MATCH (l:Landscape {tokenId: $tokenId})
         MATCH (a:Application)
         WHERE
@@ -46,7 +52,8 @@ public class ApplicationRepository {
         YIELD relationships
         UNWIND relationships as r
         RETURN startNode(r), r, endNode(r);
-        """, Map.of("tokenId", landscapeToken)));
+        """,
+            Map.of("tokenId", landscapeToken)));
   }
 
   /**
@@ -56,58 +63,73 @@ public class ApplicationRepository {
    * file which is included in either commit is returned, i.e. the union of the commit's file
    * structures is fetched.
    *
-   * @param session          OGM session object
-   * @param firstCommitHash  Hash of the first commit whose files to include
+   * @param session OGM session object
+   * @param firstCommitHash Hash of the first commit whose files to include
    * @param secondCommitHash Hash of the second commit whose files to include
-   * @param landscapeToken   Identifier of the software landscape
+   * @param landscapeToken Identifier of the software landscape
    * @return A list of the Application objects belonging to the specified commits, hydrated to
    *     include all files and file contents in the given commits that are part of the application.
    *     Empty if no application is matched.
    */
-  public List<Application> fetchApplicationsHydratedForTwoCommits(final Session session,
-      final String landscapeToken, final String firstCommitHash, final String secondCommitHash) {
-    return Lists.newArrayList(session.query(Application.class, """
+  public List<Application> fetchApplicationsHydratedForTwoCommits(
+      final Session session,
+      final String landscapeToken,
+      final String firstCommitHash,
+      final String secondCommitHash) {
+    return Lists.newArrayList(
+        session.query(
+            Application.class,
+            """
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository)
               -[:CONTAINS]->(c:Commit WHERE c.hash = $firstCommitHash OR c.hash = $secondCommitHash)
               -[:CONTAINS]->(f:FileRevision)
-            
+
             CALL apoc.path.subgraphAll(f, {
               relationshipFilter: "<HAS_ROOT|<CONTAINS",
               labelFilter: "+Directory|+Application"
             })
             YIELD relationships AS filePathRelations
-            
+
             CALL apoc.path.subgraphAll(f, {
               relationshipFilter: "CONTAINS>"
             })
             YIELD relationships AS fileContentRelations
-            
+
             UNWIND filePathRelations + fileContentRelations as r
             RETURN startNode(r), r, endNode(r);
             """,
-        Map.of("tokenId", landscapeToken, "firstCommitHash", firstCommitHash, "secondCommitHash",
-            secondCommitHash)));
+            Map.of(
+                "tokenId",
+                landscapeToken,
+                "firstCommitHash",
+                firstCommitHash,
+                "secondCommitHash",
+                secondCommitHash)));
   }
 
   /**
    * Return the names of all application nodes in a landscape which are contained in a repository,
    * i.e. the names of all applications which have static data available.
    */
-  public List<String> findStaticApplicationNamesForLandscapeToken(final Session session,
-      final String landscapeToken) {
-    return Lists.newArrayList(session.query(String.class, """
+  public List<String> findStaticApplicationNamesForLandscapeToken(
+      final Session session, final String landscapeToken) {
+    return Lists.newArrayList(
+        session.query(
+            String.class,
+            """
         MATCH (:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(a:Application)
         RETURN DISTINCT a.name;
-        """, Map.of("tokenId", landscapeToken)));
+        """,
+            Map.of("tokenId", landscapeToken)));
   }
 
-  public Application getOrCreateApplication(final Session session, final String name,
-      final String tokenId) {
-    return findApplicationByNameAndLandscapeToken(session, name, tokenId).orElse(
-        new Application(name));
+  public Application getOrCreateApplication(
+      final Session session, final String name, final String tokenId) {
+    return findApplicationByNameAndLandscapeToken(session, name, tokenId)
+        .orElse(new Application(name));
   }
 }

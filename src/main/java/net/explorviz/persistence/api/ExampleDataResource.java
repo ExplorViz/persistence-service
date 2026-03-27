@@ -29,14 +29,14 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
 class ExampleDataResource {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
   @GET
   @Path("/trace")
   public void createTestingDynamicData() {
     final Session session = sessionFactory.openSession();
-    session.query("""
+    session.query(
+        """
         MERGE (l:Landscape {tokenId: "mytokenvalue"})
         MERGE (l)-[:CONTAINS]->(t1:Trace {traceId: "trace1"})
         MERGE (l)-[:CONTAINS]->(t2:Trace {traceId: "trace2"})
@@ -50,7 +50,7 @@ class ExampleDataResource {
         SET s2.startTime = 2000000000, s2.endTime = 2003000000
         SET s3.startTime = 2500000000, s3.endTime = 3002900000
         SET s4.startTime = 3000000000, s4.endTime = 4002800000
-        
+
         MERGE (app1:Application {name: "hello-world1"})
         MERGE (app1)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
         MERGE (appRoot)
@@ -70,14 +70,15 @@ class ExampleDataResource {
           -[:CONTAINS]->(file1)
         MERGE (r1)
           -[:HAS_ROOT]->(outerDir)
-          
+
         MERGE (app2:Application {name: "hello-world2"})
         MERGE (app2)-[:HAS_ROOT]->(outerDir)
-        
+
         MERGE (s1)-[:REPRESENTS]->(func1)
         MERGE (s2)-[:REPRESENTS]->(func2)
         MERGE (s3)-[:REPRESENTS]->(func3)<-[:REPRESENTS]-(s4);
-        """, Map.of());
+        """,
+        Map.of());
   }
 
   @GET
@@ -137,10 +138,12 @@ class ExampleDataResource {
     commit3.addFileRevision(fileB);
     commit3.addFileRevision(fileC);
     commit3.addFileRevision(fileModified);
-    List.of(fileA, fileB, fileC, fileD, fileModified).forEach(f -> {
-      addFunctionsToFile(f);
-      addRandomFileMetrics(f);
-    });
+    List.of(fileA, fileB, fileC, fileD, fileModified)
+        .forEach(
+            f -> {
+              addFunctionsToFile(f);
+              addRandomFileMetrics(f);
+            });
 
     final Clazz classA = new Clazz("ClassA");
     final Clazz classB = new Clazz("ClassB");
@@ -152,10 +155,12 @@ class ExampleDataResource {
     fileC.addClass(classC);
     fileD.addClass(classD);
     fileModified.addClass(classModified);
-    List.of(classA, classB, classC, classD, classModified).forEach(c -> {
-      addFunctionsToClass(c);
-      addRandomClassMetrics(c);
-    });
+    List.of(classA, classB, classC, classD, classModified)
+        .forEach(
+            c -> {
+              addFunctionsToClass(c);
+              addRandomClassMetrics(c);
+            });
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application));
@@ -237,10 +242,12 @@ class ExampleDataResource {
     commit3.addFileRevision(fileB1Modified);
     commit3.addFileRevision(fileA2);
     commit3.addFileRevision(fileB2);
-    List.of(fileA1, fileA2, fileB1, fileB2).forEach(f -> {
-      addFunctionsToFile(f);
-      addRandomFileMetrics(f);
-    });
+    List.of(fileA1, fileA2, fileB1, fileB2)
+        .forEach(
+            f -> {
+              addFunctionsToFile(f);
+              addRandomFileMetrics(f);
+            });
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application1, application2));
@@ -281,7 +288,7 @@ class ExampleDataResource {
 
   private void addRandomSpan(final Trace trace, final String name) {
     final Span span = new Span(name);
-    final long randNumb = (long)(Math.random() * 100_000_000_000.0);
+    final long randNumb = (long) (Math.random() * 100_000_000_000.0);
     span.setStartTime(randNumb);
     span.setEndTime(randNumb + 1);
     trace.addChildSpan(span);
@@ -289,13 +296,13 @@ class ExampleDataResource {
 
   @GET
   @Path("/timestamp")
-  public void createTestingTimestamps(){
+  public void createTestingTimestamps() {
     final Landscape landscape = new Landscape("mytokenvalue");
 
     final Trace trace1 = new Trace("trace1");
     final Trace trace2 = new Trace("trace2");
 
-    for(int i = 0; i < 5; i++){
+    for (int i = 0; i < 5; i++) {
       addRandomSpan(trace1, "trace1_span" + i);
       addRandomSpan(trace2, "trace2_span" + i);
     }
@@ -307,4 +314,3 @@ class ExampleDataResource {
     session.save(List.of(landscape));
   }
 }
-

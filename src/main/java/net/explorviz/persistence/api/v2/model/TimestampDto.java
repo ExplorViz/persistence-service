@@ -6,5 +6,4 @@ package net.explorviz.persistence.api.v2.model;
  * @param epochNano Timestamp in nanoseconds since epoch
  * @param spanCount Number of spans at this timestamp
  */
-public record TimestampDto(Number epochNano, Number spanCount) {
-}
+public record TimestampDto(Number epochNano, Number spanCount) {}

@@ -187,17 +187,25 @@ public class ClazzRepository {
                 clazzName)));
   }
 
-  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzFqn(final Session session,
-      final String tokenId, final String repoName, final String[] splitSuperFqn) {
+  public Optional<Clazz> findClassByLandscapeTokenAndRepositoryAndClazzFqn(
+      final Session session,
+      final String tokenId,
+      final String repoName,
+      final String[] splitSuperFqn) {
     if (splitSuperFqn.length != 2) { // NOPMD - literal is intentional here
-      throw new IllegalArgumentException("Format of super class invalid:\n"
-          + "   Expected format: path/to/file/file.extension::class \n" + "   Actual value: "
-          + String.join("::", splitSuperFqn));
+      throw new IllegalArgumentException(
+          "Format of super class invalid:\n"
+              + "   Expected format: path/to/file/file.extension::class \n"
+              + "   Actual value: "
+              + String.join("::", splitSuperFqn));
     }
     final String superClassName = splitSuperFqn[1];
     final String[] filePath = splitSuperFqn[0].split("/");
 
-    return Optional.ofNullable(session.queryForObject(Clazz.class, """
+    return Optional.ofNullable(
+        session.queryForObject(
+            Clazz.class,
+            """
             MATCH (:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(r:Repository {name: $repoName})
               -[:CONTAINS]->(:Commit)
@@ -212,8 +220,17 @@ public class ClazzRepository {
               AND size(nodes(p))-1 = size(pathSegments)
             RETURN cl;
             """,
-        Map.of("tokenId", tokenId, "repoName", repoName, "clazzName", superClassName, "fileName",
-            filePath[filePath.length - 1], "pathSegments", filePath)));
+            Map.of(
+                "tokenId",
+                tokenId,
+                "repoName",
+                repoName,
+                "clazzName",
+                superClassName,
+                "fileName",
+                filePath[filePath.length - 1],
+                "pathSegments",
+                filePath)));
   }
 
   public Optional<Clazz> findClassFromInheritingClass(

@@ -6,5 +6,4 @@ package net.explorviz.persistence.api.v2.model;
  * @param name Origin branch name
  * @param commitId Commit hash from which the new branch emerged
  */
-public record BranchPointDto(String name, String commitId) {
-}
+public record BranchPointDto(String name, String commitId) {}
