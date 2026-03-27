@@ -23,9 +23,8 @@ public class ApplicationRepository {
             Application.class,
             """
         MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (app:Application {name: $name})-[h:HAS_ROOT]->(appRoot:Directory)
-        WHERE
-          (appRoot)-[*]-(l)
+          -[:CONTAINS]->(app:Application {name: $name})
+          -[h:HAS_ROOT]->(appRoot:Directory)
         RETURN app, h, appRoot;
         """,
             Map.of("tokenId", tokenId, "name", name)));
@@ -36,16 +35,10 @@ public class ApplicationRepository {
    * meaning all files and corresponding directories are fetched. This includes fully hydrated
    * functions and classes. Empty if no Application is matched.
    */
-  public List<Application> fetchAllFullyHydratedApplications(
-      final Session session, final String landscapeToken) {
-    return Lists.newArrayList(
-        session.query(
-            Application.class,
-            """
-        MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (a:Application)
-        WHERE
-          (a)-[*]-(l)
+  public List<Application> fetchAllFullyHydratedApplications(final Session session,
+      final String landscapeToken) {
+    return Lists.newArrayList(session.query(Application.class, """
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application)
         CALL apoc.path.subgraphAll(a, {
           relationshipFilter: "HAS_ROOT>|CONTAINS>"
         })
@@ -112,24 +105,16 @@ public class ApplicationRepository {
    * Return the names of all application nodes in a landscape which are contained in a repository,
    * i.e. the names of all applications which have static data available.
    */
-  public List<String> findStaticApplicationNamesForLandscapeToken(
-      final Session session, final String landscapeToken) {
-    return Lists.newArrayList(
-        session.query(
-            String.class,
-            """
-        MATCH (:Landscape {tokenId: $tokenId})
+  public List<String> findStaticApplicationNamesForLandscapeToken(final Session session,
+      final String landscapeToken) {
+    return Lists.newArrayList(session.query(String.class, """
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application)
+        WHERE (l)
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(a:Application)
+          -[:CONTAINS*]->(:Directory)<-[:HAS_ROOT]-(a)
         RETURN DISTINCT a.name;
         """,
             Map.of("tokenId", landscapeToken)));
-  }
-
-  public Application getOrCreateApplication(
-      final Session session, final String name, final String tokenId) {
-    return findApplicationByNameAndLandscapeToken(session, name, tokenId)
-        .orElse(new Application(name));
   }
 }

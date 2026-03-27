@@ -26,8 +26,8 @@ public class FileRevisionRepository {
 
   private static final String FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT = """
       MATCH (l:Landscape {tokenId: $tokenId})
-      MATCH (app:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
-      WHERE (appRootDir)-[*]-(l)
+        -[:CONTAINS]->(app:Application {name: $appName})
+        -[:HAS_ROOT]->(appRootDir:Directory)
       OPTIONAL MATCH p = (fqnRoot:Directory|FileRevision)
         -[:CONTAINS]->*(lastNode:Directory|FileRevision)
       WHERE
@@ -198,8 +198,9 @@ public class FileRevisionRepository {
       final Session session, final String applicationName, final String commitHash,
       final String[] pathSegments, final String landscapeToken) {
     return Optional.ofNullable(session.queryForObject(FileRevision.class, """
-            MATCH (:Landscape {tokenId: $tokenId})--*(appRootDir:Directory)
-                  <-[:HAS_ROOT]-(:Application {name: $appName})
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Application {name: $appName})
+              -[:HAS_ROOT]->(appRootDir:Directory)
             MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               length(p) = size($pathSegments) AND
@@ -217,8 +218,8 @@ public class FileRevisionRepository {
       final String landscapeToken) {
     return Optional.ofNullable(session.queryForObject(FileRevision.class, """
             MATCH (l:Landscape {tokenId: $tokenId})
-            MATCH (:Application {name: $appName})-[:HAS_ROOT]->(appRootDir:Directory)
-            WHERE (l)-[*]-(appRootDir:Directory)
+              -[:CONTAINS]->(:Application {name: $appName})
+              -[:HAS_ROOT]->(appRootDir:Directory)
             MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
             WHERE
               length(p) = size($pathSegments) AND
@@ -242,10 +243,13 @@ public class FileRevisionRepository {
     final Map<String, FileRevision> filePathToFileRevisionMap = new HashMap<>();
 
     final Result result = session.query("""
-            MATCH (:Landscape {tokenId: $tokenId})
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Application {name: $appName})
+              -[:HAS_ROOT]->(appRoot:Directory)
+            WHERE (l)
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS]->*(appRoot:Directory)<-[:HAS_ROOT]-(a:Application {name: $appName})
+              -[:CONTAINS*0..]->(appRoot)
             MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
             WITH f, [node IN nodes(p)[1..] | node.name] AS nodeNames
