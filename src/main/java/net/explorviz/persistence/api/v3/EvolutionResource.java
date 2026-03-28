@@ -1,13 +1,14 @@
 package net.explorviz.persistence.api.v3;
 
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,13 +63,20 @@ class EvolutionResource {
         commitRepository.findCommitsWithBranchForRepositoryAndLandscapeToken(
             session, landscapeToken, repositoryName);
 
-    final Map<String, Set<String>> branchToCommitMap = new HashMap<>();
+    final Map<String, ArrayList<String>> branchToCommitMap = new HashMap<>();
     final Map<String, BranchPointDto> branchToBranchPointMap = new HashMap<>();
 
     for (final Commit commit : commits) {
       final String branchName = commit.getBranch().getName();
 
-      branchToCommitMap.computeIfAbsent(branchName, k -> new HashSet<>()).add(commit.getHash());
+      if (branchName == null) {
+        Log.warnf(
+            "Commit with hash %s has no associated branch, will not be included in commit-tree",
+            commit.getHash());
+        continue;
+      }
+
+      branchToCommitMap.computeIfAbsent(branchName, k -> new ArrayList<>()).add(commit.getHash());
 
       final Set<Commit> parentCommits = commit.getParentCommits();
       if (parentCommits.isEmpty()) {
@@ -89,7 +97,7 @@ class EvolutionResource {
                 branchToBranchPointMap.putIfAbsent(
                     branchName,
                     new BranchPointDto(
-                        parentCommit.getHash(), parentCommit.getBranch().getName())));
+                        parentCommit.getBranch().getName(), parentCommit.getHash())));
       }
     }
 

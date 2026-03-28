@@ -1,6 +1,6 @@
 package net.explorviz.persistence.api.v2.model;
 
-import java.util.Set;
+import java.util.List;
 
 /**
  * Represents a git branch as used by the frontend in the v2-API.
@@ -9,4 +9,4 @@ import java.util.Set;
  * @param commits Hashes of commits in this branch
  * @param branchPoint Commit of different branch where this branch originated from
  */
-public record BranchDto(String name, Set<String> commits, BranchPointDto branchPoint) {}
+public record BranchDto(String name, List<String> commits, BranchPointDto branchPoint) {}

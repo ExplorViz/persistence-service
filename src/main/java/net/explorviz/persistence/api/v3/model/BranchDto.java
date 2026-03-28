@@ -1,6 +1,6 @@
 package net.explorviz.persistence.api.v3.model;
 
-import java.util.Set;
+import java.util.List;
 
 /**
  * Represents a git branch, where only those commits are considered part of the branch that are not
@@ -11,5 +11,5 @@ import java.util.Set;
  * @param commits Hashes of commits that are considered part of this branch
  * @param branchPoint Commit of different branch where this branch originated from
  */
-public record BranchDto(String name, Set<String> commits, BranchPointDto branchPoint) {
+public record BranchDto(String name, List<String> commits, BranchPointDto branchPoint) {
 }
