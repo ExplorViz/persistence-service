@@ -129,7 +129,7 @@ public class ApplicationRepository {
             })
             YIELD relationships AS fileContentRelations
 
-            MATCH p = (:Application)-[:CONTAINS]->*(f:FileRevision)
+            MATCH p = (:Application)-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(f:FileRevision)
 
             WITH relationships(p) + fileContentRelations AS rels
             UNWIND rels as r
