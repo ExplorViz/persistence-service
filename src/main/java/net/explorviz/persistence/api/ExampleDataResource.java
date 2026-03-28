@@ -22,6 +22,8 @@ import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
+import net.explorviz.persistence.ogm.Span;
+import net.explorviz.persistence.ogm.Trace;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -51,19 +53,21 @@ class ExampleDataResource {
         MERGE (l:Landscape {tokenId: "mytokenvalue"})
         MERGE (l)-[:CONTAINS]->(t1:Trace {traceId: "trace1"})
         MERGE (l)-[:CONTAINS]->(t2:Trace {traceId: "trace2"})
-        SET t1.startTime = 1000000000000000000, t1.endTime = 1000000000001000000
-        SET t2.startTime = 1000000000002000000, t2.endTime = 1000000000003000000
+        SET t1.startTime = 1000000000, t1.endTime = 1001000000
+        SET t2.startTime = 2000000000, t2.endTime = 4002800000
         MERGE (t1)-[:CONTAINS]->(s1:Span {spanId: "span1"})
         MERGE (t2)-[:CONTAINS]->(s2:Span {spanId: "span2"})
         MERGE (t2)-[:CONTAINS]->(s3:Span {spanId: "span3"})-[:HAS_PARENT]->(s2)
         MERGE (t2)-[:CONTAINS]->(s4:Span {spanId: "span4"})-[:HAS_PARENT]->(s3)
-        SET s1.startTime = 1000000000000000000, s1.endTime = 1000000000001000000
-        SET t2.startTime = 1000000000002000000, t2.endTime = 1000000000003000000
-        SET s3.startTime = 1000000000002500000, s3.endTime = 1000000000002900000
-        SET s4.startTime = 1000000000002600000, s4.endTime = 1000000000002800000
 
-        MERGE (app:Application {name: "hello-world"})
+        SET s1.startTime = 1000000000, s1.endTime = 1001000000
+        SET s2.startTime = 2000000000, s2.endTime = 2003000000
+        SET s3.startTime = 2500000000, s3.endTime = 3002900000
+        SET s4.startTime = 3000000000, s4.endTime = 4002800000
+
+        MERGE (l)-[:CONTAINS]->(app:Application {name: "hello-world"})
         MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
+        
         MERGE (appRoot)
           -[:CONTAINS]->(:Directory {name: "net"})
           -[:CONTAINS]->(:Directory {name: "explorviz"})
@@ -75,7 +79,16 @@ class ExampleDataResource {
         MERGE (file1)-[:CONTAINS]->(func1:Function {name: "function1"})
         MERGE (file2)-[:CONTAINS]->(func2:Function {name: "function2"})
         MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
-        MERGE (:Commit {hash: "commit1"})-[:CONTAINS]->(file1)
+
+        MERGE (l)
+          -[:CONTAINS]->(r1:Repository {name: "repo1"})
+          -[:CONTAINS]->(:Commit {hash: "commit1"})
+          -[:CONTAINS]->(file1)
+        MERGE (r1)
+          -[:HAS_ROOT]->(outerDir)
+
+        MERGE (l)-[:CONTAINS]->(app2:Application {name: "hello-world2"})
+        MERGE (app2)-[:HAS_ROOT]->(outerDir)
 
         MERGE (s1)-[:REPRESENTS]->(func1)
         MERGE (s2)-[:REPRESENTS]->(func2)
@@ -111,6 +124,7 @@ class ExampleDataResource {
     repository.addCommit(commit3);
 
     final Application application = new Application("hello-world");
+    landscape.addApplication(application);
 
     Directory currentDir = new Directory("hello-world");
     repository.setRootDirectory(currentDir);
@@ -199,6 +213,8 @@ class ExampleDataResource {
 
     final Application application1 = new Application("app-one");
     final Application application2 = new Application("app-two");
+    landscape.addApplication(application1);
+    landscape.addApplication(application2);
 
     final Directory repoRoot = new Directory("monorepo");
     repository.setRootDirectory(repoRoot);
@@ -206,6 +222,12 @@ class ExampleDataResource {
 
     Directory appOneDir = new Directory("app-one");
     Directory appTwoDir = new Directory("app-two");
+
+    application1.setRootDirectory(appOneDir);
+    application2.setRootDirectory(appTwoDir);
+
+    repoRoot.addSubdirectory(appOneDir);
+    repoRoot.addSubdirectory(appTwoDir);
 
     final String[] appOneDirNames = {"net", "explorviz", "appone"};
     final String[] appTwoDirNames = {"net", "explorviz", "apptwo"};
@@ -342,5 +364,35 @@ class ExampleDataResource {
       throw new InternalServerErrorException(
           "Failed to load example cypher file: " + e.getMessage(), e);
     }
+  }
+
+  private void addRandomSpan(final Trace trace, final String name) {
+    final Span span = new Span(name);
+    final long randNumb = (long) (Math.random() * 100_000_000_000.0);
+    span.setStartTime(randNumb);
+    span.setEndTime(randNumb + 1);
+    trace.addChildSpan(span);
+  }
+
+  @GET
+  @Path("/timestamp")
+  public String createTestingTimestamps() {
+    final Landscape landscape = new Landscape("mytokenvalue");
+
+    final Trace trace1 = new Trace("trace1");
+    final Trace trace2 = new Trace("trace2");
+
+    for (int i = 0; i < 5; i++) {
+      addRandomSpan(trace1, "trace1_span" + i);
+      addRandomSpan(trace2, "trace2_span" + i);
+    }
+
+    landscape.addTrace(trace1);
+    landscape.addTrace(trace2);
+
+    final Session session = sessionFactory.openSession();
+    session.save(List.of(landscape));
+
+    return "Successfully created testing timestamps";
   }
 }

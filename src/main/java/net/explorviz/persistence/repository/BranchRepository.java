@@ -11,13 +11,14 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class BranchRepository {
 
-  @Inject
-  private SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
-  public Optional<Branch> findBranchByNameAndRepositoryNameAndLandscapeToken(final Session session,
-      final String branchName, final String repoName, final String tokenId) {
+  public Optional<Branch> findBranchByNameAndRepositoryNameAndLandscapeToken(
+      final Session session, final String branchName, final String repoName, final String tokenId) {
     return Optional.ofNullable(
-        session.queryForObject(Branch.class, """
+        session.queryForObject(
+            Branch.class,
+            """
                 MATCH (:Landscape {tokenId: $tokenId})
                   -[:CONTAINS]->(:Repository {name: $repoName})
                   -[:CONTAINS]->(b:Branch {name: $branchName})
@@ -29,13 +30,14 @@ public class BranchRepository {
   public Optional<Branch> findBranchByNameAndRepositoryNameAndLandscapeToken(
       final String branchName, final String repoName, final String tokenId) {
     final Session session = sessionFactory.openSession();
-    return findBranchByNameAndRepositoryNameAndLandscapeToken(session, branchName, repoName,
-        tokenId);
+    return findBranchByNameAndRepositoryNameAndLandscapeToken(
+        session, branchName, repoName, tokenId);
   }
 
-  public Branch getOrCreateBranch(final Session session, final String branchName,
-      final String repoName, final String tokenId) {
-    return findBranchByNameAndRepositoryNameAndLandscapeToken(session, branchName, repoName,
-        tokenId).orElse(new Branch(branchName));
+  public Branch getOrCreateBranch(
+      final Session session, final String branchName, final String repoName, final String tokenId) {
+    return findBranchByNameAndRepositoryNameAndLandscapeToken(
+            session, branchName, repoName, tokenId)
+        .orElse(new Branch(branchName));
   }
 }

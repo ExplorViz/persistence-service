@@ -15,10 +15,6 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class CommitRepository {
 
-  // TODO might be more appropriate for FileRevisionRepository
-  public record FileComparison(
-      String fileFqn, FileRevision fileFirstCommit, FileRevision fileSecondCommit) {}
-
   @Inject private SessionFactory sessionFactory;
 
   /**
@@ -87,10 +83,9 @@ public class CommitRepository {
         session.query(
             Commit.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(repo:Repository)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(:Application {name: $appName})
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application {name: $appName})
+        MATCH (repo:Repository)<-[:CONTAINS]-(l)
+        WHERE (repo)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
         MATCH (repo)-[:CONTAINS]->(c:Commit)
         OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
         OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
@@ -114,13 +109,13 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)
@@ -159,13 +154,13 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)
@@ -204,13 +199,13 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)
@@ -250,13 +245,13 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS*0..]->(d:Directory)
@@ -291,13 +286,13 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS*0..]->(d:Directory)
@@ -331,13 +326,13 @@ public class CommitRepository {
       final String secondCommitHash) {
     return session.queryDto(
         """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(repo:Repository)
           -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
         MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (a:Application {name: $appName})
+        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
         WHERE
-          (a)-[*]->(:FileRevision)<-[:CONTAINS]-(c1)
+          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
         MATCH p = (a)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS]->*(containingDir:Directory)
@@ -368,4 +363,8 @@ public class CommitRepository {
     return findCommitByHashAndLandscapeToken(session, commitHash, tokenId)
         .orElse(new Commit(commitHash));
   }
+
+  // TODO might be more appropriate for FileRevisionRepository
+  public record FileComparison(
+      String fileFqn, FileRevision fileFirstCommit, FileRevision fileSecondCommit) {}
 }

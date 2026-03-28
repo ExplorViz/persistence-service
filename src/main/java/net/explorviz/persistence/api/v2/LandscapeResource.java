@@ -1,5 +1,6 @@
 package net.explorviz.persistence.api.v2;
 
+import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -8,6 +9,7 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import net.explorviz.persistence.api.v2.model.TimestampDto;
 import net.explorviz.persistence.api.v2.model.TraceDto;
 import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
 import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
@@ -72,5 +74,38 @@ class LandscapeResource {
               return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
             })
         .toList();
+  }
+
+  @GET
+  @Path("/timestamps")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Multi<TimestampDto> getTimestamps(
+      @RestPath final String landscapeToken,
+      @RestQuery final Long newest,
+      @RestQuery final Long oldest,
+      @RestQuery final String commit) {
+    final Session session = sessionFactory.openSession();
+
+    final List<TimestampDto> timestamps;
+    Long newestTimestamp = newest;
+    if (newestTimestamp == null) {
+      newestTimestamp = Long.MAX_VALUE;
+    }
+    Long oldestTimestamp = oldest;
+    if (oldestTimestamp == null) {
+      oldestTimestamp = 0L;
+    }
+
+    if (commit != null) {
+      timestamps =
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
+              session, landscapeToken, newestTimestamp, oldestTimestamp, commit, 1_000_000_000L);
+    } else {
+      timestamps =
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
+              session, landscapeToken, newestTimestamp, oldestTimestamp, 1_000_000_000L);
+    }
+
+    return Multi.createFrom().iterable(timestamps);
   }
 }

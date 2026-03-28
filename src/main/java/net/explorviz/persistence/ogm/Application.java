@@ -7,9 +7,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 public class Application {
-  @Id
-  @GeneratedValue
-  private Long id;
+  @Id @GeneratedValue private Long id;
 
   private String name;
 

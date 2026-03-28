@@ -14,7 +14,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class ApplicationRepository {
 
-  @Inject SessionFactory sessionFactory;
+  @Inject private SessionFactory sessionFactory;
 
   public Optional<Application> findApplicationByNameAndLandscapeToken(
       final Session session, final String name, final String tokenId) {
@@ -23,9 +23,8 @@ public class ApplicationRepository {
             Application.class,
             """
         MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (app:Application {name: $name})-[h:HAS_ROOT]->(appRoot:Directory)
-        WHERE
-          (appRoot)-[*]-(l)
+          -[:CONTAINS]->(app:Application {name: $name})
+          -[h:HAS_ROOT]->(appRoot:Directory)
         RETURN app, h, appRoot;
         """,
             Map.of("tokenId", tokenId, "name", name)));
@@ -155,18 +154,13 @@ public class ApplicationRepository {
         session.query(
             String.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application)
+        WHERE (l)
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(:Directory)<-[:HAS_ROOT]-(a:Application)
+          -[:CONTAINS*]->(:Directory)<-[:HAS_ROOT]-(a)
         RETURN DISTINCT a.name;
         """,
             Map.of("tokenId", landscapeToken)));
-  }
-
-  public Application getOrCreateApplication(
-      final Session session, final String name, final String tokenId) {
-    return findApplicationByNameAndLandscapeToken(session, name, tokenId)
-        .orElse(new Application(name));
   }
 }

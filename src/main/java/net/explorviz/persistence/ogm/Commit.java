@@ -4,6 +4,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
@@ -12,6 +13,9 @@ import org.neo4j.ogm.annotation.Relationship;
 @RegisterForReflection
 public class Commit {
   @Id
+  @GeneratedValue
+  private Long id;
+
   private String hash;
 
   private String author;

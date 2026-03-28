@@ -1,12 +1,11 @@
-package net.explorviz.persistence.grpc;
+package net.explorviz.persistence.messaging.service;
 
 import com.google.common.collect.ObjectArrays;
-import com.google.protobuf.Empty;
-import io.quarkus.grpc.GrpcService;
-import io.smallrye.common.annotation.Blocking;
-import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;
+import net.explorviz.persistence.avro.SpanData;
+import net.explorviz.persistence.messaging.SpanDataConsumer;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -14,8 +13,6 @@ import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Span;
 import net.explorviz.persistence.ogm.Trace;
-import net.explorviz.persistence.proto.SpanData;
-import net.explorviz.persistence.proto.SpanDataService;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.ClazzRepository;
 import net.explorviz.persistence.repository.CommitRepository;
@@ -24,16 +21,14 @@ import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.SpanRepository;
 import net.explorviz.persistence.repository.TraceRepository;
-import net.explorviz.persistence.util.GrpcExceptionMapper;
 import org.jboss.logging.Logger;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
-import org.neo4j.ogm.transaction.Transaction;
 
-@GrpcService
-public class SpanDataServiceImpl implements SpanDataService {
+@ApplicationScoped
+public class SpanPersistenceService {
 
-  private static final Logger LOGGER = Logger.getLogger(SpanDataServiceImpl.class);
+  private static final Logger LOGGER = Logger.getLogger(SpanDataConsumer.class);
 
   @Inject private ApplicationRepository applicationRepository;
 
@@ -53,22 +48,9 @@ public class SpanDataServiceImpl implements SpanDataService {
 
   @Inject private TraceRepository traceRepository;
 
-  @Blocking
-  @Override
-  public Uni<Empty> persistSpan(final SpanData request) {
-    final Session session = sessionFactory.openSession();
-
-    try (Transaction tx = session.beginTransaction()) {
-      saveSpanData(session, request);
-      tx.commit();
-      return Uni.createFrom().item(Empty.getDefaultInstance());
-    } catch (Exception e) { // NOPMD - intentional: Handling in GGrpcExceptionMapper
-      return Uni.createFrom().failure(GrpcExceptionMapper.mapToGrpcException(e, request));
-    }
-  }
-
   public void saveSpanData(final Session session, final SpanData spanData) {
-    final Span span = new Span(spanData);
+    final Span span =
+        spanRepository.findSpanById(session, spanData.getSpanId()).orElse(new Span(spanData));
 
     if (!spanData.getParentId().isEmpty()) {
       final Span parentSpan = spanRepository.getOrCreateSpan(session, spanData.getParentId());
@@ -83,10 +65,10 @@ public class SpanDataServiceImpl implements SpanDataService {
     landscape.addTrace(trace);
 
     final Function function;
-    if (spanData.hasCommitHash()) {
-      function = resolveFunctionFqn(session, spanData, spanData.getCommitHash());
+    if (spanData.getCommitHash() != null) {
+      function = resolveFunctionFqn(session, spanData, spanData.getCommitHash(), landscape);
     } else {
-      function = resolveFunctionFqn(session, spanData);
+      function = resolveFunctionFqn(session, spanData, landscape);
     }
 
     span.setFunction(function);
@@ -94,14 +76,16 @@ public class SpanDataServiceImpl implements SpanDataService {
     session.save(List.of(span, trace, landscape, function));
   }
 
-  private Function resolveFunctionFqn(final Session session, final SpanData spanData) {
+  private Function resolveFunctionFqn(
+      final Session session, final SpanData spanData, final Landscape landscape) {
     final String[] splitFilePath = spanData.getFilePath().split("/");
     final String functionName = spanData.getFunctionName();
 
-    final FileRevision fileRevision = resolveFileRevision(session, spanData, splitFilePath);
+    final FileRevision fileRevision =
+        resolveFileRevision(session, spanData, splitFilePath, landscape);
     final Function function;
 
-    if (spanData.hasClassName()) {
+    if (spanData.getClassName() != null) {
       final Clazz clazz =
           clazzRepository
               .findClassByClassPathAndFileRevisionId(
@@ -131,11 +115,14 @@ public class SpanDataServiceImpl implements SpanDataService {
   }
 
   private Function resolveFunctionFqn(
-      final Session session, final SpanData spanData, final String commitHash) {
+      final Session session,
+      final SpanData spanData,
+      final String commitHash,
+      final Landscape landscape) {
     final String[] splitFilePath = spanData.getFilePath().split("/");
     final String functionName = spanData.getFunctionName();
 
-    if (spanData.hasClassName()) {
+    if (spanData.getClassName() != null) {
       return functionRepository
           .findFunction(
               session,
@@ -144,7 +131,7 @@ public class SpanDataServiceImpl implements SpanDataService {
               spanData.getLandscapeTokenId(),
               commitHash,
               spanData.getClassName().split("\\."))
-          .orElseGet(() -> resolveFunctionFqn(session, spanData));
+          .orElseGet(() -> resolveFunctionFqn(session, spanData, landscape));
     } else {
       return functionRepository
           .findFunction(
@@ -153,12 +140,15 @@ public class SpanDataServiceImpl implements SpanDataService {
               ObjectArrays.concat(splitFilePath, functionName),
               commitHash,
               spanData.getLandscapeTokenId())
-          .orElseGet(() -> resolveFunctionFqn(session, spanData));
+          .orElseGet(() -> resolveFunctionFqn(session, spanData, landscape));
     }
   }
 
   private FileRevision resolveFileRevision(
-      final Session session, final SpanData spanData, final String[] splitFileFqn) {
+      final Session session,
+      final SpanData spanData,
+      final String[] splitFileFqn,
+      final Landscape landscape) {
     return fileRevisionRepository
         .findFileRevisionFromAppNameAndPathWithoutCommit(
             session, spanData.getApplicationName(), splitFileFqn, spanData.getLandscapeTokenId())
@@ -169,6 +159,7 @@ public class SpanDataServiceImpl implements SpanDataService {
                       .findApplicationByNameAndLandscapeToken(
                           session, spanData.getApplicationName(), spanData.getLandscapeTokenId())
                       .orElse(new Application(spanData.getApplicationName()));
+              landscape.addApplication(application);
 
               FileRevision fileRevision;
 

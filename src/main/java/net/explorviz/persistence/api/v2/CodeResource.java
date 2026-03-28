@@ -1,6 +1,7 @@
 package net.explorviz.persistence.api.v2;
 
 import jakarta.inject.Inject;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Path;
@@ -39,6 +40,7 @@ import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.CommitRepository.FileComparison;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
+import net.explorviz.persistence.repository.TraceRepository;
 import org.jboss.resteasy.reactive.RestPath;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -51,6 +53,8 @@ class CodeResource {
    * Dummy branch point expected by frontend if no branch point exists (e.g. for the main branch).
    */
   private static final BranchPointDto NO_BRANCH_POINT = new BranchPointDto("NONE", "");
+
+  @Inject private TraceRepository traceRepository;
 
   @Inject private ApplicationRepository applicationRepository;
 
@@ -192,6 +196,14 @@ class CodeResource {
 
     final NodeDto node = new NodeDto("", "", applicationDtoList);
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
+  }
+
+  @DELETE
+  @Path("landscapes/{landscapeToken}/trace-data")
+  public void deleteTraceData(@RestPath final String landscapeToken) {
+    final Session session = sessionFactory.openSession();
+
+    traceRepository.deleteTraceData(session, landscapeToken);
   }
 
   @GET

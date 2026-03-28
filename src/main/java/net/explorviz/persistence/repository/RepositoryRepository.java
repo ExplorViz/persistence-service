@@ -16,7 +16,7 @@ public class RepositoryRepository {
   @Inject private SessionFactory sessionFactory;
 
   public Optional<Repository> findRepositoryByNameAndLandscapeToken(
-      final Session session, final String name, final String landscapeToken) {
+      final Session session, final String name, final String tokenId) {
     return Optional.ofNullable(
         session.queryForObject(
             Repository.class,
@@ -25,7 +25,7 @@ public class RepositoryRepository {
             MATCH (r)-[rel]->(n)
             RETURN r, rel, n;
             """,
-            Map.of("tokenId", landscapeToken, "name", name)));
+            Map.of("tokenId", tokenId, "name", name)));
   }
 
   public List<String> fetchAllRepositoryNamesInLandscape(
