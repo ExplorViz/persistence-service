@@ -23,6 +23,7 @@ import org.jboss.resteasy.reactive.RestPath;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
+/** Contains endpoints concerning git repository analysis. */
 @Path("/v3/landscapes/{landscapeToken}")
 class EvolutionResource {
 
@@ -67,14 +68,15 @@ class EvolutionResource {
     final Map<String, BranchPointDto> branchToBranchPointMap = new HashMap<>();
 
     for (final Commit commit : commits) {
-      final String branchName = commit.getBranch().getName();
 
-      if (branchName == null) {
+      if (commit.getBranch() == null) {
         Log.warnf(
             "Commit with hash %s has no associated branch, will not be included in commit-tree",
             commit.getHash());
         continue;
       }
+
+      final String branchName = commit.getBranch().getName();
 
       branchToCommitMap.computeIfAbsent(branchName, k -> new ArrayList<>()).add(commit.getHash());
 
