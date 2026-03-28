@@ -6,7 +6,7 @@ import java.util.List;
  * Represents the entire commit-tree of a git repository, where points of branching are explicitly
  * provided for the visualization.
  *
- * @param repositoryName Repository name
+ * @param name Repository name
  * @param branches Branches of this repository
  */
-public record CommitTreeDto(String repositoryName, List<BranchDto> branches) {}
+public record CommitTreeDto(String name, List<BranchDto> branches) {}
