@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -394,5 +395,152 @@ class ExampleDataResource {
     session.save(List.of(landscape));
 
     return "Successfully created testing timestamps";
+  }
+
+  @GET
+  @Path("/multirepo")
+  public String createTestingMultiRepo() {
+    final Landscape landscape = new Landscape("mytokenvalue");
+
+    final Repository repo = new Repository("hello-world");
+    final Repository repo2 = new Repository("hello-underworld");
+    landscape.addRepository(repo);
+    landscape.addRepository(repo2);
+
+    final Branch branch1Repo1 = new Branch("main");
+    final Branch branch2Repo1 = new Branch("feature-a");
+    final Branch branch1Repo2 = new Branch("main");
+    final Branch branch2Repo2 = new Branch("feature-b");
+    repo.addBranch(branch1Repo1);
+    repo.addBranch(branch2Repo1);
+    repo2.addBranch(branch1Repo2);
+    repo2.addBranch(branch2Repo2);
+
+    final Commit commit1Repo1 = new Commit("commit1");
+    commit1Repo1.setCommitDate(Instant.ofEpochMilli(1000));
+    final Commit commit2Repo1 = new Commit("commit2");
+    commit2Repo1.setCommitDate(Instant.ofEpochMilli(1500));
+    final Commit commit3Repo1 = new Commit("commit3");
+    commit3Repo1.setCommitDate(Instant.ofEpochMilli(2000));
+    final Commit commit1Repo2 = new Commit("commit1u");
+    commit2Repo1.setCommitDate(Instant.ofEpochMilli(1500));
+    final Commit commit2Repo2 = new Commit("commit2u");
+    commit2Repo2.setCommitDate(Instant.ofEpochMilli(2250));
+    final Commit commit3Repo2 = new Commit("commit3u");
+    commit3Repo2.setCommitDate(Instant.ofEpochMilli(3456));
+    commit1Repo1.setBranch(branch1Repo1);
+    commit2Repo1.setBranch(branch1Repo1);
+    commit2Repo1.addParent(commit1Repo1);
+    commit3Repo1.setBranch(branch2Repo1);
+    commit3Repo1.addParent(commit1Repo1);
+    repo.addCommit(commit1Repo1);
+    repo.addCommit(commit2Repo1);
+    repo.addCommit(commit3Repo1);
+    commit1Repo2.setBranch(branch1Repo2);
+    commit2Repo2.setBranch(branch2Repo2);
+    commit2Repo2.addParent(commit1Repo2);
+    commit3Repo2.setBranch(branch1Repo2);
+    commit3Repo2.addParent(commit1Repo2);
+    repo2.addCommit(commit1Repo2);
+    repo2.addCommit(commit2Repo2);
+    repo2.addCommit(commit3Repo2);
+
+    final Application app1 = new Application("app-hello-world");
+    final Application app2 = new Application("app-hello-underworld");
+    landscape.addApplication(app1);
+    landscape.addApplication(app2);
+
+    List<Directory> dirsRepo1 = createDirStructure(repo, app1);
+    Directory currentDirRepo1 = dirsRepo1.get(0);
+    Directory innerDirRepo1 = dirsRepo1.get(1);
+    List<Directory> dirsRepo2 = createDirStructure(repo2, app2);
+    Directory currentDirRepo2 = dirsRepo2.get(0);
+    Directory innerDirRepo2 = dirsRepo2.get(1);
+
+    final FileRevision fileA = new FileRevision("ClassA.java");
+    final FileRevision fileB = new FileRevision("ClassB.java");
+    final FileRevision fileModified = new FileRevision("ClassB.java");
+    final FileRevision fileC = new FileRevision("ClassC.java");
+    currentDirRepo1.addFileRevision(fileA);
+    currentDirRepo1.addFileRevision(fileB);
+    currentDirRepo1.addFileRevision(fileModified);
+    innerDirRepo1.addFileRevision(fileC);
+    commit1Repo1.addFileRevision(fileA);
+    commit2Repo1.addFileRevision(fileA);
+    commit2Repo1.addFileRevision(fileB);
+    commit3Repo1.addFileRevision(fileModified);
+    commit3Repo1.addFileRevision(fileC);
+    List.of(fileA, fileB, fileC, fileModified)
+        .forEach(
+            f -> {
+              addFunctionsToFile(f);
+              addRandomFileMetrics(f);
+            });
+
+    final Clazz classA = new Clazz("ClassA");
+    final Clazz classB = new Clazz("ClassB");
+    final Clazz classModified = new Clazz("ClassB");
+    final Clazz classC = new Clazz("ClassC");
+    fileA.addClass(classA);
+    fileB.addClass(classB);
+    fileModified.addClass(classModified);
+    fileC.addClass(classC);
+    List.of(classA, classB, classC, classModified)
+        .forEach(
+            c -> {
+              addFunctionsToClass(c);
+              addRandomClassMetrics(c);
+            });
+
+    final FileRevision fileD = new FileRevision("ClassD.java");
+    final FileRevision fileE = new FileRevision("ClassE.java");
+    final FileRevision fileF = new FileRevision("ClassF.java");
+    currentDirRepo2.addFileRevision(fileD);
+    innerDirRepo2.addFileRevision(fileE);
+    innerDirRepo2.addFileRevision(fileF);
+    commit1Repo2.addFileRevision(fileD);
+    commit2Repo2.addFileRevision(fileE);
+    commit3Repo2.addFileRevision(fileF);
+    List.of(fileD, fileE, fileF)
+        .forEach(
+            f -> {
+              addFunctionsToFile(f);
+              addRandomFileMetrics(f);
+            });
+
+    final Clazz classD = new Clazz("ClassD");
+    final Clazz classE = new Clazz("ClassE");
+    final Clazz classF = new Clazz("ClassF");
+    fileD.addClass(classD);
+    fileE.addClass(classE);
+    fileF.addClass(classF);
+    List.of(classD, classE, classF)
+        .forEach(
+            c -> {
+              addFunctionsToClass(c);
+              addRandomClassMetrics(c);
+            });
+
+    final Session session = sessionFactory.openSession();
+    session.save(List.of(landscape, app1, app2));
+
+    return "Successfully created example \"multirepo\"";
+  }
+
+  private List<Directory> createDirStructure(Repository repo, Application app) {
+    Directory currentDir = new Directory(repo.getName());
+    repo.setRootDirectory(currentDir);
+    app.setRootDirectory(currentDir);
+
+    final String[] dirNames = {"net", "explorviz", "helloworld"};
+    for (final String dirName : dirNames) {
+      final Directory newDir = new Directory(dirName);
+      currentDir.addSubdirectory(newDir);
+      currentDir = newDir;
+    }
+    final Directory innerDir = new Directory("innerpackage");
+    currentDir.addSubdirectory(innerDir);
+
+    return List.of(currentDir, innerDir);
   }
 }
