@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -81,11 +82,11 @@ class ExampleDataResource {
         MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
 
         MERGE (l)
-          -[:CONTAINS]->(r1:Repository {name: "repo1"})
+          -[:CONTAINS]->(r1:Repository {name: "hello-world"})
           -[:CONTAINS]->(:Commit {hash: "commit1"})
           -[:CONTAINS]->(file1)
         MERGE (r1)
-          -[:HAS_ROOT]->(outerDir)
+          -[:HAS_ROOT]->(appRoot)
 
         MERGE (l)-[:CONTAINS]->(app2:Application {name: "hello-world2"})
         MERGE (app2)-[:HAS_ROOT]->(outerDir)
@@ -115,10 +116,13 @@ class ExampleDataResource {
     final Commit commit2 = new Commit("commit2");
     final Commit commit3 = new Commit("commit3");
     commit1.setBranch(branch1);
+    commit1.setCommitDate(Instant.ofEpochMilli(1000));
     commit2.setBranch(branch1);
     commit2.addParent(commit1);
+    commit1.setCommitDate(Instant.ofEpochMilli(2000));
     commit3.setBranch(branch2);
     commit3.addParent(commit1);
+    commit1.setCommitDate(Instant.ofEpochMilli(1500));
     repository.addCommit(commit1);
     repository.addCommit(commit2);
     repository.addCommit(commit3);
@@ -203,10 +207,13 @@ class ExampleDataResource {
     final Commit commit2 = new Commit("commit2");
     final Commit commit3 = new Commit("commit3");
     commit1.setBranch(branch1);
+    commit1.setCommitDate(Instant.ofEpochMilli(1000));
     commit2.setBranch(branch1);
     commit2.addParent(commit1);
+    commit2.setCommitDate(Instant.ofEpochMilli(1000));
     commit3.setBranch(branch2);
     commit3.addParent(commit1);
+    commit1.setCommitDate(Instant.ofEpochMilli(1500));
     repository.addCommit(commit1);
     repository.addCommit(commit2);
     repository.addCommit(commit3);

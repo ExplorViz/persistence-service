@@ -159,7 +159,8 @@ public class ApplicationRepository {
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
           -[:CONTAINS*]->(:Directory)<-[:HAS_ROOT]-(a)
-        RETURN DISTINCT a.name;
+        RETURN DISTINCT a.name
+        ORDER BY a.name ASC;
         """,
             Map.of("tokenId", landscapeToken)));
   }
