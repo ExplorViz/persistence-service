@@ -36,7 +36,7 @@ public class CommitRepository {
           all(file IN filesInCommit WHERE file.hasFileData) AND
           NOT isEmpty(filesInCommit)
         RETURN c
-        ORDER BY c.commitDate
+        ORDER BY c.commitDate DESC
         LIMIT 1;""",
             Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }

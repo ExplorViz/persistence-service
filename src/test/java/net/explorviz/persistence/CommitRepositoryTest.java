@@ -21,11 +21,9 @@ import org.neo4j.ogm.session.SessionFactory;
 @QuarkusTest
 class CommitRepositoryTest {
 
-  @Inject
-  CommitRepository commitRepository;
+  @Inject CommitRepository commitRepository;
 
-  @Inject
-  SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   @BeforeEach
   void cleanup() {
@@ -41,6 +39,9 @@ class CommitRepositoryTest {
     file1.setHasFileData(true);
 
     FileRevision file2 = new FileRevision("File2.java");
+    file2.setHasFileData(true);
+
+    FileRevision file3 = new FileRevision("File3.java");
 
     Branch branch = new Branch("main");
 
@@ -56,20 +57,29 @@ class CommitRepositoryTest {
     commit2.setCommitDate(Instant.ofEpochMilli(2000));
     commit2.setBranch(branch);
 
+    Commit commit3 = new Commit("commit3");
+    commit3.addParent(commit2);
+    commit3.addFileRevision(file1);
+    commit3.addFileRevision(file2);
+    commit3.addFileRevision(file3);
+    commit3.setCommitDate(Instant.ofEpochMilli(3000));
+    commit3.setBranch(branch);
+
     Repository repository = new Repository("myrepo");
     repository.addBranch(branch);
     repository.addCommit(commit1);
     repository.addCommit(commit2);
+    repository.addCommit(commit3);
 
     Landscape landscape = new Landscape("mytokenvalue");
     landscape.addRepository(repository);
 
     session.save(landscape);
 
-    Optional<Commit> latestCommit = commitRepository.findLatestFullyPersistedCommit(
-        session, "myrepo", "mytokenvalue", "main");
+    Optional<Commit> latestCommit =
+        commitRepository.findLatestFullyPersistedCommit(session, "myrepo", "mytokenvalue", "main");
 
     assertTrue(latestCommit.isPresent());
-    assertEquals("commit1", latestCommit.get().getHash());
+    assertEquals("commit2", latestCommit.get().getHash());
   }
 }
