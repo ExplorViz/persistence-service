@@ -22,8 +22,9 @@ import org.jboss.resteasy.reactive.RestPath;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
-@Path("/v3/landscapes/{landscapeToken}")
-class LandscapeResource {
+/** Contains endpoints concerning landscape structure data, i.e. the shape of the landscape. */
+@Path("/v3/landscapes/{landscapeToken}/structure")
+class StructureResource {
 
   @Inject SessionFactory sessionFactory;
 
@@ -34,7 +35,7 @@ class LandscapeResource {
   /** Retrieve all structure data gathered from runtime analysis. */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  @Path("/structure/runtime")
+  @Path("/runtime")
   public FlatLandscapeDto getRuntimeStructureData(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
 
@@ -59,7 +60,7 @@ class LandscapeResource {
    */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  @Path("/structure/static/{repositoryName}/{commitHash}")
+  @Path("/evolution/{repositoryName}/{commitHash}")
   public FlatLandscapeDto getStaticStructureData(
       @RestPath final String landscapeToken,
       @RestPath final String repositoryName,
@@ -91,7 +92,7 @@ class LandscapeResource {
    */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  @Path("/structure/static/{repositoryName}/{firstCommitHash}-{secondCommitHash}")
+  @Path("/evolution/{repositoryName}/{firstCommitHash}-{secondCommitHash}")
   public FlatLandscapeDto getCombinedStaticStructureData(
       @RestPath final String landscapeToken,
       @RestPath final String repositoryName,
