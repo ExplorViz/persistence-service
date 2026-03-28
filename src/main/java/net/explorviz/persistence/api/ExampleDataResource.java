@@ -25,6 +25,8 @@ import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.ogm.Span;
 import net.explorviz.persistence.ogm.Trace;
+import org.jboss.resteasy.reactive.RestQuery;
+import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -68,7 +70,7 @@ class ExampleDataResource {
 
         MERGE (l)-[:CONTAINS]->(app:Application {name: "hello-world"})
         MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
-        
+
         MERGE (appRoot)
           -[:CONTAINS]->(:Directory {name: "net"})
           -[:CONTAINS]->(:Directory {name: "explorviz"})
@@ -81,12 +83,10 @@ class ExampleDataResource {
         MERGE (file2)-[:CONTAINS]->(func2:Function {name: "function2"})
         MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
 
-        MERGE (l)
-          -[:CONTAINS]->(r1:Repository {name: "hello-world"})
-          -[:CONTAINS]->(:Commit {hash: "commit1"})
-          -[:CONTAINS]->(file1)
-        MERGE (r1)
-          -[:HAS_ROOT]->(appRoot)
+        MERGE (l)-[:CONTAINS]->(r1:Repository {name: "hello-world"})
+        MERGE (r1)-[:CONTAINS]->(c1:Commit {hash: "commit1"})
+        MERGE (c1)-[:CONTAINS]->(file1)
+        MERGE (r1)-[:HAS_ROOT]->(appRoot)
 
         MERGE (l)-[:CONTAINS]->(app2:Application {name: "hello-world2"})
         MERGE (app2)-[:HAS_ROOT]->(outerDir)
@@ -99,93 +99,70 @@ class ExampleDataResource {
     return "Successfully created example \"trace\"";
   }
 
-  @GET
-  @Path("/repo")
-  public String createTestingRepository() {
-    final Landscape landscape = new Landscape("mytokenvalue");
-
-    final Repository repository = new Repository("hello-world");
-    landscape.addRepository(repository);
-
-    final Branch branch1 = new Branch("main");
-    final Branch branch2 = new Branch("feature-a");
-    repository.addBranch(branch1);
-    repository.addBranch(branch2);
-
-    final Commit commit1 = new Commit("commit1");
-    final Commit commit2 = new Commit("commit2");
-    final Commit commit3 = new Commit("commit3");
-    commit1.setBranch(branch1);
-    commit1.setCommitDate(Instant.ofEpochMilli(1000));
-    commit2.setBranch(branch1);
-    commit2.addParent(commit1);
-    commit1.setCommitDate(Instant.ofEpochMilli(2000));
-    commit3.setBranch(branch2);
-    commit3.addParent(commit1);
-    commit1.setCommitDate(Instant.ofEpochMilli(1500));
-    repository.addCommit(commit1);
-    repository.addCommit(commit2);
-    repository.addCommit(commit3);
-
-    final Application application = new Application("hello-world");
-    landscape.addApplication(application);
-
-    Directory currentDir = new Directory("hello-world");
-    repository.setRootDirectory(currentDir);
-    application.setRootDirectory(currentDir);
-
-    final String[] dirNames = {"net", "explorviz", "helloworld"};
-    for (final String dirName : dirNames) {
-      final Directory newDir = new Directory(dirName);
-      currentDir.addSubdirectory(newDir);
-      currentDir = newDir;
-    }
-    final Directory innerDir = new Directory("innerpackage");
-    currentDir.addSubdirectory(innerDir);
-
-    final FileRevision fileA = new FileRevision("ClassA.java");
-    final FileRevision fileB = new FileRevision("ClassB.java");
-    final FileRevision fileC = new FileRevision("ClassC.java");
-    final FileRevision fileD = new FileRevision("ClassD.java");
-    final FileRevision fileModified = new FileRevision("ClassD.java");
-    currentDir.addFileRevision(fileA);
-    currentDir.addFileRevision(fileB);
-    innerDir.addFileRevision(fileC);
-    innerDir.addFileRevision(fileD);
-    innerDir.addFileRevision(fileModified);
-    commit1.addFileRevision(fileA);
-    commit2.addFileRevision(fileA);
-    commit2.addFileRevision(fileB);
-    commit2.addFileRevision(fileD);
-    commit3.addFileRevision(fileB);
-    commit3.addFileRevision(fileC);
-    commit3.addFileRevision(fileModified);
-    List.of(fileA, fileB, fileC, fileD, fileModified)
-        .forEach(
-            f -> {
-              addFunctionsToFile(f);
-              addRandomFileMetrics(f);
-            });
-
-    final Clazz classA = new Clazz("ClassA");
-    final Clazz classB = new Clazz("ClassB");
-    final Clazz classC = new Clazz("ClassC");
-    final Clazz classD = new Clazz("ClassD");
-    final Clazz classModified = new Clazz("ClassD");
-    fileA.addClass(classA);
-    fileB.addClass(classB);
-    fileC.addClass(classC);
-    fileD.addClass(classD);
-    fileModified.addClass(classModified);
-    List.of(classA, classB, classC, classD, classModified)
-        .forEach(
-            c -> {
-              addFunctionsToClass(c);
-              addRandomClassMetrics(c);
-            });
+  @SuppressWarnings("unchecked")
+  public String createTestingRepository(@RestQuery final String name) {
+    final String repoName = name != null ? name : "hello-world";
 
     final Session session = sessionFactory.openSession();
-    session.save(List.of(landscape, application));
+    final Result result = session.query(
+        """
+        MERGE (l:Landscape {tokenId: "mytokenvalue"})
+        MERGE (l)-[:CONTAINS]->(repo:Repository {name: $repoName})
+        MERGE (repo)-[:CONTAINS]->(main1:Branch {name: "main"})
+        MERGE (repo)-[:CONTAINS]->(feature1: Branch {name: "feature-a"})
+        
+        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", commitDate: 1000})
+        MERGE (commit1)-[:BELONGS_TO]->(main1)
+        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", commitDate: 2000})
+        MERGE (commit2)-[:BELONGS_TO]->(main1)
+        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", commitDate: 3000})
+        MERGE (commit3)-[:BELONGS_TO]->(feature1)
+        
+        MERGE (l)-[:CONTAINS]->(app1:Application {name: $repoName})
+        MERGE (app1)-[:HAS_ROOT]->(rootDir:Directory {name: $repoName})
+        MERGE (rootDir)-[:CONTAINS]->(d1:Directory {name: "net"})
+        MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
+        MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "persistence"})
+        MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+        
+        MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "ClassA.java"})
+        MERGE (file1)-[:CONTAINS]->(class1:Clazz {name: "ClassA"})
+        MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "ClassB.java"})
+        MERGE (file2)-[:CONTAINS]->(class2:Clazz {name: "ClassB"})
+        MERGE (outerDir)-[:CONTAINS]->(file2modified:FileRevision {name: "ClassB.java"})
+        MERGE (file2modified)-[:CONTAINS]->(class2modified:Clazz {name: "ClassB"})
+        MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "ClassC.java"})
+        MERGE (file3)-[:CONTAINS]->(class3:Clazz {name: "ClassC"})
+        
+        MERGE (repo)-[:HAS_ROOT]->(rootDir)
+        MERGE (commit1)-[:CONTAINS]->(file1)
+        MERGE (commit2)-[:CONTAINS]->(file1)
+        MERGE (commit2)-[:CONTAINS]->(file2)
+        MERGE (commit3)-[:CONTAINS]->(file2modified)
+        MERGE (commit3)-[:CONTAINS]->(file3)
+        
+        RETURN
+          [file1, file2, file2modified, file3] AS files,
+          [class1, class2, class2modified, class3] AS classes;
+        """,
+        Map.of("repoName", repoName));
+
+    result.queryResults().forEach(qr -> {
+      final List<FileRevision> files = (List<FileRevision>) qr.get("files");
+      final List<Clazz> classes = (List<Clazz>) qr.get("classes");
+
+      files.forEach(f -> {
+        addFunctionsToFile(f);
+        addRandomFileMetrics(f);
+        session.save(f);
+      });
+
+      classes.forEach(c -> {
+        addFunctionsToClass(c);
+        addRandomClassMetrics(c);
+        session.save(c);
+      });
+    });
 
     return "Successfully created example \"repo\"";
   }
@@ -406,130 +383,8 @@ class ExampleDataResource {
   @GET
   @Path("/multirepo")
   public String createTestingMultiRepo() {
-    final Landscape landscape = new Landscape("mytokenvalue");
-
-    final Repository repo = new Repository("hello-world");
-    final Repository repo2 = new Repository("hello-underworld");
-    landscape.addRepository(repo);
-    landscape.addRepository(repo2);
-
-    final Branch branch1Repo1 = new Branch("main");
-    final Branch branch2Repo1 = new Branch("feature-a");
-    final Branch branch1Repo2 = new Branch("main");
-    final Branch branch2Repo2 = new Branch("feature-b");
-    repo.addBranch(branch1Repo1);
-    repo.addBranch(branch2Repo1);
-    repo2.addBranch(branch1Repo2);
-    repo2.addBranch(branch2Repo2);
-
-    final Commit commit1Repo1 = new Commit("commit1");
-    commit1Repo1.setCommitDate(Instant.ofEpochMilli(1000));
-    final Commit commit2Repo1 = new Commit("commit2");
-    commit2Repo1.setCommitDate(Instant.ofEpochMilli(1500));
-    final Commit commit3Repo1 = new Commit("commit3");
-    commit3Repo1.setCommitDate(Instant.ofEpochMilli(2000));
-    final Commit commit1Repo2 = new Commit("commit1u");
-    commit1Repo2.setCommitDate(Instant.ofEpochMilli(1500));
-    final Commit commit2Repo2 = new Commit("commit2u");
-    commit2Repo2.setCommitDate(Instant.ofEpochMilli(2250));
-    final Commit commit3Repo2 = new Commit("commit3u");
-    commit3Repo2.setCommitDate(Instant.ofEpochMilli(3456));
-    commit1Repo1.setBranch(branch1Repo1);
-    commit2Repo1.setBranch(branch1Repo1);
-    commit2Repo1.addParent(commit1Repo1);
-    commit3Repo1.setBranch(branch2Repo1);
-    commit3Repo1.addParent(commit2Repo1);
-    repo.addCommit(commit1Repo1);
-    repo.addCommit(commit2Repo1);
-    repo.addCommit(commit3Repo1);
-    commit1Repo2.setBranch(branch1Repo2);
-    commit2Repo2.setBranch(branch2Repo2);
-    commit2Repo2.addParent(commit1Repo2);
-    commit3Repo2.setBranch(branch1Repo2);
-    commit3Repo2.addParent(commit1Repo2);
-    repo2.addCommit(commit1Repo2);
-    repo2.addCommit(commit2Repo2);
-    repo2.addCommit(commit3Repo2);
-
-    final Application app1 = new Application("app-hello-world");
-    final Application app2 = new Application("app-hello-underworld");
-    landscape.addApplication(app1);
-    landscape.addApplication(app2);
-
-    List<Directory> dirsRepo1 = createDirStructure(repo, app1);
-    Directory currentDirRepo1 = dirsRepo1.get(0);
-    Directory innerDirRepo1 = dirsRepo1.get(1);
-    List<Directory> dirsRepo2 = createDirStructure(repo2, app2);
-    Directory currentDirRepo2 = dirsRepo2.get(0);
-    Directory innerDirRepo2 = dirsRepo2.get(1);
-
-    final FileRevision fileA = new FileRevision("ClassA.java");
-    final FileRevision fileB = new FileRevision("ClassB.java");
-    final FileRevision fileModified = new FileRevision("ClassB.java");
-    final FileRevision fileC = new FileRevision("ClassC.java");
-    currentDirRepo1.addFileRevision(fileA);
-    currentDirRepo1.addFileRevision(fileB);
-    currentDirRepo1.addFileRevision(fileModified);
-    innerDirRepo1.addFileRevision(fileC);
-    commit1Repo1.addFileRevision(fileA);
-    commit2Repo1.addFileRevision(fileA);
-    commit2Repo1.addFileRevision(fileB);
-    commit3Repo1.addFileRevision(fileModified);
-    commit3Repo1.addFileRevision(fileC);
-    List.of(fileA, fileB, fileC, fileModified)
-        .forEach(
-            f -> {
-              addFunctionsToFile(f);
-              addRandomFileMetrics(f);
-            });
-
-    final Clazz classA = new Clazz("ClassA");
-    final Clazz classB = new Clazz("ClassB");
-    final Clazz classModified = new Clazz("ClassB");
-    final Clazz classC = new Clazz("ClassC");
-    fileA.addClass(classA);
-    fileB.addClass(classB);
-    fileModified.addClass(classModified);
-    fileC.addClass(classC);
-    List.of(classA, classB, classC, classModified)
-        .forEach(
-            c -> {
-              addFunctionsToClass(c);
-              addRandomClassMetrics(c);
-            });
-
-    final FileRevision fileD = new FileRevision("ClassD.java");
-    final FileRevision fileE = new FileRevision("ClassE.java");
-    final FileRevision fileF = new FileRevision("ClassF.java");
-    currentDirRepo2.addFileRevision(fileD);
-    innerDirRepo2.addFileRevision(fileE);
-    innerDirRepo2.addFileRevision(fileF);
-    commit1Repo2.addFileRevision(fileD);
-    commit2Repo2.addFileRevision(fileE);
-    commit3Repo2.addFileRevision(fileF);
-    List.of(fileD, fileE, fileF)
-        .forEach(
-            f -> {
-              addFunctionsToFile(f);
-              addRandomFileMetrics(f);
-            });
-
-    final Clazz classD = new Clazz("ClassD");
-    final Clazz classE = new Clazz("ClassE");
-    final Clazz classF = new Clazz("ClassF");
-    fileD.addClass(classD);
-    fileE.addClass(classE);
-    fileF.addClass(classF);
-    List.of(classD, classE, classF)
-        .forEach(
-            c -> {
-              addFunctionsToClass(c);
-              addRandomClassMetrics(c);
-            });
-
-    final Session session = sessionFactory.openSession();
-    session.save(List.of(landscape, app1, app2));
-
+    createTestingRepository("hello-world");
+    createTestingRepository("hello-underworld");
     return "Successfully created example \"multirepo\"";
   }
 
