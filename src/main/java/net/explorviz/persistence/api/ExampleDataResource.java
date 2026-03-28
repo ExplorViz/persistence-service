@@ -387,21 +387,4 @@ class ExampleDataResource {
     createTestingRepository("hello-underworld");
     return "Successfully created example \"multirepo\"";
   }
-
-  private List<Directory> createDirStructure(Repository repo, Application app) {
-    Directory currentDir = new Directory(repo.getName());
-    repo.setRootDirectory(currentDir);
-    app.setRootDirectory(currentDir);
-
-    final String[] dirNames = {"net", "explorviz", "helloworld"};
-    for (final String dirName : dirNames) {
-      final Directory newDir = new Directory(dirName);
-      currentDir.addSubdirectory(newDir);
-      currentDir = newDir;
-    }
-    final Directory innerDir = new Directory("innerpackage");
-    currentDir.addSubdirectory(innerDir);
-
-    return List.of(currentDir, innerDir);
-  }
 }

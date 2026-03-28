@@ -25,6 +25,7 @@ import org.neo4j.ogm.session.SessionFactory;
 
 /** Contains endpoints concerning git repository analysis. */
 @Path("/v3/landscapes/{landscapeToken}")
+@SuppressWarnings("PMD.UseObjectForClearerAPI")
 class EvolutionResource {
 
   /**

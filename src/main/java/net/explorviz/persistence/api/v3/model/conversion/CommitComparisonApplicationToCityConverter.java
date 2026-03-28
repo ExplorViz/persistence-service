@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.BiFunction;
@@ -293,16 +294,16 @@ public final class CommitComparisonApplicationToCityConverter {
    * implementation, therefore the elements need not necessarily be identical to be considered
    * "present" in both sets.
    *
+   * @param <T> The type of elements in the sets, must be {@link Comparable}
+   * @param <R> The output type of the transformation functions
    * @param firstSet First set to iterate
    * @param secondSet Second set to iterate
    * @param onPresentInBoth Transformation function to use if element is present in both sets
    * @param onOnlyInFirst Transformation function to use if element is only present in first set
    * @param onOnlyInSecond Transformation function to use if element is only present in second set
    * @return An unordered set containing the results of the transformation functions
-   * @param <T> The type of elements in the sets, must be {@link Comparable}
-   * @param <R> The output type of the transformation functions
    */
-  public static <T extends Comparable<T>, R> Set<R> compareSortedSets(
+  private static <T extends Comparable<T>, R> Set<R> compareSortedSets(
       final SortedSet<T> firstSet,
       final SortedSet<T> secondSet,
       final BiFunction<T, T, R> onPresentInBoth,
@@ -313,22 +314,26 @@ public final class CommitComparisonApplicationToCityConverter {
 
     final Iterator<T> firstIt = firstSet.iterator();
     final Iterator<T> secondIt = secondSet.iterator();
-    T first = firstIt.hasNext() ? firstIt.next() : null;
-    T second = secondIt.hasNext() ? secondIt.next() : null;
+    Optional<T> first = next(firstIt);
+    Optional<T> second = next(secondIt);
 
-    while (first != null || second != null) {
-      if (first != null && second != null && first.compareTo(second) == 0) {
-        results.add(onPresentInBoth.apply(first, second));
-        first = firstIt.hasNext() ? firstIt.next() : null;
-        second = secondIt.hasNext() ? secondIt.next() : null;
-      } else if (second == null || (first != null && first.compareTo(second) < 0)) {
-        results.add(onOnlyInFirst.apply(first));
-        first = firstIt.hasNext() ? firstIt.next() : null;
+    while (first.isPresent() || second.isPresent()) {
+      if (first.isPresent() && second.isPresent() && first.get().compareTo(second.get()) == 0) {
+        results.add(onPresentInBoth.apply(first.get(), second.get()));
+        first = next(firstIt);
+        second = next(secondIt);
+      } else if (second.isEmpty() || first.isPresent() && first.get().compareTo(second.get()) < 0) {
+        results.add(onOnlyInFirst.apply(first.get()));
+        first = next(firstIt);
       } else {
-        results.add(onOnlyInSecond.apply(second));
-        second = secondIt.hasNext() ? secondIt.next() : null;
+        results.add(onOnlyInSecond.apply(second.get()));
+        second = next(secondIt);
       }
     }
     return results;
+  }
+
+  private static <T> Optional<T> next(final Iterator<T> it) {
+    return it.hasNext() ? Optional.of(it.next()) : Optional.empty();
   }
 }

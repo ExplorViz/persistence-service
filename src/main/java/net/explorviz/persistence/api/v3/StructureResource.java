@@ -24,6 +24,7 @@ import org.neo4j.ogm.session.SessionFactory;
 
 /** Contains endpoints concerning landscape structure data, i.e. the shape of the landscape. */
 @Path("/v3/landscapes/{landscapeToken}/structure")
+@SuppressWarnings("PMD.UseObjectForClearerAPI")
 class StructureResource {
 
   @Inject SessionFactory sessionFactory;
