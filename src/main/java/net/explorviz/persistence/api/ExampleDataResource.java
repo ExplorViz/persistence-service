@@ -429,7 +429,7 @@ class ExampleDataResource {
     final Commit commit3Repo1 = new Commit("commit3");
     commit3Repo1.setCommitDate(Instant.ofEpochMilli(2000));
     final Commit commit1Repo2 = new Commit("commit1u");
-    commit2Repo1.setCommitDate(Instant.ofEpochMilli(1500));
+    commit1Repo2.setCommitDate(Instant.ofEpochMilli(1500));
     final Commit commit2Repo2 = new Commit("commit2u");
     commit2Repo2.setCommitDate(Instant.ofEpochMilli(2250));
     final Commit commit3Repo2 = new Commit("commit3u");
@@ -438,7 +438,7 @@ class ExampleDataResource {
     commit2Repo1.setBranch(branch1Repo1);
     commit2Repo1.addParent(commit1Repo1);
     commit3Repo1.setBranch(branch2Repo1);
-    commit3Repo1.addParent(commit1Repo1);
+    commit3Repo1.addParent(commit2Repo1);
     repo.addCommit(commit1Repo1);
     repo.addCommit(commit2Repo1);
     repo.addCommit(commit3Repo1);
