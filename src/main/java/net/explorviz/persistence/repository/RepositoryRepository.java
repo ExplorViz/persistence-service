@@ -35,7 +35,7 @@ public class RepositoryRepository {
             String.class,
             """
             MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository)
-            RETURN r.name
+            RETURN DISTINCT r.name
             ORDER BY r.name ASC;""",
             Map.of("tokenId", landscapeToken)));
   }
