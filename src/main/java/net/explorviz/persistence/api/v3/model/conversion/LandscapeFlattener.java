@@ -123,23 +123,28 @@ public final class LandscapeFlattener {
 
     final Map<String, CityDto> cities =
         resultContainer.cities.stream()
-            .collect(Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity()));
+            .collect(
+                Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity(), (c1, c2) -> c1));
 
     final Map<String, DistrictDto> districts =
         resultContainer.districts.stream()
-            .collect(Collectors.toMap(d -> d.flatBaseModel().id(), Function.identity()));
+            .collect(
+                Collectors.toMap(d -> d.flatBaseModel().id(), Function.identity(), (d1, d2) -> d1));
 
     final Map<String, BuildingDto> buildings =
         resultContainer.buildings.stream()
-            .collect(Collectors.toMap(b -> b.flatBaseModel().id(), Function.identity()));
+            .collect(
+                Collectors.toMap(b -> b.flatBaseModel().id(), Function.identity(), (b1, b2) -> b1));
 
     final Map<String, ClazzDto> classes =
         resultContainer.classes.stream()
-            .collect(Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity()));
+            .collect(
+                Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity(), (c1, c2) -> c1));
 
     final Map<String, FunctionDto> functions =
         resultContainer.functions.stream()
-            .collect(Collectors.toMap(f -> f.flatBaseModel().id(), Function.identity()));
+            .collect(
+                Collectors.toMap(f -> f.flatBaseModel().id(), Function.identity(), (f1, f2) -> f1));
 
     return new FlatLandscapeDto(landscapeToken, cities, districts, buildings, classes, functions);
   }
