@@ -220,14 +220,6 @@ class CodeResource {
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
   }
 
-  @DELETE
-  @Path("landscapes/{landscapeToken}/trace-data")
-  public void deleteTraceData(@RestPath final String landscapeToken) {
-    final Session session = sessionFactory.openSession();
-
-    traceRepository.deleteTraceData(session, landscapeToken);
-  }
-
   @GET
   @Path("/structure/{landscapeToken}/{applicationName}/{commitHash}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -308,5 +300,12 @@ class CodeResource {
         addedPackages,
         deletedPackages,
         entityMetricsComparisons);
+  }
+
+  @DELETE
+  @Path("landscapes/{landscapeToken}/trace-data")
+  public void deleteTraceData(@RestPath final String landscapeToken) {
+    final Session session = sessionFactory.openSession();
+    traceRepository.deleteTraceData(session, landscapeToken);
   }
 }

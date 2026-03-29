@@ -1,6 +1,7 @@
 package net.explorviz.persistence.api.v3;
 
 import jakarta.inject.Inject;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -80,5 +81,17 @@ class TraceResource {
     }
 
     return timestamps;
+  }
+
+  /**
+   * Debug function to delete all data gathered from runtime analysis in the landscape.
+   *
+   * @param landscapeToken String identifier of the visualization landscape
+   */
+  @DELETE
+  @Path("/trace-data")
+  public void deleteTraceData(@RestPath final String landscapeToken) {
+    final Session session = sessionFactory.openSession();
+    traceRepository.deleteTraceData(session, landscapeToken);
   }
 }
