@@ -98,12 +98,20 @@ class LandscapeResource {
 
     if (commit != null) {
       timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
-              session, landscapeToken, newestTimestamp, oldestTimestamp, commit, 1_000_000_000L);
+          traceRepository
+              .findTimestampsForLandscapeTokenCommitAndTimeRange(
+                  session, landscapeToken, newestTimestamp, oldestTimestamp, commit, 1_000_000_000L)
+              .stream()
+              .map(TimestampDto::new)
+              .toList();
     } else {
       timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
-              session, landscapeToken, newestTimestamp, oldestTimestamp, 1_000_000_000L);
+          traceRepository
+              .findTimestampsForLandscapeTokenCommitAndTimeRange(
+                  session, landscapeToken, newestTimestamp, oldestTimestamp, 1_000_000_000L)
+              .stream()
+              .map(TimestampDto::new)
+              .toList();
     }
 
     return Multi.createFrom().iterable(timestamps);

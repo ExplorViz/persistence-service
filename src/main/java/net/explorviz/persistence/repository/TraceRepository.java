@@ -6,7 +6,6 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.explorviz.persistence.api.v2.model.TimestampDto;
 import net.explorviz.persistence.ogm.Trace;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -87,7 +86,7 @@ public class TraceRepository {
     return findTraceById(session, traceId).orElse(new Trace(traceId));
   }
 
-  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(
+  public List<Timestamp> findTimestampsForLandscapeTokenCommitAndTimeRange(
       final Session session,
       final String landscapeToken,
       final long newest,
@@ -106,7 +105,7 @@ public class TraceRepository {
           s.startTime >= $oldest AND s.startTime <= $newest
         WITH
           s, (toInteger(s.startTime / $bucketSize)) AS bucket
-        RETURN bucket AS epochNano, COUNT(s) AS spanCount
+        RETURN bucket AS startTimeEpochNano, COUNT(s) AS spanCount
         ORDER BY bucket ASC;
         """,
         Map.of(
@@ -115,10 +114,10 @@ public class TraceRepository {
             "oldest", oldest,
             "commitHash", commitHash,
             "bucketSize", bucketSize),
-        TimestampDto.class);
+        Timestamp.class);
   }
 
-  public List<TimestampDto> findTimestampsForLandscapeTokenCommitAndTimeRange(
+  public List<Timestamp> findTimestampsForLandscapeTokenCommitAndTimeRange(
       final Session session,
       final String landscapeToken,
       final long newest,
@@ -133,7 +132,7 @@ public class TraceRepository {
               s.startTime >= $oldest AND s.startTime <= $newest
             WITH
               s, (toInteger(s.startTime / $bucketSize)) AS bucket
-            RETURN bucket AS epochNano, COUNT(s) AS spanCount
+            RETURN bucket AS startTimeEpochNano, COUNT(s) AS spanCount
             ORDER BY bucket ASC;
             """,
         Map.of(
@@ -145,7 +144,7 @@ public class TraceRepository {
             oldest,
             "bucketSize",
             bucketSize),
-        TimestampDto.class);
+        Timestamp.class);
   }
 
   public void deleteTraceData(final Session session, final String landscapeToken) {
@@ -174,4 +173,12 @@ public class TraceRepository {
         """,
         Map.of("tokenId", landscapeToken));
   }
+
+  /**
+   * Represents a collection of spans within a specific time range.
+   *
+   * @param startTimeEpochNano Start time of the time range, given in epoch nanoseconds
+   * @param spanCount Number of spans in the time range
+   */
+  public record Timestamp(long startTimeEpochNano, long spanCount) {}
 }

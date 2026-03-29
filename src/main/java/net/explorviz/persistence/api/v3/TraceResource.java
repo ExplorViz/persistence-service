@@ -9,8 +9,8 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import net.explorviz.persistence.api.v2.model.TimestampDto;
-import net.explorviz.persistence.api.v2.model.TraceDto;
+import net.explorviz.persistence.api.v3.model.trace.TimestampDto;
+import net.explorviz.persistence.api.v3.model.trace.TraceDto;
 import net.explorviz.persistence.ogm.Trace;
 import net.explorviz.persistence.repository.TraceRepository;
 import org.jboss.resteasy.reactive.RestPath;
@@ -72,12 +72,20 @@ class TraceResource {
 
     if (commit != null) {
       timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
-              session, landscapeToken, newestTimestamp, oldestTimestamp, commit, 1_000_000_000L);
+          traceRepository
+              .findTimestampsForLandscapeTokenCommitAndTimeRange(
+                  session, landscapeToken, newestTimestamp, oldestTimestamp, commit, 1_000_000_000L)
+              .stream()
+              .map(TimestampDto::new)
+              .toList();
     } else {
       timestamps =
-          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(
-              session, landscapeToken, newestTimestamp, oldestTimestamp, 1_000_000_000L);
+          traceRepository
+              .findTimestampsForLandscapeTokenCommitAndTimeRange(
+                  session, landscapeToken, newestTimestamp, oldestTimestamp, 1_000_000_000L)
+              .stream()
+              .map(TimestampDto::new)
+              .toList();
     }
 
     return timestamps;
