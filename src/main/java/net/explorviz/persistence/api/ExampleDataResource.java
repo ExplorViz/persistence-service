@@ -71,11 +71,10 @@ class ExampleDataResource {
         MERGE (l)-[:CONTAINS]->(app:Application {name: "hello-world"})
         MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
 
-        MERGE (appRoot)
-          -[:CONTAINS]->(:Directory {name: "net"})
-          -[:CONTAINS]->(:Directory {name: "explorviz"})
-          -[:CONTAINS]->(outerDir:Directory {name: "helloworld"})
-          -[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+        MERGE (appRoot)-[:CONTAINS]->(d1:Directory {name: "net"})
+        MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
+        MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "helloworld"})
+        MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
         MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "File1.java"})
         MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "File2.java"})
         MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "File3.java"})
@@ -87,9 +86,6 @@ class ExampleDataResource {
         MERGE (r1)-[:CONTAINS]->(c1:Commit {hash: "commit1"})
         MERGE (c1)-[:CONTAINS]->(file1)
         MERGE (r1)-[:HAS_ROOT]->(appRoot)
-
-        MERGE (l)-[:CONTAINS]->(app2:Application {name: "hello-world2"})
-        MERGE (app2)-[:HAS_ROOT]->(outerDir)
 
         MERGE (s1)-[:REPRESENTS]->(func1)
         MERGE (s2)-[:REPRESENTS]->(func2)
