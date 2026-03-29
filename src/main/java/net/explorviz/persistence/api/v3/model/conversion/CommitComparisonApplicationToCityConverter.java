@@ -26,6 +26,7 @@ import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
+import net.explorviz.persistence.proto.Language;
 
 /**
  * Provides wrapper classes for turning two versions of the same OGM Application object into a
@@ -160,12 +161,12 @@ public final class CommitComparisonApplicationToCityConverter {
 
     @Override
     public String getId() {
-      return firstFile.getId().toString();
+      return secondFile.getId().toString();
     }
 
     @Override
     public String getName() {
-      return firstFile().getName();
+      return secondFile().getName();
     }
 
     @Override
@@ -198,6 +199,11 @@ public final class CommitComparisonApplicationToCityConverter {
           ComparisonFunctionWrapper::new,
           f1 -> new FunctionWrapper(f1, TypeOfAnalysis.STATIC, CommitComparison.REMOVED),
           f2 -> new FunctionWrapper(f2, TypeOfAnalysis.STATIC, CommitComparison.ADDED));
+    }
+
+    @Override
+    public Language getLanguage() {
+      return secondFile.getLanguage();
     }
 
     @Override

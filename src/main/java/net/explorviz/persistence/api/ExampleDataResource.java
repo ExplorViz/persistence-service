@@ -99,6 +99,8 @@ class ExampleDataResource {
     return "Successfully created example \"trace\"";
   }
 
+  @GET
+  @Path("/repo")
   @SuppressWarnings("unchecked")
   public String createTestingRepository(@RestQuery final String name) {
     final String repoName = name != null ? name : "hello-world";
