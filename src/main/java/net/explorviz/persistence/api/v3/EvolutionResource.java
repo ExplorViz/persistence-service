@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v3.model.BranchDto;
 import net.explorviz.persistence.api.v3.model.BranchPointDto;
 import net.explorviz.persistence.api.v3.model.CommitTreeDto;
@@ -81,7 +82,21 @@ class EvolutionResource {
 
       branchToCommitMap.computeIfAbsent(branchName, k -> new ArrayList<>()).add(commit.getHash());
 
-      final Set<Commit> parentCommits = commit.getParentCommits();
+      final Set<Commit> parentCommits =
+          commit.getParentCommits().stream()
+              .filter(
+                  pc -> {
+                    if (pc.getBranch() == null) {
+                      Log.warnf(
+                          "Parent commit with hash %s has no associated branch, will not be "
+                              + "included in commit-tree calculation",
+                          pc.getHash());
+                      return false;
+                    }
+                    return true;
+                  })
+              .collect(Collectors.toSet());
+
       if (parentCommits.isEmpty()) {
         branchToBranchPointMap.putIfAbsent(branchName, NO_BRANCH_POINT);
         continue;
