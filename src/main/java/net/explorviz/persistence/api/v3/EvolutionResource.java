@@ -51,7 +51,7 @@ class EvolutionResource {
   @GET
   @Path("/commit-tree/{repositoryName}")
   @Produces(MediaType.APPLICATION_JSON)
-  public CommitTreeDto getCommitTreeForApplicationAndLandscape(
+  public CommitTreeDto getCommitTreeForRepositoryAndLandscape(
       @RestPath final String landscapeToken, @RestPath final String repositoryName) {
     final Session session = sessionFactory.openSession();
 

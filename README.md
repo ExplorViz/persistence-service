@@ -192,7 +192,8 @@ There are two versions available.
 
 ## v2
 Version 2 offers the standard endpoints that were used prior to the switch to the persistence-service.
-This can be used to work with older versions of the [frontend](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend).
+This can be used to work with older versions of the [frontend](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend). For developing new features, please
+refer to the version 3 of the API.
 
 ### GET /v2/landscapes/{landscapeToken}/structure
 ```Java
@@ -200,25 +201,24 @@ LandscapeDto getStructureData(String landscapeToken);
 ```
 Returns the landscape associated with a landscape token.
 
-### GET /v2/landscapes/{landscapeToken}/dynamic
+### GET /v2/landscapes/{landscapeToken}/dynamic?from={}&to={}
 ```Java
 List<TraceDto> getDynamicData(String landscapeToken, Long from, Long to);
 ```
-Returns all traces associated with a landscape in a specified time period.
+Returns all traces associated with a landscape. Optionally, a time range can be specified.
 
-### GET /v2/landscapes/{landscapeToken}/timestamps
+### GET /v2/landscapes/{landscapeToken}/timestamps?oldest={}&newest={}&commit={}
 ```Java
 Multi<TimestampDto> getTimestamps(
-        String landscapeToken, @QueryParam("newest") Long newest, @QueryParam("oldest") Long oldest,
-        @QueryParam("commit") String commit);
+        String landscapeToken, Long newest, Long oldest, String commit);
 ```
-Returns timestamps associated with a landscape and a commit within a specified time period.
+Returns timestamps associated with a landscape. Optionally, a time range and a commit can be specified.
 
 ### GET /v2/code/applications/{landscapeToken}
 ```Java
 List<String> getStaticApplicationNamesForLandscape(String landscapeToken);
 ```
-Returns all application names associated with a landscape.
+Returns the names of all applications in a landscape that are backed by data from git evolution analysis.
 
 ### GET /v2/code/commit-tree/{landscapeToken}/{applicationName}
 ```Java
@@ -231,7 +231,7 @@ Returns the tree of commits associated with a landscape and an application.
 ApplicationMetricsCodeDto getStaticCodeMetricsForApplicationAndCommit(
         String landscapeToken, String applicationName, String commitHash);
 ```
-Returns the metrics associated with a landscape, an application, and a commit.
+Returns the code metrics associated with a landscape, an application, and a commit.
 
 ### GET /v2/code/structure/{landscapeToken}/{applicationName}/{commitHash}
 ```Java
@@ -245,7 +245,7 @@ Returns the landscape structure associated with a landscape, an application, and
 LandscapeDto getStaticStructureForApplicationAndTwoCommits(
         String landscapeToken, String applicationName, String firstCommitHash, String secondCommitHash);
 ```
-Returns the landscape structure associated with a landscape, an application, and two commits.
+Returns the union of the landscape structures associated with two commits of an application in a landscape.
 
 ### GET /v2/code/commit-comparison/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}
 ```Java
@@ -258,10 +258,61 @@ Returns a comparison object of two commits associated with a landscape and an ap
 ```Java
 void deleteTraceData(String landscapeToken);
 ```
-Deletes all traces associated with a landscape from the database.
+Deletes all data gathered from runtime analysis associated with a landscape from the database.
 
 ## v3
 Version 3 features a redesign of the endpoints, allowing many of the calculations to be moved from the [frontend](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend) to the persistence-service.
+The central change is the switch to a flat data model as opposed to a deeply nested one, allowing fast lookups for visualization objects.
+
+### GET /v3/landscapes/{landscapeToken}/structure/runtime
+```Java
+FlatLandscapeDto getRuntimeStructureData(String landscapeToken);
+```
+Returns all landscape structure data gathered from runtime analysis for a landscape.
+
+### GET /v3/landscapes/{landscapeToken}/structure/evolution/{repositoryName}/{commitHash}
+```Java
+FlatLandscapeDto getStaticStructureData(String landscapeToken, String repositoryName, String commitHash);
+```
+Retrieve landscape structure data gathered from static analysis for a particular repository and commit in a landscape.
+
+### GET /v3/landscapes/{landscapeToken}/structure/evolution/{repositoryName}/{firstCommitHash}-{secondCommitHash}
+```Java
+FlatLandscapeDto getCombinedStaticStructureData(String landscapeToken, String repositoryName, String firstCommitHash, String secondCommitHash);
+```
+Retrieve the union of landscape structure data for the two provided commits within the given landscape and repository.
+The value for the `commitComparison` attribute is set relative to the second commit, e.g. "DELETED" is written if some component is present in the first commit, but not the second.
+
+### GET /v3/landscapes/{landscapeToken}/dynamic?from={}&to={}
+```Java
+List<TraceDto> getDynamicData(String landscapeToken, Long from, Long to);
+```
+Returns all traces associated with a landscape. Optionally, a time range can be specified.
+
+### GET /v3/landscapes/{landscapeToken}/timestamps?oldest={}&newest={}&commit={}
+```Java
+List<TimestampDto> getTimestamps(String landscapeToken, Long newest, Long oldest, String commit);
+```
+Returns timestamps associated with a landscape. Optionally, a time range and a commit can be specified.
+
+### GET /v3/landscapes/{landscapeToken}/repositories
+```Java
+List<String> getRepositoryNames(String landscapeToken);
+```
+Retrieves the names of all repositories in a landscape.
+
+### GET /v3/landscapes/{landscapeToken}/commit-tree/{repositoryName}
+```Java
+CommitTreeDto getCommitTreeForRepositoryAndLandscape(String landscapeToken, String repositoryName);
+```
+Returns the tree of commits associated with a repository in a lanscape.
+
+### DELETE /v3/landscapes/{landscapeToken}/trace-data
+```Java
+void deleteTraceData(String landscapeToken);
+```
+Deletes all data gathered from runtime analysis associated with a landscape from the database.
+
 
 **TBA**
 

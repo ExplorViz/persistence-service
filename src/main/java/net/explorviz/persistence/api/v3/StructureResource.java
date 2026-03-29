@@ -81,7 +81,7 @@ class StructureResource {
 
   /**
    * Retrieve union of structure data for the two provided commits within the given repository. The
-   * {@link CommitComparison} value is set relative to the second commit, i.e. "DELETED" is written
+   * {@link CommitComparison} value is set relative to the second commit, e.g. "DELETED" is written
    * if some component is present in the first commit, but not the second.
    *
    * @param landscapeToken String identifier of the landscape
