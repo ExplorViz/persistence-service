@@ -26,15 +26,17 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings("PMD.UseObjectForClearerAPI")
 class TraceResource {
 
-  @Inject SessionFactory sessionFactory;
+  @Inject
+  SessionFactory sessionFactory;
 
-  @Inject TraceRepository traceRepository;
+  @Inject
+  TraceRepository traceRepository;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @Path("/dynamic")
-  public List<TraceDto> getDynamicData(
-      @RestPath final String landscapeToken, @RestQuery final Long from, @RestQuery final Long to) {
+  public List<TraceDto> getDynamicData(@RestPath final String landscapeToken,
+      @RestQuery final Long from, @RestQuery final Long to) {
 
     final Session session = sessionFactory.openSession();
 
@@ -44,47 +46,43 @@ class TraceResource {
     final List<Trace> ogmTraces =
         traceRepository.findHydratedTraces(session, landscapeToken, fromTimestamp, toTimestamp);
 
-    return ogmTraces.stream()
-        .map(
-            t -> {
-              final Optional<String> commitHash =
-                  traceRepository.findCommitHashForTrace(session, landscapeToken, t.getTraceId());
-              return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
-            })
-        .toList();
+    return ogmTraces.stream().map(t -> {
+      final Optional<String> commitHash =
+          traceRepository.findCommitHashForTrace(session, landscapeToken, t.getTraceId());
+      return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
+    }).toList();
   }
 
   @GET
   @Path("/timestamps")
   @Produces(MediaType.APPLICATION_JSON)
-  public List<TimestampDto> getTimestamps(
-      @RestPath final String landscapeToken,
-      @RestQuery final Long newest,
-      @RestQuery final Long oldest,
-      @RestQuery final String commit) {
+  public List<TimestampDto> getTimestamps(@RestPath final String landscapeToken,
+      @RestQuery final Long newest, @RestQuery final Long oldest, @RestQuery final String commit,
+      @RestQuery Long size) {
 
     final Session session = sessionFactory.openSession();
 
     final long newestTimestamp = Objects.requireNonNullElse(newest, Long.MAX_VALUE);
     final long oldestTimestamp = Objects.requireNonNullElse(oldest, Long.MIN_VALUE);
 
+    Long bucketSize = size;
+    if (bucketSize == null || bucketSize <= 0) {
+      bucketSize = 1_000_000_000L;
+    } else {
+      bucketSize *= 1_000_000_000L;
+    }
+
     final List<TimestampDto> timestamps;
 
     if (commit != null) {
       timestamps =
-          traceRepository
-              .findTimestampsForLandscapeTokenCommitAndTimeRange(
-                  session, landscapeToken, newestTimestamp, oldestTimestamp, commit, 1_000_000_000L)
-              .stream()
-              .map(TimestampDto::new)
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
+                  newestTimestamp, oldestTimestamp, commit, bucketSize).stream().map(TimestampDto::new)
               .toList();
     } else {
       timestamps =
-          traceRepository
-              .findTimestampsForLandscapeTokenCommitAndTimeRange(
-                  session, landscapeToken, newestTimestamp, oldestTimestamp, 1_000_000_000L)
-              .stream()
-              .map(TimestampDto::new)
+          traceRepository.findTimestampsForLandscapeTokenCommitAndTimeRange(session, landscapeToken,
+                  newestTimestamp, oldestTimestamp, bucketSize).stream().map(TimestampDto::new)
               .toList();
     }
 
