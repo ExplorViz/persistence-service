@@ -15,9 +15,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 public class FileRevision implements Comparable<FileRevision> {
-  @Id
-  @GeneratedValue
-  private Long id;
+  @Id @GeneratedValue private Long id;
 
   private String hash;
 
@@ -31,8 +29,7 @@ public class FileRevision implements Comparable<FileRevision> {
 
   private Set<String> importNames = new HashSet<>();
 
-  @Properties
-  private Map<String, Double> metrics = new HashMap<>();
+  @Properties private Map<String, Double> metrics = new HashMap<>();
 
   private String lastEditor;
 
@@ -171,6 +168,18 @@ public class FileRevision implements Comparable<FileRevision> {
 
   @Override
   public int compareTo(final FileRevision other) {
-    return name.compareTo(other.name);
+    final int nameComparison = name.compareTo(other.name);
+
+    if (nameComparison != 0) {
+      return nameComparison;
+    }
+
+    if (hash != null & other.hash != null && hash.compareTo(other.hash) != 0) {
+      return hash.compareTo(other.hash);
+    }
+
+    return id != null && other.id != null
+        ? id.compareTo(other.id)
+        : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
   }
 }

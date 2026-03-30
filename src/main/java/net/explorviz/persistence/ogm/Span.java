@@ -74,7 +74,15 @@ public class Span implements Comparable<Span> {
 
   @Override
   public int compareTo(final Span other) {
+
     final int startCompare = Long.compare(startTime, other.startTime);
-    return startCompare == 0 ? Long.compare(other.endTime, endTime) : startCompare;
+
+    if (startCompare != 0) {
+      return startCompare;
+    }
+
+    final int endCompare = Long.compare(other.endTime, endTime);
+
+    return endCompare == 0 ? spanId.compareTo(other.spanId) : endCompare;
   }
 }

@@ -17,9 +17,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 public class Clazz implements Comparable<Clazz> {
-  @Id
-  @GeneratedValue
-  private Long id;
+  @Id @GeneratedValue private Long id;
 
   private String name;
 
@@ -33,8 +31,7 @@ public class Clazz implements Comparable<Clazz> {
 
   private Set<String> enumValues;
 
-  @Properties
-  private Map<String, Double> metrics;
+  @Properties private Map<String, Double> metrics;
 
   @Relationship(type = "INHERITS", direction = Relationship.Direction.OUTGOING)
   private final SortedSet<Clazz> superClasses = new TreeSet<>();
@@ -155,6 +152,14 @@ public class Clazz implements Comparable<Clazz> {
 
   @Override
   public int compareTo(final Clazz other) {
-    return name.compareTo(other.name);
+    final int nameComparison = name.compareTo(other.name);
+
+    if (nameComparison != 0) {
+      return nameComparison;
+    }
+
+    return id != null && other.id != null
+        ? id.compareTo(other.id)
+        : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
   }
 }

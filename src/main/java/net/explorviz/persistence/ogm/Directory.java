@@ -55,6 +55,14 @@ public class Directory implements Comparable<Directory> {
 
   @Override
   public int compareTo(final Directory other) {
-    return name.compareTo(other.name);
+    final int nameComparison = name.compareTo(other.name);
+
+    if (nameComparison != 0) {
+      return nameComparison;
+    }
+
+    return id != null && other.id != null
+        ? id.compareTo(other.id)
+        : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
   }
 }
