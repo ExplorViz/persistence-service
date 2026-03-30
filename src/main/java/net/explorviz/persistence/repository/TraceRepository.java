@@ -41,8 +41,10 @@ public class TraceRepository {
             Trace.class,
             """
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)
-        WHERE
-          t.startTime >= $from AND t.endTime <= $to
+        WHERE EXISTS {
+          MATCH (t)-[:CONTAINS]->(s:Span)
+          WHERE s.startTime >= $from AND s.startTime <= $to}
+        WITH DISTINCT t
         CALL apoc.path.subgraphAll(t, {
           relationshipFilter: "CONTAINS>|REPRESENTS>|HAS_PARENT>"
         })
