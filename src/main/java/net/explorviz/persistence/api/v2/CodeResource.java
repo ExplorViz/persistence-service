@@ -1,5 +1,6 @@
 package net.explorviz.persistence.api.v2;
 
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v2.model.BranchDto;
@@ -51,7 +53,6 @@ class CodeResource {
    * Dummy branch point expected by frontend if no branch point exists (e.g. for the main branch).
    */
   private static final BranchPointDto NO_BRANCH_POINT = new BranchPointDto("NONE", "");
-
 
   @Inject private TraceRepository traceRepository;
 
@@ -94,37 +95,64 @@ class CodeResource {
         commitRepository.findCommitsWithBranchForApplicationAndLandscapeToken(
             session, landscapeToken, applicationName);
 
-    final Map<String, ArrayList<String>> commitsMap = new HashMap<>();
-    final Map<String, BranchPointDto> branchPointMap = new HashMap<>();
+    final Map<String, ArrayList<String>> branchToCommitsMap = new HashMap<>();
+    final Map<String, BranchPointDto> branchToBranchPointMap = new HashMap<>();
 
     for (final Commit commit : commits) {
+
+      if (commit.getBranch() == null) {
+        Log.warnf(
+            "Commit with hash %s has no associated branch, will not be included in commit-tree",
+            commit.getHash());
+        continue;
+      }
+
       final String branchName = commit.getBranch().getName();
 
-      commitsMap.computeIfAbsent(branchName, k -> new ArrayList<>()).add(commit.getHash());
+      branchToCommitsMap.computeIfAbsent(branchName, k -> new ArrayList<>()).add(commit.getHash());
 
-      final Set<Commit> parentCommits = commit.getParentCommits();
+      final Set<Commit> parentCommits =
+          commit.getParentCommits().stream()
+              .filter(
+                  pc -> {
+                    if (pc.getBranch() == null) {
+                      Log.warnf(
+                          "Parent commit with hash %s has no associated branch, will not be "
+                              + "included in commit-tree calculation",
+                          pc.getHash());
+                      return false;
+                    }
+                    return true;
+                  })
+              .collect(Collectors.toSet());
+
       if (parentCommits.isEmpty()) {
-        branchPointMap.putIfAbsent(branchName, NO_BRANCH_POINT);
+        branchToBranchPointMap.putIfAbsent(branchName, NO_BRANCH_POINT);
         continue;
       }
 
       // If all parent commits are assigned to a different branch than the current commit, then we
       // treat this as the first commit unique to this branch and therefore create a branch point
       // from the first of the parent commits. Usually, there is only 1 parent commit in this case.
-      parentCommits.stream()
-          .filter(pc -> !branchName.equals(pc.getBranch().getName()))
-          .findFirst()
-          .ifPresent(
-              parentCommit ->
-                  branchPointMap.putIfAbsent(
-                      branchName,
-                      new BranchPointDto(
-                          parentCommit.getHash(), parentCommit.getBranch().getName())));
+      final boolean hasParentInSameBranch =
+          parentCommits.stream().anyMatch(pc -> branchName.equals(pc.getBranch().getName()));
+
+      if (!hasParentInSameBranch) {
+        final Optional<Commit> parentCommitOptional = parentCommits.stream().findAny();
+        parentCommitOptional.ifPresent(
+            parentCommit ->
+                branchToBranchPointMap.putIfAbsent(
+                    branchName,
+                    new BranchPointDto(
+                        parentCommit.getBranch().getName(), parentCommit.getHash())));
+      }
     }
 
     final List<BranchDto> branches =
-        commitsMap.entrySet().stream()
-            .map(e -> new BranchDto(e.getKey(), e.getValue(), branchPointMap.get(e.getKey())))
+        branchToCommitsMap.entrySet().stream()
+            .map(
+                e ->
+                    new BranchDto(e.getKey(), e.getValue(), branchToBranchPointMap.get(e.getKey())))
             .toList();
 
     return new CommitTreeDto(applicationName, branches);
@@ -190,14 +218,6 @@ class CodeResource {
 
     final NodeDto node = new NodeDto("", "", applicationDtoList);
     return new LandscapeDto(landscapeToken, List.of(node), List.of());
-  }
-
-  @DELETE
-  @Path("landscapes/{landscapeToken}/trace-data")
-  public void deleteTraceData(@RestPath final String landscapeToken) {
-    final Session session = sessionFactory.openSession();
-
-    traceRepository.deleteTraceData(session, landscapeToken);
   }
 
   @GET
@@ -280,5 +300,12 @@ class CodeResource {
         addedPackages,
         deletedPackages,
         entityMetricsComparisons);
+  }
+
+  @DELETE
+  @Path("landscapes/{landscapeToken}/trace-data")
+  public void deleteTraceData(@RestPath final String landscapeToken) {
+    final Session session = sessionFactory.openSession();
+    traceRepository.deleteTraceData(session, landscapeToken);
   }
 }

@@ -2,7 +2,6 @@ package net.explorviz.persistence.api.v3.model.conversion;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -25,103 +24,168 @@ import net.explorviz.persistence.api.v3.model.landscape.FunctionDto.FunctionConv
  */
 public final class LandscapeFlattener {
 
-  private LandscapeFlattener() {
-  }
+  private LandscapeFlattener() {}
 
   /**
    * Provides access to parent IDs during traversal of the unflattened structure and collects the
-   * result of the flattening in shared sets to avoid having to  merge partial results. A context is
+   * result of the flattening in shared sets to avoid having to merge partial results. A context is
    * created for each City. Each traversed object produces a modified version of the context to pass
    * down to its children.
    */
-  private record Context(String parentId, String parentCityId, String parentDistrictId,
-                         String parentFqn, HashSet<DistrictDto> districts,
-                         HashSet<BuildingDto> buildings, HashSet<ClazzDto> classes,
-                         HashSet<FunctionDto> functions) {
+  private record Context(
+      String parentId,
+      String parentCityId,
+      String parentDistrictId,
+      String parentBuildingId,
+      String parentFqn,
+      HashSet<DistrictDto> districts,
+      HashSet<BuildingDto> buildings,
+      HashSet<ClazzDto> classes,
+      HashSet<FunctionDto> functions) {
 
     private Context withParent(final DistrictDto district) {
       districts.add(district);
-      return new Context(district.flatBaseModel().id(), parentCityId, district.flatBaseModel().id(),
-          district.flatBaseModel().fqn(), districts, buildings, classes, functions);
+      return new Context(
+          district.flatBaseModel().id(),
+          parentCityId,
+          district.flatBaseModel().id(),
+          parentBuildingId,
+          district.flatBaseModel().fqn(),
+          districts,
+          buildings,
+          classes,
+          functions);
     }
 
     private Context withParent(final BuildingDto building) {
       buildings.add(building);
-      return new Context(building.flatBaseModel().id(), parentCityId, parentDistrictId,
-          building.flatBaseModel().fqn(), districts, buildings, classes, functions);
+      return new Context(
+          building.flatBaseModel().id(),
+          parentCityId,
+          parentDistrictId,
+          building.flatBaseModel().id(),
+          building.flatBaseModel().fqn(),
+          districts,
+          buildings,
+          classes,
+          functions);
     }
 
     private Context withParent(final ClazzDto clazz) {
       classes.add(clazz);
-      return new Context(clazz.flatBaseModel().id(), parentCityId, parentDistrictId,
-          clazz.flatBaseModel().fqn(), districts, buildings, classes, functions);
+      return new Context(
+          clazz.flatBaseModel().id(),
+          parentCityId,
+          parentDistrictId,
+          parentBuildingId,
+          clazz.flatBaseModel().fqn(),
+          districts,
+          buildings,
+          classes,
+          functions);
     }
 
     private Context withParent(final FunctionDto function) {
       functions.add(function);
-      return new Context(function.flatBaseModel().id(), parentCityId, parentDistrictId,
-          function.flatBaseModel().fqn(), districts, buildings, classes, functions);
+      return new Context(
+          function.flatBaseModel().id(),
+          parentCityId,
+          parentDistrictId,
+          parentBuildingId,
+          function.flatBaseModel().fqn(),
+          districts,
+          buildings,
+          classes,
+          functions);
     }
   }
 
-
-  /**
-   * Aggregates all landscape models across multiple cities to produce the final result lists.
-   */
+  /** Aggregates all landscape models across multiple cities to produce the final result lists. */
   private record FlatteningResult(
       HashSet<CityDto> cities,
       HashSet<DistrictDto> districts,
       HashSet<BuildingDto> buildings,
       HashSet<ClazzDto> classes,
-      HashSet<FunctionDto> functions) {
-  }
+      HashSet<FunctionDto> functions) {}
 
+  /**
+   * Produces a flat landscape with the given landscape token ID from a collection of
+   * city-interpretable objects (see {@link CityConvertible}).
+   *
+   * @param landscapeToken String identifier to give to the produced landscape.
+   * @param cityConvertibles Collection of city-interpretable objects to flatten and include in the
+   *     created landscape
+   * @return The flattened landscape (see {@link FlatLandscapeDto}) containing the given cities.
+   */
   public static FlatLandscapeDto flattenLandscape(
       final String landscapeToken, final Collection<CityConvertible> cityConvertibles) {
 
     final FlatteningResult resultContainer =
-        new FlatteningResult(new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(),
-            new HashSet<>());
+        new FlatteningResult(
+            new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>());
 
     cityConvertibles.forEach(c -> flattenCity(c, resultContainer));
 
-    final Map<String, CityDto> cities = resultContainer.cities.stream()
-        .collect(Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity()));
+    final Map<String, CityDto> cities =
+        resultContainer.cities.stream()
+            .collect(
+                Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity(), (c1, c2) -> c1));
 
-    final Map<String, DistrictDto> districts = resultContainer.districts.stream()
-        .collect(Collectors.toMap(d -> d.flatBaseModel().id(), Function.identity()));
+    final Map<String, DistrictDto> districts =
+        resultContainer.districts.stream()
+            .collect(
+                Collectors.toMap(d -> d.flatBaseModel().id(), Function.identity(), (d1, d2) -> d1));
 
-    final Map<String, BuildingDto> buildings = resultContainer.buildings.stream()
-        .collect(Collectors.toMap(b -> b.flatBaseModel().id(), Function.identity()));
+    final Map<String, BuildingDto> buildings =
+        resultContainer.buildings.stream()
+            .collect(
+                Collectors.toMap(b -> b.flatBaseModel().id(), Function.identity(), (b1, b2) -> b1));
 
-    final Map<String, ClazzDto> classes = resultContainer.classes.stream()
-        .collect(Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity()));
+    final Map<String, ClazzDto> classes =
+        resultContainer.classes.stream()
+            .collect(
+                Collectors.toMap(c -> c.flatBaseModel().id(), Function.identity(), (c1, c2) -> c1));
 
-    final Map<String, FunctionDto> functions = resultContainer.functions.stream()
-        .collect(Collectors.toMap(f -> f.flatBaseModel().id(), Function.identity()));
+    final Map<String, FunctionDto> functions =
+        resultContainer.functions.stream()
+            .collect(
+                Collectors.toMap(f -> f.flatBaseModel().id(), Function.identity(), (f1, f2) -> f1));
 
     return new FlatLandscapeDto(landscapeToken, cities, districts, buildings, classes, functions);
   }
 
-  private static void flattenCity(final CityConvertible cityConvertible,
-      final FlatteningResult resultContainer) {
+  private static void flattenCity(
+      final CityConvertible cityConvertible, final FlatteningResult resultContainer) {
 
-    final List<String> districtIds =
-        cityConvertible.getDistricts().map(DistrictConvertible::getId).toList();
-    final List<String> buildingIds =
-        cityConvertible.getBuildings().map(BuildingConvertible::getId).toList();
+    final Collection<? extends DistrictConvertible> districts = cityConvertible.getDistricts();
+    final Collection<? extends BuildingConvertible> buildings = cityConvertible.getBuildings();
 
     final Context context =
-        new Context(cityConvertible.getId(), cityConvertible.getId(), null, "", new HashSet<>(),
-            new HashSet<>(), new HashSet<>(), new HashSet<>());
+        new Context(
+            cityConvertible.getId(),
+            cityConvertible.getId(),
+            null,
+            null,
+            "",
+            new HashSet<>(),
+            new HashSet<>(),
+            new HashSet<>(),
+            new HashSet<>());
 
-    cityConvertible.getDistricts().forEach(d -> flattenDistrict(d, context));
-    cityConvertible.getBuildings().forEach(b -> flattenBuilding(b, context));
+    districts.forEach(d -> flattenDistrict(d, context));
+    buildings.forEach(b -> flattenBuilding(b, context));
 
     final CityDto city =
-        new CityDto(new FlatBaseModel(cityConvertible.getId(), cityConvertible.getName()),
-            districtIds,
-            buildingIds, context.districts.stream().map(d -> d.flatBaseModel().id()).toList(),
+        new CityDto(
+            new FlatBaseModel(
+                cityConvertible.getId(),
+                cityConvertible.getName(),
+                "",
+                cityConvertible.getOriginOfData(),
+                cityConvertible.getCommitComparison()),
+            districts.stream().map(DistrictConvertible::getId).toList(),
+            buildings.stream().map(BuildingConvertible::getId).toList(),
+            context.districts.stream().map(d -> d.flatBaseModel().id()).toList(),
             context.buildings.stream().map(b -> b.flatBaseModel().id()).toList());
 
     resultContainer.cities.add(city);
@@ -129,39 +193,52 @@ public final class LandscapeFlattener {
     resultContainer.buildings.addAll(context.buildings);
     resultContainer.classes.addAll(context.classes);
     resultContainer.functions.addAll(context.functions);
-
   }
 
-  private static void flattenDistrict(final DistrictConvertible districtConvertible,
-      final Context context) {
-    final List<String> subdistrictIds =
-        districtConvertible.getDistricts().map(DistrictConvertible::getId).toList();
-    final List<String> buildingIds =
-        districtConvertible.getBuildings().map(BuildingConvertible::getId).toList();
+  private static void flattenDistrict(
+      final DistrictConvertible districtConvertible, final Context context) {
+    final Collection<? extends DistrictConvertible> subdistricts =
+        districtConvertible.getDistricts();
+    final Collection<? extends BuildingConvertible> buildings = districtConvertible.getBuildings();
 
-    final DistrictDto district = new DistrictDto(
-        new FlatBaseModel(districtConvertible.getId(), districtConvertible.getName(),
-            appendToFqn(context.parentFqn, districtConvertible.getName())), context.parentCityId,
-        context.parentDistrictId, subdistrictIds, buildingIds);
+    final DistrictDto district =
+        new DistrictDto(
+            new FlatBaseModel(
+                districtConvertible.getId(),
+                districtConvertible.getName(),
+                appendToFqn(context.parentFqn, districtConvertible.getName()),
+                districtConvertible.getOriginOfData(),
+                districtConvertible.getCommitComparison()),
+            context.parentCityId,
+            context.parentDistrictId,
+            subdistricts.stream().map(DistrictConvertible::getId).toList(),
+            buildings.stream().map(BuildingConvertible::getId).toList());
 
     final Context childrenContext = context.withParent(district);
 
-    districtConvertible.getDistricts().forEach(d -> flattenDistrict(d, childrenContext));
-    districtConvertible.getBuildings().forEach(b -> flattenBuilding(b, childrenContext));
+    subdistricts.forEach(d -> flattenDistrict(d, childrenContext));
+    buildings.forEach(b -> flattenBuilding(b, childrenContext));
   }
 
-  private static void flattenBuilding(final BuildingConvertible buildingConvertible,
-      final Context context) {
-    final List<String> classIds =
-        buildingConvertible.getClasses().map(ClassConvertible::getId).toList();
-    final List<String> functionIds =
-        buildingConvertible.getFunctions().map(FunctionConvertible::getId).toList();
+  private static void flattenBuilding(
+      final BuildingConvertible buildingConvertible, final Context context) {
+    final Collection<? extends ClassConvertible> classes = buildingConvertible.getClasses();
+    final Collection<? extends FunctionConvertible> functions = buildingConvertible.getFunctions();
 
-    final BuildingDto building = new BuildingDto(
-        new FlatBaseModel(buildingConvertible.getId(), buildingConvertible.getName(),
-            appendToFqn(context.parentFqn(), buildingConvertible.getName())), context.parentCityId,
-        context.parentDistrictId, buildingConvertible.getLanguage(), classIds, functionIds,
-        buildingConvertible.getMetrics());
+    final BuildingDto building =
+        new BuildingDto(
+            new FlatBaseModel(
+                buildingConvertible.getId(),
+                buildingConvertible.getName(),
+                appendToFqn(context.parentFqn(), buildingConvertible.getName()),
+                buildingConvertible.getOriginOfData(),
+                buildingConvertible.getCommitComparison()),
+            context.parentCityId,
+            context.parentDistrictId,
+            buildingConvertible.getLanguage(),
+            classes.stream().map(ClassConvertible::getId).toList(),
+            functions.stream().map(FunctionConvertible::getId).toList(),
+            buildingConvertible.getMetrics());
 
     final Context childrenContext = context.withParent(building);
 
@@ -170,16 +247,21 @@ public final class LandscapeFlattener {
   }
 
   private static void flattenClass(final ClassConvertible classConvertible, final Context context) {
-    final List<String> innerClassIds =
-        classConvertible.getInnerClasses().map(ClassConvertible::getId).toList();
-    final List<String> functionIds =
-        classConvertible.getFunctions().map(FunctionConvertible::getId).toList();
+    final Collection<? extends ClassConvertible> innerClasses = classConvertible.getInnerClasses();
+    final Collection<? extends FunctionConvertible> functions = classConvertible.getFunctions();
 
-    final ClazzDto clazz = new ClazzDto(
-        new FlatBaseModel(classConvertible.getId(), classConvertible.getName(),
-            appendToFqn(context.parentFqn(), classConvertible.getName())), innerClassIds,
-        functionIds,
-        classConvertible.getMetrics());
+    final ClazzDto clazz =
+        new ClazzDto(
+            new FlatBaseModel(
+                classConvertible.getId(),
+                classConvertible.getName(),
+                appendToFqn(context.parentFqn(), classConvertible.getName()),
+                classConvertible.getOriginOfData(),
+                classConvertible.getCommitComparison()),
+            context.parentBuildingId,
+            innerClasses.stream().map(ClassConvertible::getId).toList(),
+            functions.stream().map(FunctionConvertible::getId).toList(),
+            classConvertible.getMetrics());
 
     final Context childrenContext = context.withParent(clazz);
 
@@ -187,12 +269,19 @@ public final class LandscapeFlattener {
     classConvertible.getFunctions().forEach(f -> flattenFunction(f, childrenContext));
   }
 
-  private static void flattenFunction(final FunctionConvertible functionConvertible,
-      final Context context) {
-    final FunctionDto function = new FunctionDto(
-        new FlatBaseModel(functionConvertible.getId(), functionConvertible.getName(),
-            appendToFqn(context.parentFqn, functionConvertible.getName())), context.parentId,
-        functionConvertible.getMetrics());
+  private static void flattenFunction(
+      final FunctionConvertible functionConvertible, final Context context) {
+    final FunctionDto function =
+        new FunctionDto(
+            new FlatBaseModel(
+                functionConvertible.getId(),
+                functionConvertible.getName(),
+                appendToFqn(context.parentFqn, functionConvertible.getName()),
+                functionConvertible.getOriginOfData(),
+                functionConvertible.getCommitComparison()),
+            context.parentId,
+            context.parentBuildingId,
+            functionConvertible.getMetrics());
 
     context.withParent(function);
   }

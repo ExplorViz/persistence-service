@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import net.explorviz.persistence.proto.ClassData;
 import net.explorviz.persistence.proto.ClassType;
 import org.neo4j.ogm.annotation.GeneratedValue;
@@ -14,7 +16,7 @@ import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Clazz {
+public class Clazz implements Comparable<Clazz> {
   @Id
   @GeneratedValue
   private Long id;
@@ -35,16 +37,16 @@ public class Clazz {
   private Map<String, Double> metrics;
 
   @Relationship(type = "INHERITS", direction = Relationship.Direction.OUTGOING)
-  private Set<Clazz> superClasses = new HashSet<>();
+  private final SortedSet<Clazz> superClasses = new TreeSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Clazz> innerClasses = new HashSet<>();
+  private final SortedSet<Clazz> innerClasses = new TreeSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Function> functions = new HashSet<>();
+  private final SortedSet<Function> functions = new TreeSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Field> fields = new HashSet<>();
+  private final Set<Field> fields = new HashSet<>();
 
   public Clazz() {
     this.modifiers = new HashSet<>();
@@ -84,27 +86,19 @@ public class Clazz {
   }
 
   public void addSuperClass(final Clazz superClass) {
-    final Set<Clazz> newSuperClasses = new HashSet<>(superClasses);
-    newSuperClasses.add(superClass);
-    superClasses = Set.copyOf(newSuperClasses);
+    superClasses.add(superClass);
   }
 
   public void addInnerClass(final Clazz innerClass) {
-    final Set<Clazz> newInnerClasses = new HashSet<>(innerClasses);
-    newInnerClasses.add(innerClass);
-    innerClasses = Set.copyOf(newInnerClasses);
+    innerClasses.add(innerClass);
   }
 
   public void addFunction(final Function function) {
-    final Set<Function> newFunctions = new HashSet<>(functions);
-    newFunctions.add(function);
-    functions = Set.copyOf(newFunctions);
+    functions.add(function);
   }
 
   public void addField(final Field field) {
-    final Set<Field> newFields = new HashSet<>(fields);
-    newFields.add(field);
-    fields = Set.copyOf(newFields);
+    fields.add(field);
   }
 
   public Long getId() {
@@ -119,12 +113,12 @@ public class Clazz {
     return type;
   }
 
-  public Set<Function> getFunctions() {
-    return functions;
+  public SortedSet<Function> getFunctions() {
+    return new TreeSet<>(functions);
   }
 
-  public Set<Clazz> getInnerClasses() {
-    return innerClasses;
+  public SortedSet<Clazz> getInnerClasses() {
+    return new TreeSet<>(innerClasses);
   }
 
   public void setType(final ClassType type) {
@@ -157,5 +151,10 @@ public class Clazz {
 
   public Map<String, Double> getMetrics() {
     return metrics;
+  }
+
+  @Override
+  public int compareTo(final Clazz other) {
+    return name.compareTo(other.name);
   }
 }

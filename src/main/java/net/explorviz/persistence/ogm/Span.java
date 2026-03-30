@@ -7,10 +7,8 @@ import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Span {
-  @Id
-  @GeneratedValue
-  private Long id;
+public class Span implements Comparable<Span> {
+  @Id @GeneratedValue private Long id;
 
   private String spanId;
 
@@ -72,5 +70,11 @@ public class Span {
 
   public void setEndTime(final long endTime) {
     this.endTime = endTime;
+  }
+
+  @Override
+  public int compareTo(final Span other) {
+    final int startCompare = Long.compare(startTime, other.startTime);
+    return startCompare == 0 ? Long.compare(other.endTime, endTime) : startCompare;
   }
 }

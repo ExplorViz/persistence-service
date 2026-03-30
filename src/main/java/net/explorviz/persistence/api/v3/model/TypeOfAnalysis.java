@@ -1,7 +1,9 @@
 package net.explorviz.persistence.api.v3.model;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum TypeOfAnalysis {
-  DYNAMIC("dynamic"),
+  RUNTIME("runtime"),
   STATIC("static");
 
   private final String name;
@@ -10,6 +12,7 @@ public enum TypeOfAnalysis {
     this.name = name;
   }
 
+  @JsonValue
   @Override
   public String toString() {
     return name;

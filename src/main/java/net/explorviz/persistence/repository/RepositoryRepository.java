@@ -1,7 +1,9 @@
 package net.explorviz.persistence.repository;
 
+import com.google.common.collect.Lists;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.explorviz.persistence.ogm.Repository;
@@ -19,11 +21,23 @@ public class RepositoryRepository {
         session.queryForObject(
             Repository.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $name})
-        MATCH (r)-[rel]->(n)
-        RETURN r, rel, n;
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $name})
+            MATCH (r)-[rel]->(n)
+            RETURN r, rel, n;
+            """,
             Map.of("tokenId", tokenId, "name", name)));
+  }
+
+  public List<String> fetchAllRepositoryNamesInLandscape(
+      final Session session, final String landscapeToken) {
+    return Lists.newArrayList(
+        session.query(
+            String.class,
+            """
+            MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository)
+            RETURN DISTINCT r.name
+            ORDER BY r.name ASC;""",
+            Map.of("tokenId", landscapeToken)));
   }
 
   public Repository getOrCreateRepository(

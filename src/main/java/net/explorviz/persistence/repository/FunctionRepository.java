@@ -206,7 +206,7 @@ public class FunctionRepository {
             WHERE (l)
               -[:CONTAINS]->(:Repository)
               -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS*0..]->*(appRoot)
+              -[:CONTAINS*0..]->(appRoot)
             MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)-[:CONTAINS]->(fn:Function)
             WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
             WITH fn, [node IN nodes(p)[1..] | node.name] AS nodeNames
