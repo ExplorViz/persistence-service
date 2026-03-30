@@ -27,7 +27,6 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
         - [Tag](#tag)
         - [Trace](#trace)
     - [Updating the Database Model](#updating-the-database-model)
-
 - [REST-API](#rest-api)
     - [v2](#v2)
         - [GET /v2/landscapes/{landscapeToken}/structure](#get-v2landscapeslandscapetokenstructure)
@@ -40,7 +39,6 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
         - [GET /v2/code/structure/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}](#get-v2codestructurelandscapetokenapplicationnamefirstcommithash-secondcommithash)
         - [GET /v2/code/commit-comparison/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}](#get-v2codecommit-comparisonlandscapetokenapplicationnamefirstcommithash-secondcommithash)
         - [DELETE /v2/code/landscapes/{landscapeToken}/trace-data](#delete-v2codelandscapeslandscapetokentrace-data)
-
     - [v3](#v3)
         - [GET /v3/landscapes/{landscapeToken}/structure/runtime](#get-v3landscapeslandscapetokenstructureruntime)
         - [GET /v3/landscapes/{landscapeToken}/structure/evolution/{repositoryName}/{commitHash}](#get-v3landscapeslandscapetokenstructureevolutionrepositorynamecommithash)
@@ -50,7 +48,6 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
         - [GET /v3/landscapes/{landscapeToken}/repositories](#get-v3landscapeslandscapetokenrepositories)
         - [GET /v3/landscapes/{landscapeToken}/commit-tree/{repositoryName}](#get-v3landscapeslandscapetokencommit-treerepositoryname)
         - [DELETE /v3/landscapes/{landscapeToken}/trace-data](#delete-v3landscapeslandscapetokentrace-data)
-
 - [Development](#development)
     - [Prerequisites](#prerequisites)
     - [Code Style](#code-style)
