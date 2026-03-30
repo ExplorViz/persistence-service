@@ -8,6 +8,7 @@ import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
+import org.neo4j.ogm.annotation.typeconversion.DateLong;
 
 @NodeEntity
 @RegisterForReflection
@@ -20,8 +21,10 @@ public class Commit {
 
   private String author;
 
+  @DateLong
   private Instant authorDate;
 
+  @DateLong
   private Instant commitDate;
 
   @Relationship(type = "BELONGS_TO", direction = Relationship.Direction.OUTGOING)

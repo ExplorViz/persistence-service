@@ -1,10 +1,12 @@
 package net.explorviz.persistence.api.v3.model;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum CommitComparison {
-  ADDED("added"),
-  MODIFIED("modified"),
-  REMOVED("removed"),
-  UNCHANGED("unchanged");
+  ADDED("ADDED"),
+  MODIFIED("MODIFIED"),
+  REMOVED("REMOVED"),
+  UNCHANGED("UNCHANGED");
 
   private final String name;
 
@@ -12,6 +14,7 @@ public enum CommitComparison {
     this.name = name;
   }
 
+  @JsonValue
   @Override
   public String toString() {
     return name;

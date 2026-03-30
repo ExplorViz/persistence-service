@@ -1,14 +1,14 @@
 package net.explorviz.persistence.ogm;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Directory {
+public class Directory implements Comparable<Directory> {
   @Id
   @GeneratedValue
   private Long id;
@@ -16,10 +16,10 @@ public class Directory {
   private String name;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Directory> subdirectories = new HashSet<>();
+  private final SortedSet<Directory> subdirectories = new TreeSet<>();
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<FileRevision> fileRevisions = new HashSet<>();
+  private final SortedSet<FileRevision> fileRevisions = new TreeSet<>();
 
   public Directory() {
     // Empty constructor required by Neo4j OGM
@@ -30,15 +30,11 @@ public class Directory {
   }
 
   public void addSubdirectory(final Directory directory) {
-    final Set<Directory> newSubdirectories = new HashSet<>(subdirectories);
-    newSubdirectories.add(directory);
-    subdirectories = Set.copyOf(newSubdirectories);
+    subdirectories.add(directory);
   }
 
   public void addFileRevision(final FileRevision fileRevision) {
-    final Set<FileRevision> newFileRevisions = new HashSet<>(fileRevisions);
-    newFileRevisions.add(fileRevision);
-    fileRevisions = Set.copyOf(newFileRevisions);
+    fileRevisions.add(fileRevision);
   }
 
   public Long getId() {
@@ -49,11 +45,16 @@ public class Directory {
     return name;
   }
 
-  public Set<Directory> getSubdirectories() {
-    return subdirectories;
+  public SortedSet<Directory> getSubdirectories() {
+    return new TreeSet<>(subdirectories);
   }
 
-  public Set<FileRevision> getFileRevisions() {
-    return fileRevisions;
+  public SortedSet<FileRevision> getFileRevisions() {
+    return new TreeSet<>(fileRevisions);
+  }
+
+  @Override
+  public int compareTo(final Directory other) {
+    return name.compareTo(other.name);
   }
 }

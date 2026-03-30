@@ -1,8 +1,7 @@
-package net.explorviz.persistence.api.v2;
+package net.explorviz.persistence.api.v3;
 
-import io.quarkus.logging.Log;
-import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -10,48 +9,26 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import net.explorviz.persistence.api.v2.model.TimestampDto;
-import net.explorviz.persistence.api.v2.model.TraceDto;
-import net.explorviz.persistence.api.v2.model.landscape.ApplicationDto;
-import net.explorviz.persistence.api.v2.model.landscape.LandscapeDto;
-import net.explorviz.persistence.api.v2.model.landscape.NodeDto;
-import net.explorviz.persistence.ogm.Application;
+import net.explorviz.persistence.api.v3.model.trace.TimestampDto;
+import net.explorviz.persistence.api.v3.model.trace.TraceDto;
 import net.explorviz.persistence.ogm.Trace;
-import net.explorviz.persistence.repository.ApplicationRepository;
-import net.explorviz.persistence.repository.CommitRepository;
-import net.explorviz.persistence.repository.RepositoryRepository;
 import net.explorviz.persistence.repository.TraceRepository;
 import org.jboss.resteasy.reactive.RestPath;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
-@Path("/v2/landscapes/{landscapeToken}")
+/**
+ * Contains endpoints concerning dynamic data, i.e. communication data retrieved from runtime
+ * analysis of traces.
+ */
+@Path("/v3/landscapes/{landscapeToken}")
 @SuppressWarnings("PMD.UseObjectForClearerAPI")
-class LandscapeResource {
+class TraceResource {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
-  @Inject private ApplicationRepository applicationRepository;
-
-  @Inject private CommitRepository commitRepository;
-
-  @Inject private RepositoryRepository repositoryRepository;
-
-  @Inject private TraceRepository traceRepository;
-
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  @Path("/structure")
-  public LandscapeDto getStructureData(@RestPath final String landscapeToken) {
-    final Session session = sessionFactory.openSession();
-
-    final List<Application> ogmApps =
-        applicationRepository.fetchAllApplicationsHydratedForRuntimeData(session, landscapeToken);
-
-    final NodeDto node = new NodeDto("", "", ogmApps.stream().map(ApplicationDto::new).toList());
-    return new LandscapeDto(landscapeToken, List.of(node), List.of());
-  }
+  @Inject TraceRepository traceRepository;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -68,14 +45,6 @@ class LandscapeResource {
         traceRepository.findHydratedTraces(session, landscapeToken, fromTimestamp, toTimestamp);
 
     return ogmTraces.stream()
-        .filter(
-            t -> {
-              if (t.getStartTime() == null || t.getEndTime() == null) {
-                Log.errorf("Trace missing start or end timestamp, ignoring: %s", t.getTraceId());
-                return false;
-              }
-              return true;
-            })
         .map(
             t -> {
               final Optional<String> commitHash =
@@ -88,30 +57,34 @@ class LandscapeResource {
   @GET
   @Path("/timestamps")
   @Produces(MediaType.APPLICATION_JSON)
-  public Multi<TimestampDto> getTimestamps(
+  public List<TimestampDto> getTimestamps(
       @RestPath final String landscapeToken,
       @RestQuery final Long newest,
       @RestQuery final Long oldest,
-      @RestQuery final String commit) {
+      @RestQuery final String commit,
+      @RestQuery final Long size) {
+
     final Session session = sessionFactory.openSession();
 
     final long newestTimestamp = Objects.requireNonNullElse(newest, Long.MAX_VALUE);
     final long oldestTimestamp = Objects.requireNonNullElse(oldest, Long.MIN_VALUE);
 
-    final List<TimestampDto> timestamps;
-
     final long defaultBucketSizeNano = 10_000_000_000L; // 10 seconds in nanoseconds
+
+    final long bucketSize;
+    if (size == null || size <= 0) {
+      bucketSize = defaultBucketSizeNano;
+    } else {
+      bucketSize = size * 1_000_000L; // Milliseconds to nanoseconds
+    }
+
+    final List<TimestampDto> timestamps;
 
     if (commit != null) {
       timestamps =
           traceRepository
               .findTimestampsForLandscapeTokenAndCommitAndTimeRange(
-                  session,
-                  landscapeToken,
-                  newestTimestamp,
-                  oldestTimestamp,
-                  commit,
-                  defaultBucketSizeNano)
+                  session, landscapeToken, newestTimestamp, oldestTimestamp, commit, bucketSize)
               .stream()
               .map(TimestampDto::new)
               .toList();
@@ -119,16 +92,24 @@ class LandscapeResource {
       timestamps =
           traceRepository
               .findTimestampsForLandscapeTokenAndTimeRange(
-                  session,
-                  landscapeToken,
-                  newestTimestamp,
-                  oldestTimestamp,
-                  defaultBucketSizeNano)
+                  session, landscapeToken, newestTimestamp, oldestTimestamp, bucketSize)
               .stream()
               .map(TimestampDto::new)
               .toList();
     }
 
-    return Multi.createFrom().iterable(timestamps);
+    return timestamps;
+  }
+
+  /**
+   * Debug function to delete all data gathered from runtime analysis in the landscape.
+   *
+   * @param landscapeToken String identifier of the visualization landscape
+   */
+  @DELETE
+  @Path("/trace-data")
+  public void deleteTraceData(@RestPath final String landscapeToken) {
+    final Session session = sessionFactory.openSession();
+    traceRepository.deleteTraceData(session, landscapeToken);
   }
 }

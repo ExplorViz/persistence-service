@@ -3,9 +3,17 @@ package net.explorviz.persistence.api;
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.InternalServerErrorException;
 import jakarta.ws.rs.Path;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Clazz;
@@ -17,6 +25,8 @@ import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.ogm.Span;
 import net.explorviz.persistence.ogm.Trace;
+import org.jboss.resteasy.reactive.RestQuery;
+import org.neo4j.ogm.model.Result;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
@@ -25,15 +35,21 @@ import org.neo4j.ogm.session.SessionFactory;
  * run other ExplorViz services. Simply cURL endpoints or access them via browser.
  */
 @IfBuildProfile("dev")
-@Path("/test")
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI", "PMD.NcssCount"})
+@Path("/example")
+@SuppressWarnings({
+  "PMD.AvoidDuplicateLiterals",
+  "PMD.CloseResource",
+  "PMD.UseObjectForClearerAPI",
+  "PMD.NcssCount",
+  "PMD.TooManyMethods"
+})
 class ExampleDataResource {
 
   @Inject private SessionFactory sessionFactory;
 
   @GET
   @Path("/trace")
-  public void createTestingDynamicData() {
+  public String createTestingDynamicData() {
     final Session session = sessionFactory.openSession();
     session.query(
         """
@@ -46,6 +62,7 @@ class ExampleDataResource {
         MERGE (t2)-[:CONTAINS]->(s2:Span {spanId: "span2"})
         MERGE (t2)-[:CONTAINS]->(s3:Span {spanId: "span3"})-[:HAS_PARENT]->(s2)
         MERGE (t2)-[:CONTAINS]->(s4:Span {spanId: "span4"})-[:HAS_PARENT]->(s3)
+
         SET s1.startTime = 1000000000, s1.endTime = 1001000000
         SET s2.startTime = 2000000000, s2.endTime = 2003000000
         SET s3.startTime = 2500000000, s3.endTime = 3002900000
@@ -53,124 +70,186 @@ class ExampleDataResource {
 
         MERGE (l)-[:CONTAINS]->(app:Application {name: "hello-world"})
         MERGE (app)-[:HAS_ROOT]->(appRoot:Directory {name: "hello-world"})
-        
-        MERGE (appRoot)
-          -[:CONTAINS]->(:Directory {name: "net"})
-          -[:CONTAINS]->(:Directory {name: "explorviz"})
-          -[:CONTAINS]->(outerDir:Directory {name: "helloworld"})
-          -[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+
+        MERGE (appRoot)-[:CONTAINS]->(d1:Directory {name: "net"})
+        MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
+        MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "helloworld"})
+        MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
         MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "File1.java"})
         MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "File2.java"})
         MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "File3.java"})
         MERGE (file1)-[:CONTAINS]->(func1:Function {name: "function1"})
         MERGE (file2)-[:CONTAINS]->(func2:Function {name: "function2"})
         MERGE (file3)-[:CONTAINS]->(func3:Function {name: "function3"})
-        MERGE (l)
-          -[:CONTAINS]->(r1:Repository {name: "repo1"})
-          -[:CONTAINS]->(:Commit {hash: "commit1"})
-          -[:CONTAINS]->(file1)
-        MERGE (r1)
-          -[:HAS_ROOT]->(outerDir)
 
-        MERGE (l)-[:CONTAINS]->(app2:Application {name: "hello-world2"})
-        MERGE (app2)-[:HAS_ROOT]->(outerDir)
+        MERGE (l)-[:CONTAINS]->(r1:Repository {name: "hello-world"})
+        MERGE (r1)-[:CONTAINS]->(c1:Commit {hash: "commit1"})
+        MERGE (c1)-[:CONTAINS]->(file1)
+        MERGE (r1)-[:HAS_ROOT]->(appRoot)
 
         MERGE (s1)-[:REPRESENTS]->(func1)
         MERGE (s2)-[:REPRESENTS]->(func2)
         MERGE (s3)-[:REPRESENTS]->(func3)<-[:REPRESENTS]-(s4);
         """,
         Map.of());
+    return "Successfully created example \"trace\"";
   }
 
   @GET
   @Path("/repo")
-  public void createTestingRepository() {
-    final Landscape landscape = new Landscape("mytokenvalue");
-
-    final Repository repository = new Repository("hello-world");
-    landscape.addRepository(repository);
-
-    final Branch branch1 = new Branch("main");
-    final Branch branch2 = new Branch("feature-a");
-    repository.addBranch(branch1);
-    repository.addBranch(branch2);
-
-    final Commit commit1 = new Commit("commit1");
-    final Commit commit2 = new Commit("commit2");
-    final Commit commit3 = new Commit("commit3");
-    commit1.setBranch(branch1);
-    commit2.setBranch(branch1);
-    commit2.addParent(commit1);
-    commit3.setBranch(branch2);
-    commit3.addParent(commit1);
-    repository.addCommit(commit1);
-    repository.addCommit(commit2);
-    repository.addCommit(commit3);
-
-    final Application application = new Application("hello-world");
-    landscape.addApplication(application);
-
-    Directory currentDir = new Directory("hello-world");
-    repository.setRootDirectory(currentDir);
-    application.setRootDirectory(currentDir);
-
-    final String[] dirNames = {"net", "explorviz", "helloworld"};
-    for (final String dirName : dirNames) {
-      final Directory newDir = new Directory(dirName);
-      currentDir.addSubdirectory(newDir);
-      currentDir = newDir;
-    }
-    final Directory innerDir = new Directory("innerpackage");
-    currentDir.addSubdirectory(innerDir);
-
-    final FileRevision fileA = new FileRevision("ClassA.java");
-    final FileRevision fileB = new FileRevision("ClassB.java");
-    final FileRevision fileC = new FileRevision("ClassC.java");
-    final FileRevision fileD = new FileRevision("ClassD.java");
-    final FileRevision fileModified = new FileRevision("ClassD.java");
-    currentDir.addFileRevision(fileA);
-    currentDir.addFileRevision(fileB);
-    innerDir.addFileRevision(fileC);
-    innerDir.addFileRevision(fileD);
-    innerDir.addFileRevision(fileModified);
-    commit1.addFileRevision(fileA);
-    commit2.addFileRevision(fileA);
-    commit2.addFileRevision(fileB);
-    commit2.addFileRevision(fileD);
-    commit3.addFileRevision(fileB);
-    commit3.addFileRevision(fileC);
-    commit3.addFileRevision(fileModified);
-    List.of(fileA, fileB, fileC, fileD, fileModified)
-        .forEach(
-            f -> {
-              addFunctionsToFile(f);
-              addRandomFileMetrics(f);
-            });
-
-    final Clazz classA = new Clazz("ClassA");
-    final Clazz classB = new Clazz("ClassB");
-    final Clazz classC = new Clazz("ClassC");
-    final Clazz classD = new Clazz("ClassD");
-    final Clazz classModified = new Clazz("ClassD");
-    fileA.addClass(classA);
-    fileB.addClass(classB);
-    fileC.addClass(classC);
-    fileD.addClass(classD);
-    fileModified.addClass(classModified);
-    List.of(classA, classB, classC, classD, classModified)
-        .forEach(
-            c -> {
-              addFunctionsToClass(c);
-              addRandomClassMetrics(c);
-            });
+  @SuppressWarnings("unchecked")
+  public String createTestingRepository(@RestQuery final String name) {
+    final String repoName = name != null ? name : "hello-world";
 
     final Session session = sessionFactory.openSession();
-    session.save(List.of(landscape, application));
+    final Result result =
+        session.query(
+            """
+        MERGE (l:Landscape {tokenId: "mytokenvalue"})
+        MERGE (l)-[:CONTAINS]->(repo:Repository {name: $repoName})
+        MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
+        MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
+
+        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", commitDate: 1000})
+        MERGE (commit1)-[:BELONGS_TO]->(main)
+        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", commitDate: 2000})
+        MERGE (commit2)-[:BELONGS_TO]->(main)
+        MERGE (commit2)-[:HAS_PARENT]->(commit1)
+        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", commitDate: 3000})
+        MERGE (commit3)-[:BELONGS_TO]->(feature)
+        MERGE (commit3)-[:HAS_PARENT]->(commit2)
+
+        MERGE (l)-[:CONTAINS]->(app:Application {name: $repoName})
+        MERGE (app)-[:HAS_ROOT]->(rootDir:Directory {name: $repoName})
+        MERGE (rootDir)-[:CONTAINS]->(d1:Directory {name: "net"})
+        MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
+        MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "persistence"})
+        MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+
+        MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "ClassA.java"})
+        MERGE (file1)-[:CONTAINS]->(class1:Clazz {name: "ClassA"})
+        MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "ClassB.java"})
+        MERGE (file2)-[:CONTAINS]->(class2:Clazz {name: "ClassB"})
+        MERGE (outerDir)-[:CONTAINS]->(file2modified:FileRevision {name: "ClassB.java"})
+        MERGE (file2modified)-[:CONTAINS]->(class2modified:Clazz {name: "ClassB"})
+        MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "ClassC.java"})
+        MERGE (file3)-[:CONTAINS]->(class3:Clazz {name: "ClassC"})
+
+        MERGE (repo)-[:HAS_ROOT]->(rootDir)
+        MERGE (commit1)-[:CONTAINS]->(file1)
+        MERGE (commit2)-[:CONTAINS]->(file1)
+        MERGE (commit2)-[:CONTAINS]->(file2)
+        MERGE (commit3)-[:CONTAINS]->(file2modified)
+        MERGE (commit3)-[:CONTAINS]->(file3)
+
+        RETURN
+          [file1, file2, file2modified, file3] AS files,
+          [class1, class2, class2modified, class3] AS classes;
+        """,
+            Map.of("repoName", repoName));
+
+    result
+        .queryResults()
+        .forEach(
+            qr -> {
+              final List<FileRevision> files = (List<FileRevision>) qr.get("files");
+              final List<Clazz> classes = (List<Clazz>) qr.get("classes");
+
+              files.forEach(
+                  f -> {
+                    addFunctionsToFile(f);
+                    addRandomFileMetrics(f);
+                    session.save(f);
+                  });
+
+              classes.forEach(
+                  c -> {
+                    addFunctionsToClass(c);
+                    addRandomClassMetrics(c);
+                    session.save(c);
+                  });
+            });
+
+    return "Successfully created example \"repo\"";
+  }
+
+  @SuppressWarnings("unchecked")
+  public void createTestingRepositoryDifferentBranchPoint(final String name) {
+    final String repoName = name != null ? name : "hello-underworld";
+
+    final Session session = sessionFactory.openSession();
+    final Result result =
+        session.query(
+            """
+        MERGE (l:Landscape {tokenId: "mytokenvalue"})
+        MERGE (l)-[:CONTAINS]->(repo:Repository {name: $repoName})
+        MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
+        MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
+
+        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", commitDate: 1000})
+        MERGE (commit1)-[:BELONGS_TO]->(main)
+        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", commitDate: 2000})
+        MERGE (commit2)-[:BELONGS_TO]->(feature)
+        MERGE (commit2)-[:HAS_PARENT]->(commit1)
+        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", commitDate: 3000})
+        MERGE (commit3)-[:BELONGS_TO]->(main)
+        MERGE (commit3)-[:HAS_PARENT]->(commit1)
+
+        MERGE (l)-[:CONTAINS]->(app:Application {name: $repoName})
+        MERGE (app)-[:HAS_ROOT]->(rootDir:Directory {name: $repoName})
+        MERGE (rootDir)-[:CONTAINS]->(d1:Directory {name: "net"})
+        MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
+        MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "persistence"})
+        MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+
+        MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "ClassA.java"})
+        MERGE (file1)-[:CONTAINS]->(class1:Clazz {name: "ClassA"})
+        MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "ClassB.java"})
+        MERGE (file2)-[:CONTAINS]->(class2:Clazz {name: "ClassB"})
+        MERGE (outerDir)-[:CONTAINS]->(file2modified:FileRevision {name: "ClassB.java"})
+        MERGE (file2modified)-[:CONTAINS]->(class2modified:Clazz {name: "ClassB"})
+        MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "ClassC.java"})
+        MERGE (file3)-[:CONTAINS]->(class3:Clazz {name: "ClassC"})
+
+        MERGE (repo)-[:HAS_ROOT]->(rootDir)
+        MERGE (commit1)-[:CONTAINS]->(file1)
+        MERGE (commit2)-[:CONTAINS]->(file1)
+        MERGE (commit2)-[:CONTAINS]->(file2)
+        MERGE (commit3)-[:CONTAINS]->(file2modified)
+        MERGE (commit3)-[:CONTAINS]->(file3)
+
+        RETURN
+          [file1, file2, file2modified, file3] AS files,
+          [class1, class2, class2modified, class3] AS classes;
+        """,
+            Map.of("repoName", repoName));
+
+    result
+        .queryResults()
+        .forEach(
+            qr -> {
+              final List<FileRevision> files = (List<FileRevision>) qr.get("files");
+              final List<Clazz> classes = (List<Clazz>) qr.get("classes");
+
+              files.forEach(
+                  f -> {
+                    addFunctionsToFile(f);
+                    addRandomFileMetrics(f);
+                    session.save(f);
+                  });
+
+              classes.forEach(
+                  c -> {
+                    addFunctionsToClass(c);
+                    addRandomClassMetrics(c);
+                    session.save(c);
+                  });
+            });
   }
 
   @GET
   @Path("/monorepo")
-  public void createTestingMonorepo() {
+  public String createTestingMonorepo() {
     final Landscape landscape = new Landscape("mytokenvalue");
 
     final Repository repository = new Repository("monorepo");
@@ -185,10 +264,13 @@ class ExampleDataResource {
     final Commit commit2 = new Commit("commit2");
     final Commit commit3 = new Commit("commit3");
     commit1.setBranch(branch1);
+    commit1.setCommitDate(Instant.ofEpochMilli(1000));
     commit2.setBranch(branch1);
     commit2.addParent(commit1);
+    commit2.setCommitDate(Instant.ofEpochMilli(1000));
     commit3.setBranch(branch2);
     commit3.addParent(commit1);
+    commit1.setCommitDate(Instant.ofEpochMilli(1500));
     repository.addCommit(commit1);
     repository.addCommit(commit2);
     repository.addCommit(commit3);
@@ -255,13 +337,43 @@ class ExampleDataResource {
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape, application1, application2));
+
+    return "Successfully created example \"monorepo\"";
+  }
+
+  /** code-agent analysis of spring-petclinic repository, limited to the two latest commits. */
+  @GET
+  @Path("/petclinic-static")
+  public String createPetclinicStatic() {
+    final String resourceFilePath = "example-data/petclinic-static.cypher";
+    executeCypherFile(resourceFilePath);
+    return "Successfully created example \"petclinic-static\"";
+  }
+
+  /** trace-generator result using the "petclinic" preset. */
+  @GET
+  @Path("/petclinic-runtime")
+  public String createPetclinicRuntime() {
+    final String resourceFilePath = "example-data/petclinic-runtime.cypher";
+    executeCypherFile(resourceFilePath);
+    return "Successfully created example \"petclinic-runtime\"";
+  }
+
+  /** Combined result of code-agent and trace-generator for spring-petclinic. */
+  @GET
+  @Path("/petclinic")
+  public String createPetclinicCombined() {
+    final String resourceFilePath = "example-data/petclinic-combined.cypher";
+    executeCypherFile(resourceFilePath);
+    return "Successfully created example \"petclinic\"";
   }
 
   @GET
   @Path("/purge")
-  public void purgeDatabase() {
+  public String purgeDatabase() {
     final Session session = sessionFactory.openSession();
     session.purgeDatabase();
+    return "Database purge successful";
   }
 
   private void addFunctionsToFile(final FileRevision fileRevision) {
@@ -290,6 +402,34 @@ class ExampleDataResource {
     clazz.addMetric("cyclomatic_complexity_weighted", Math.floor(Math.random() * 10));
   }
 
+  /**
+   * Executes all Cypher statements in the given file. Each statement is expected to be separated by
+   * semicolon. Lines starting with // and empty lines are ignored.
+   */
+  private void executeCypherFile(final String resourceFilePath) {
+    final InputStream fileInputStream =
+        Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceFilePath);
+    if (fileInputStream == null) {
+      throw new InternalServerErrorException(
+          "Requested resource file could not be found: " + resourceFilePath);
+    }
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(fileInputStream))) {
+      final String[] cypherStatements =
+          reader
+              .lines()
+              .filter(l -> !l.startsWith("//") && !l.isBlank())
+              .collect(Collectors.joining(" "))
+              .split(";");
+      reader.close();
+      final Session session = sessionFactory.openSession();
+      session.purgeDatabase();
+      Arrays.stream(cypherStatements).forEach(s -> session.query(s, Map.of()));
+    } catch (final IOException e) {
+      throw new InternalServerErrorException(
+          "Failed to load example cypher file: " + e.getMessage(), e);
+    }
+  }
+
   private void addRandomSpan(final Trace trace, final String name) {
     final Span span = new Span(name);
     final long randNumb = (long) (Math.random() * 100_000_000_000.0);
@@ -300,7 +440,7 @@ class ExampleDataResource {
 
   @GET
   @Path("/timestamp")
-  public void createTestingTimestamps() {
+  public String createTestingTimestamps() {
     final Landscape landscape = new Landscape("mytokenvalue");
 
     final Trace trace1 = new Trace("trace1");
@@ -316,5 +456,15 @@ class ExampleDataResource {
 
     final Session session = sessionFactory.openSession();
     session.save(List.of(landscape));
+
+    return "Successfully created testing timestamps";
+  }
+
+  @GET
+  @Path("/multirepo")
+  public String createTestingMultiRepo() {
+    createTestingRepository("hello-world");
+    createTestingRepositoryDifferentBranchPoint("hello-underworld");
+    return "Successfully created example \"multirepo\"";
   }
 }

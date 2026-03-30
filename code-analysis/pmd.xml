@@ -19,6 +19,7 @@
 
   <rule ref="category/java/codestyle.xml">
     <exclude name="AtLeastOneConstructor" />
+    <exclude name="CommentDefaultAccessModifier" />
     <exclude name="LongVariable" />
     <exclude name="OnlyOneReturn" />
     <exclude name="ShortVariable" />

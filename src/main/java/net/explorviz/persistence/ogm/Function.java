@@ -14,7 +14,7 @@ import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
-public class Function {
+public class Function implements Comparable<Function> {
   @Id
   @GeneratedValue
   private Long id;
@@ -90,5 +90,10 @@ public class Function {
     for (final ParameterData p : parameterDataList) {
       addParameter(new Parameter(p.getName(), p.getType(), p.getModifiersList()));
     }
+  }
+
+  @Override
+  public int compareTo(final Function other) {
+    return name.compareTo(other.name);
   }
 }
