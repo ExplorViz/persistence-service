@@ -43,8 +43,8 @@ public class TraceRepository {
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)
         WHERE EXISTS {
           MATCH (t)-[:CONTAINS]->(s:Span)
-          WHERE s.startTime >= $from AND s.startTime <= $to}
-        WITH DISTINCT t
+          WHERE s.startTime >= $from AND s.startTime <= $to
+        }
         CALL apoc.path.subgraphAll(t, {
           relationshipFilter: "CONTAINS>|REPRESENTS>|HAS_PARENT>"
         })
@@ -88,7 +88,7 @@ public class TraceRepository {
     return findTraceById(session, traceId).orElse(new Trace(traceId));
   }
 
-  public List<Timestamp> findTimestampsForLandscapeTokenCommitAndTimeRange(
+  public List<Timestamp> findTimestampsForLandscapeTokenAndCommitAndTimeRange(
       final Session session,
       final String landscapeToken,
       final long newest,
@@ -106,7 +106,7 @@ public class TraceRepository {
             <-[:CONTAINS]-(:Commit {hash: $commitHash}) AND
           s.startTime >= $oldest AND s.startTime <= $newest
         WITH
-          s, (toInteger(s.startTime / $bucketSize)) AS bucket
+          s, toInteger(s.startTime / $bucketSize) * $bucketSize AS bucket
         RETURN bucket AS startTimeEpochNano, COUNT(s) AS spanCount
         ORDER BY bucket ASC;
         """,
@@ -119,7 +119,7 @@ public class TraceRepository {
         Timestamp.class);
   }
 
-  public List<Timestamp> findTimestampsForLandscapeTokenCommitAndTimeRange(
+  public List<Timestamp> findTimestampsForLandscapeTokenAndTimeRange(
       final Session session,
       final String landscapeToken,
       final long newest,
@@ -133,7 +133,7 @@ public class TraceRepository {
             WHERE
               s.startTime >= $oldest AND s.startTime <= $newest
             WITH
-              s, (toInteger(s.startTime / $bucketSize)) AS bucket
+              s, toInteger(s.startTime / $bucketSize) * $bucketSize AS bucket
             RETURN bucket AS startTimeEpochNano, COUNT(s) AS spanCount
             ORDER BY bucket ASC;
             """,

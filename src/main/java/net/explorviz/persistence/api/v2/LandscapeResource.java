@@ -1,5 +1,6 @@
 package net.explorviz.persistence.api.v2;
 
+import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -67,6 +68,14 @@ class LandscapeResource {
         traceRepository.findHydratedTraces(session, landscapeToken, fromTimestamp, toTimestamp);
 
     return ogmTraces.stream()
+        .filter(
+            t -> {
+              if (t.getStartTime() == null || t.getEndTime() == null) {
+                Log.errorf("Trace missing start or end timestamp, ignoring: %s", t.getTraceId());
+                return false;
+              }
+              return true;
+            })
         .map(
             t -> {
               final Optional<String> commitHash =
@@ -86,29 +95,35 @@ class LandscapeResource {
       @RestQuery final String commit) {
     final Session session = sessionFactory.openSession();
 
+    final long newestTimestamp = Objects.requireNonNullElse(newest, Long.MAX_VALUE);
+    final long oldestTimestamp = Objects.requireNonNullElse(oldest, Long.MIN_VALUE);
+
     final List<TimestampDto> timestamps;
-    Long newestTimestamp = newest;
-    if (newestTimestamp == null) {
-      newestTimestamp = Long.MAX_VALUE;
-    }
-    Long oldestTimestamp = oldest;
-    if (oldestTimestamp == null) {
-      oldestTimestamp = 0L;
-    }
+
+    final long DEFAULT_BUCKET_SIZE_NANO = 10_000_000_000L; // 10 seconds in nanoseconds
 
     if (commit != null) {
       timestamps =
           traceRepository
-              .findTimestampsForLandscapeTokenCommitAndTimeRange(
-                  session, landscapeToken, newestTimestamp, oldestTimestamp, commit, 1_000_000_000L)
+              .findTimestampsForLandscapeTokenAndCommitAndTimeRange(
+                  session,
+                  landscapeToken,
+                  newestTimestamp,
+                  oldestTimestamp,
+                  commit,
+                  DEFAULT_BUCKET_SIZE_NANO)
               .stream()
               .map(TimestampDto::new)
               .toList();
     } else {
       timestamps =
           traceRepository
-              .findTimestampsForLandscapeTokenCommitAndTimeRange(
-                  session, landscapeToken, newestTimestamp, oldestTimestamp, 1_000_000_000L)
+              .findTimestampsForLandscapeTokenAndTimeRange(
+                  session,
+                  landscapeToken,
+                  newestTimestamp,
+                  oldestTimestamp,
+                  DEFAULT_BUCKET_SIZE_NANO)
               .stream()
               .map(TimestampDto::new)
               .toList();

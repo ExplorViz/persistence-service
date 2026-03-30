@@ -69,11 +69,13 @@ class TraceResource {
     final long newestTimestamp = Objects.requireNonNullElse(newest, Long.MAX_VALUE);
     final long oldestTimestamp = Objects.requireNonNullElse(oldest, Long.MIN_VALUE);
 
-    Long bucketSize = size;
-    if (bucketSize == null || bucketSize <= 0) {
-      bucketSize = 1_000_000_000L;
+    final long defaultBucketSizeNano = 10_000_000_000L; // 10 seconds in nanoseconds
+
+    final long bucketSize;
+    if (size == null || size <= 0) {
+      bucketSize = defaultBucketSizeNano;
     } else {
-      bucketSize *= 1_000_000_000L;
+      bucketSize = size * 1_000_000_000L; // Seconds to nanoseconds
     }
 
     final List<TimestampDto> timestamps;
@@ -81,7 +83,7 @@ class TraceResource {
     if (commit != null) {
       timestamps =
           traceRepository
-              .findTimestampsForLandscapeTokenCommitAndTimeRange(
+              .findTimestampsForLandscapeTokenAndCommitAndTimeRange(
                   session, landscapeToken, newestTimestamp, oldestTimestamp, commit, bucketSize)
               .stream()
               .map(TimestampDto::new)
@@ -89,7 +91,7 @@ class TraceResource {
     } else {
       timestamps =
           traceRepository
-              .findTimestampsForLandscapeTokenCommitAndTimeRange(
+              .findTimestampsForLandscapeTokenAndTimeRange(
                   session, landscapeToken, newestTimestamp, oldestTimestamp, bucketSize)
               .stream()
               .map(TimestampDto::new)
