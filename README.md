@@ -27,19 +27,30 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
         - [Tag](#tag)
         - [Trace](#trace)
     - [Updating the Database Model](#updating-the-database-model)
+
 - [REST-API](#rest-api)
     - [v2](#v2)
         - [GET /v2/landscapes/{landscapeToken}/structure](#get-v2landscapeslandscapetokenstructure)
-        - [GET /v2/landscapes/{landscapeToken}/dynamic](#get-v2landscapeslandscapetokendynamic)
+        - [GET /v2/landscapes/{landscapeToken}/dynamic?from={}&to={}](#get-v2landscapeslandscapetokendynamicfromto)
+        - [GET /v2/landscapes/{landscapeToken}/timestamps?oldest={}newest={}&commit={}](#get-v2landscapeslandscapetokentimestampsoldestnewestcommit)
         - [GET /v2/code/applications/{landscapeToken}](#get-v2codeapplicationslandscapetoken)
         - [GET /v2/code/commit-tree/{landscapeToken}/{applicationName}](#get-v2codecommit-treelandscapetokenapplicationname)
         - [GET /v2/code/metrics/{landscapeToken}/{applicationName}/{commitHash}](#get-v2codemetricslandscapetokenapplicationnamecommithash)
         - [GET /v2/code/structure/{landscapeToken}/{applicationName}/{commitHash}](#get-v2codestructurelandscapetokenapplicationnamecommithash)
         - [GET /v2/code/structure/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}](#get-v2codestructurelandscapetokenapplicationnamefirstcommithash-secondcommithash)
         - [GET /v2/code/commit-comparison/{landscapeToken}/{applicationName}/{firstCommitHash}-{secondCommitHash}](#get-v2codecommit-comparisonlandscapetokenapplicationnamefirstcommithash-secondcommithash)
-        - [GET /v2/code/landscapes/{landscapeToken}/timestamps](#get-v2codelandscapeslandscapetokentimestamps)
         - [DELETE /v2/code/landscapes/{landscapeToken}/trace-data](#delete-v2codelandscapeslandscapetokentrace-data)
+
     - [v3](#v3)
+        - [GET /v3/landscapes/{landscapeToken}/structure/runtime](#get-v3landscapeslandscapetokenstructureruntime)
+        - [GET /v3/landscapes/{landscapeToken}/structure/evolution/{repositoryName}/{commitHash}](#get-v3landscapeslandscapetokenstructureevolutionrepositorynamecommithash)
+        - [GET /v3/landscapes/{landscapeToken}/structure/evolution/{repositoryName}/{firstCommitHash}-{secondCommitHash}](#get-v3landscapeslandscapetokenstructureevolutionrepositorynamefirstcommithash-secondcommithash)
+        - [GET /v3/landscapes/{landscapeToken}/dynamic?from={}&to?{}](#get-v3landscapeslandscapetokendynamicfromto)
+        - [GET /v3/landscapes/{landscapeToken}/timestamps?oldest={}&newest={}&commit={}](#get-v3landscapeslandscapetokentimestampsoldestnewestcommit)
+        - [GET /v3/landscapes/{landscapeToken}/repositories](#get-v3landscapeslandscapetokenrepositories)
+        - [GET /v3/landscapes/{landscapeToken}/commit-tree/{repositoryName}](#get-v3landscapeslandscapetokencommit-treerepositoryname)
+        - [DELETE /v3/landscapes/{landscapeToken}/trace-data](#delete-v3landscapeslandscapetokentrace-data)
+
 - [Development](#development)
     - [Prerequisites](#prerequisites)
     - [Code Style](#code-style)
@@ -312,9 +323,6 @@ Returns the tree of commits associated with a repository in a lanscape.
 void deleteTraceData(String landscapeToken);
 ```
 Deletes all data gathered from runtime analysis associated with a landscape from the database.
-
-
-**TBA**
 
 # Development
 
