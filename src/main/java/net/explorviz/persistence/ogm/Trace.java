@@ -46,7 +46,7 @@ public class Trace {
     return spans;
   }
 
-  public long getStartTime() {
+  public Long getStartTime() {
     return startTime;
   }
 
@@ -54,7 +54,7 @@ public class Trace {
     this.startTime = startTime;
   }
 
-  public long getEndTime() {
+  public Long getEndTime() {
     return endTime;
   }
 

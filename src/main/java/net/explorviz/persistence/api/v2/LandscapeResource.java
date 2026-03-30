@@ -100,7 +100,7 @@ class LandscapeResource {
 
     final List<TimestampDto> timestamps;
 
-    final long DEFAULT_BUCKET_SIZE_NANO = 10_000_000_000L; // 10 seconds in nanoseconds
+    final long defaultBucketSizeNano = 10_000_000_000L; // 10 seconds in nanoseconds
 
     if (commit != null) {
       timestamps =
@@ -111,7 +111,7 @@ class LandscapeResource {
                   newestTimestamp,
                   oldestTimestamp,
                   commit,
-                  DEFAULT_BUCKET_SIZE_NANO)
+                  defaultBucketSizeNano)
               .stream()
               .map(TimestampDto::new)
               .toList();
@@ -123,7 +123,7 @@ class LandscapeResource {
                   landscapeToken,
                   newestTimestamp,
                   oldestTimestamp,
-                  DEFAULT_BUCKET_SIZE_NANO)
+                  defaultBucketSizeNano)
               .stream()
               .map(TimestampDto::new)
               .toList();
