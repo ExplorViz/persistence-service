@@ -8,37 +8,19 @@ import net.explorviz.persistence.ogm.Trace;
  *
  * @param landscapeToken String identifier of the visualization landscape
  * @param traceId ID of the trace as specified by OpenTelemetry
- * @param gitCommitChecksum Hash of the git commit associated with this trace
  * @param startTime Start time of the trace, as Unix epoch timestamp
  * @param endTime End time of the trace, as Unix epoch timestamp
- * @param duration Duration of the trace, either milliseconds or nanoseconds depending on format of
- *     start and end timestamps
- * @param overallRequestCount Included for compatibility reasons, always fixed to 1
- * @param traceCount Included for compatibility reasons, always fixed to 1
  * @param spanList Spans that are part of this trace, see {@link SpanDto}
  */
 public record TraceDto(
-    String landscapeToken,
-    String traceId,
-    String gitCommitChecksum,
-    long startTime,
-    long endTime,
-    long duration,
-    long overallRequestCount,
-    long traceCount,
-    List<SpanDto> spanList) {
+    String landscapeToken, String traceId, long startTime, long endTime, List<SpanDto> spanList) {
 
-  public TraceDto(
-      final Trace ogmTrace, final String landscapeToken, final String gitCommitChecksum) {
+  public TraceDto(final Trace ogmTrace, final String landscapeToken) {
     this(
         landscapeToken,
         ogmTrace.getTraceId(),
-        gitCommitChecksum,
         ogmTrace.getStartTime(),
         ogmTrace.getEndTime(),
-        ogmTrace.getEndTime() - ogmTrace.getStartTime(),
-        1,
-        1,
         ogmTrace.getSpans().stream().map(s -> new SpanDto(s, ogmTrace.getTraceId())).toList());
   }
 }

@@ -1,7 +1,9 @@
 package net.explorviz.persistence.api.v3.model.conversion;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -225,6 +227,9 @@ public final class LandscapeFlattener {
     final Collection<? extends ClassConvertible> classes = buildingConvertible.getClasses();
     final Collection<? extends FunctionConvertible> functions = buildingConvertible.getFunctions();
 
+    final List<String> allContainedClassIds = new ArrayList<>();
+    final List<String> allContainedFunctionIds = new ArrayList<>();
+
     final BuildingDto building =
         new BuildingDto(
             new FlatBaseModel(
@@ -238,15 +243,26 @@ public final class LandscapeFlattener {
             buildingConvertible.getLanguage(),
             classes.stream().map(ClassConvertible::getId).toList(),
             functions.stream().map(FunctionConvertible::getId).toList(),
+            allContainedClassIds,
+            allContainedFunctionIds,
             buildingConvertible.getMetrics());
 
     final Context childrenContext = context.withParent(building);
 
-    buildingConvertible.getClasses().forEach(c -> flattenClass(c, childrenContext));
-    buildingConvertible.getFunctions().forEach(f -> flattenFunction(f, childrenContext));
+    buildingConvertible
+        .getClasses()
+        .forEach(
+            c -> flattenClass(c, childrenContext, allContainedClassIds, allContainedFunctionIds));
+    buildingConvertible
+        .getFunctions()
+        .forEach(f -> flattenFunction(f, childrenContext, allContainedFunctionIds));
   }
 
-  private static void flattenClass(final ClassConvertible classConvertible, final Context context) {
+  private static void flattenClass(
+      final ClassConvertible classConvertible,
+      final Context context,
+      final List<String> parentBuildingClassIds,
+      final List<String> parentBuildingFunctionIds) {
     final Collection<? extends ClassConvertible> innerClasses = classConvertible.getInnerClasses();
     final Collection<? extends FunctionConvertible> functions = classConvertible.getFunctions();
 
@@ -263,14 +279,25 @@ public final class LandscapeFlattener {
             functions.stream().map(FunctionConvertible::getId).toList(),
             classConvertible.getMetrics());
 
+    parentBuildingClassIds.add(classConvertible.getId());
+
     final Context childrenContext = context.withParent(clazz);
 
-    classConvertible.getInnerClasses().forEach(c -> flattenClass(c, childrenContext));
-    classConvertible.getFunctions().forEach(f -> flattenFunction(f, childrenContext));
+    classConvertible
+        .getInnerClasses()
+        .forEach(
+            c ->
+                flattenClass(
+                    c, childrenContext, parentBuildingClassIds, parentBuildingFunctionIds));
+    classConvertible
+        .getFunctions()
+        .forEach(f -> flattenFunction(f, childrenContext, parentBuildingFunctionIds));
   }
 
   private static void flattenFunction(
-      final FunctionConvertible functionConvertible, final Context context) {
+      final FunctionConvertible functionConvertible,
+      final Context context,
+      final List<String> parentBuildingFunctionIds) {
     final FunctionDto function =
         new FunctionDto(
             new FlatBaseModel(
@@ -282,6 +309,8 @@ public final class LandscapeFlattener {
             context.parentId,
             context.parentBuildingId,
             functionConvertible.getMetrics());
+
+    parentBuildingFunctionIds.add(functionConvertible.getId());
 
     context.withParent(function);
   }

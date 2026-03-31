@@ -13,9 +13,9 @@ public class Trace {
 
   private String traceId;
 
-  private long startTime;
+  private Long startTime;
 
-  private long endTime;
+  private Long endTime;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private final SortedSet<Span> spans = new TreeSet<>();
@@ -30,8 +30,8 @@ public class Trace {
 
   public void addChildSpan(final Span span) {
     spans.add(span);
-    startTime = Math.min(startTime, span.getStartTime());
-    endTime = Math.max(endTime, span.getEndTime());
+    startTime = startTime != null ? Math.min(startTime, span.getStartTime()) : span.getStartTime();
+    endTime = endTime != null ? Math.max(endTime, span.getEndTime()) : span.getEndTime();
   }
 
   public String getTraceId() {
