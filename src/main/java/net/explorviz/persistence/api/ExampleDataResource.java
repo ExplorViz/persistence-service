@@ -45,7 +45,7 @@ import org.neo4j.ogm.session.SessionFactory;
 })
 class ExampleDataResource {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   @GET
   @Path("/trace")
