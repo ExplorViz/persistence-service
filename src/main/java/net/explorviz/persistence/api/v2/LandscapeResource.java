@@ -30,15 +30,15 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings("PMD.UseObjectForClearerAPI")
 class LandscapeResource {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
-  @Inject private ApplicationRepository applicationRepository;
+  @Inject ApplicationRepository applicationRepository;
 
-  @Inject private CommitRepository commitRepository;
+  @Inject CommitRepository commitRepository;
 
-  @Inject private RepositoryRepository repositoryRepository;
+  @Inject RepositoryRepository repositoryRepository;
 
-  @Inject private TraceRepository traceRepository;
+  @Inject TraceRepository traceRepository;
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)

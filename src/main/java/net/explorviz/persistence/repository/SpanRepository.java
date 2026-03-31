@@ -11,17 +11,17 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class SpanRepository {
 
-  @Inject private ApplicationRepository applicationRepository;
+  @Inject ApplicationRepository applicationRepository;
 
-  @Inject private FileRevisionRepository fileRevisionRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject private FunctionRepository functionRepository;
+  @Inject FunctionRepository functionRepository;
 
-  @Inject private LandscapeRepository landscapeRepository;
+  @Inject LandscapeRepository landscapeRepository;
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
-  @Inject private TraceRepository traceRepository;
+  @Inject TraceRepository traceRepository;
 
   public Optional<Span> findSpanById(final Session session, final String spanId) {
     return Optional.ofNullable(

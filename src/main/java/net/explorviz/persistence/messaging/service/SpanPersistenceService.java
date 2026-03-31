@@ -30,23 +30,23 @@ public class SpanPersistenceService {
 
   private static final Logger LOGGER = Logger.getLogger(SpanDataConsumer.class);
 
-  @Inject private ApplicationRepository applicationRepository;
+  @Inject ApplicationRepository applicationRepository;
 
-  @Inject private ClazzRepository clazzRepository;
+  @Inject ClazzRepository clazzRepository;
 
-  @Inject private CommitRepository commitRepository;
+  @Inject CommitRepository commitRepository;
 
-  @Inject private FileRevisionRepository fileRevisionRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject private FunctionRepository functionRepository;
+  @Inject FunctionRepository functionRepository;
 
-  @Inject private LandscapeRepository landscapeRepository;
+  @Inject LandscapeRepository landscapeRepository;
 
-  @Inject private SpanRepository spanRepository;
+  @Inject SpanRepository spanRepository;
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
-  @Inject private TraceRepository traceRepository;
+  @Inject TraceRepository traceRepository;
 
   public void saveSpanData(final Session session, final SpanData spanData) {
     final Span span =

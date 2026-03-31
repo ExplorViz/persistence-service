@@ -54,7 +54,7 @@ public class FunctionRepository {
       MATCH (file)<-[:CONTAINS]-(:Commit {hash: $commitHash})
       RETURN func;""";
 
-  @Inject private FileRevisionRepository fileRevisionRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
   public Optional<Function> findFunctionByApplicationNameAndFqnAndLandscapeToken(
       final Session session,

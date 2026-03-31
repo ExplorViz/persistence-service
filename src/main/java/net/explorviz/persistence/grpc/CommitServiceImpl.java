@@ -31,14 +31,14 @@ import org.neo4j.ogm.transaction.Transaction;
 public class CommitServiceImpl implements CommitService {
 
   private static final String NO_PARENT_ID = "NONE";
-  @Inject private ApplicationRepository applicationRepository;
-  @Inject private BranchRepository branchRepository;
-  @Inject private CommitRepository commitRepository;
-  @Inject private LandscapeRepository landscapeRepository;
-  @Inject private RepositoryRepository repositoryRepository;
-  @Inject private FileRevisionRepository fileRevisionRepository;
-  @Inject private TagRepository tagRepository;
-  @Inject private SessionFactory sessionFactory;
+  @Inject ApplicationRepository applicationRepository;
+  @Inject BranchRepository branchRepository;
+  @Inject CommitRepository commitRepository;
+  @Inject LandscapeRepository landscapeRepository;
+  @Inject RepositoryRepository repositoryRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
+  @Inject TagRepository tagRepository;
+  @Inject SessionFactory sessionFactory;
 
   @Blocking
   @Override

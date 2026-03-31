@@ -28,19 +28,19 @@ import org.neo4j.ogm.transaction.Transaction;
 @GrpcService
 public class StateDataServiceImpl implements StateDataService {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
-  @Inject private ApplicationRepository applicationRepository;
+  @Inject ApplicationRepository applicationRepository;
 
-  @Inject private BranchRepository branchRepository;
+  @Inject BranchRepository branchRepository;
 
-  @Inject private CommitRepository commitRepository;
+  @Inject CommitRepository commitRepository;
 
-  @Inject private DirectoryRepository directoryRepository;
+  @Inject DirectoryRepository directoryRepository;
 
-  @Inject private LandscapeRepository landscapeRepository;
+  @Inject LandscapeRepository landscapeRepository;
 
-  @Inject private RepositoryRepository repositoryRepository;
+  @Inject RepositoryRepository repositoryRepository;
 
   @Blocking
   @Override

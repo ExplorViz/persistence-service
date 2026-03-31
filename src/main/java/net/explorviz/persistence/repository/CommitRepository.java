@@ -15,7 +15,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class CommitRepository {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   /**
    * Find latest commit for which we have seen a CommitData message and also a FileData message for

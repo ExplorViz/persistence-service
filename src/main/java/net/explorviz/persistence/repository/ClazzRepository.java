@@ -17,7 +17,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class ClazzRepository {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   public Optional<Clazz> findClassDynamicData(
       final Session session,
