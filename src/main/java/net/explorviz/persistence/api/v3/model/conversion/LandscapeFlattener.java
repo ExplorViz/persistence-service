@@ -235,7 +235,7 @@ public final class LandscapeFlattener {
                 buildingConvertible.getCommitComparison()),
             context.parentCityId,
             context.parentDistrictId,
-            buildingConvertible.getLanguage(),
+            buildingConvertible.getLanguage().toString(),
             classes.stream().map(ClassConvertible::getId).toList(),
             functions.stream().map(FunctionConvertible::getId).toList(),
             buildingConvertible.getMetrics());

@@ -23,7 +23,7 @@ public class FileRevision implements Comparable<FileRevision> {
 
   private boolean hasFileData;
 
-  private Language language;
+  private String language;
 
   private String packageName;
 
@@ -94,11 +94,11 @@ public class FileRevision implements Comparable<FileRevision> {
     this.name = name;
   }
 
-  public Language getLanguage() {
+  public String getLanguage() {
     return language;
   }
 
-  public void setLanguage(final Language language) {
+  public void setLanguage(final String language) {
     this.language = language;
   }
 

@@ -202,7 +202,7 @@ public final class CommitComparisonApplicationToCityConverter {
     }
 
     @Override
-    public Language getLanguage() {
+    public String getLanguage() {
       return secondFile.getLanguage();
     }
 

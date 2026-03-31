@@ -95,6 +95,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -156,6 +157,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       String dbStructureQuery =
@@ -237,6 +239,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       SpanData testSpanDataTwo =
@@ -250,6 +253,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -330,6 +334,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -345,6 +350,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", filePathTwo))
               .setStartTime(2)
               .setEndTime(4)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanDataTwo);
@@ -420,6 +426,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -436,6 +443,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(2)
               .setEndTime(4)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanDataTwo);
@@ -514,6 +522,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -595,6 +604,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", baseFilePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       SpanData testSpanDataTwo =
@@ -608,6 +618,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", filePathTwo))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -700,6 +711,7 @@ class SpanDataServiceTest {
               .setClassName(String.join(".", classPath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -773,6 +785,7 @@ class SpanDataServiceTest {
               .setClassName(String.join(".", classPath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       SpanData testSpanDataTwo =
@@ -787,6 +800,7 @@ class SpanDataServiceTest {
               .setClassName(String.join(".", classPath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -872,6 +886,7 @@ class SpanDataServiceTest {
               .setClassName(String.join(".", classPath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       SpanData testSpanDataTwo =
@@ -886,6 +901,7 @@ class SpanDataServiceTest {
               .setClassName(String.join(".", classPathTwo))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -971,6 +987,7 @@ class SpanDataServiceTest {
               .setCommitHash(commitHash)
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -1046,6 +1063,7 @@ class SpanDataServiceTest {
               .setCommitHash(commitHash)
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       SpanData testSpanDataTwo =
@@ -1061,6 +1079,7 @@ class SpanDataServiceTest {
               .setCommitHash(commitHash)
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -1255,6 +1274,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", filePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -1337,6 +1357,7 @@ class SpanDataServiceTest {
               .setStartTime(1)
               .setEndTime(5)
               .setCommitHash(baseCommitHash)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -1406,6 +1427,7 @@ class SpanDataServiceTest {
               .setFilePath(String.join("/", filePath))
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -1491,6 +1513,7 @@ class SpanDataServiceTest {
               .setStartTime(1)
               .setEndTime(5)
               .setCommitHash(baseCommitHash)
+              .setLanguage("")
               .build();
 
       SpanData testSpanDataTwo =
@@ -1505,6 +1528,7 @@ class SpanDataServiceTest {
               .setStartTime(1)
               .setEndTime(5)
               .setCommitHash(baseCommitHash)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -1598,6 +1622,7 @@ class SpanDataServiceTest {
               .setStartTime(1)
               .setEndTime(5)
               .setCommitHash(baseCommitHash)
+              .setLanguage("")
               .build();
 
       Map<String, Object> params = new HashMap<>();
@@ -1773,6 +1798,7 @@ class SpanDataServiceTest {
               .setCommitHash(baseCommitHash)
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);
@@ -1849,6 +1875,7 @@ class SpanDataServiceTest {
               .setCommitHash(baseCommitHash)
               .setStartTime(1)
               .setEndTime(5)
+              .setLanguage("")
               .build();
 
       spanDataConsumer.consume(testSpanData);

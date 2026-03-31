@@ -183,7 +183,7 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
-    public Language getLanguage() {
+    public String getLanguage() {
       return ogmFile.getLanguage();
     }
 

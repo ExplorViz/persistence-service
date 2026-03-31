@@ -81,6 +81,9 @@ public class SpanPersistenceService {
 
     final FileRevision fileRevision =
         resolveFileRevision(session, spanData, splitFilePath, landscape);
+    fileRevision.setLanguage(spanData.getLanguage());
+    session.save(fileRevision);
+
     final Function function;
 
     if (spanData.getClassName() != null) {

@@ -36,7 +36,7 @@ public record BuildingDto(
     @JsonUnwrapped FlatBaseModel flatBaseModel,
     String parentCityId,
     @JsonInclude(Include.NON_NULL) String parentDistrictId,
-    @JsonInclude(Include.NON_NULL) Language language,
+    @JsonInclude(Include.NON_NULL) String language,
     List<String> classIds,
     List<String> functionIds,
     @JsonInclude(Include.NON_EMPTY) Map<String, MetricValue> metrics) {
@@ -54,7 +54,7 @@ public record BuildingDto(
 
     Collection<? extends FunctionConvertible> getFunctions();
 
-    default Language getLanguage() {
+    default String getLanguage() {
       return null;
     }
 
