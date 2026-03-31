@@ -54,19 +54,19 @@ class CodeResource {
    */
   private static final BranchPointDto NO_BRANCH_POINT = new BranchPointDto("NONE", "");
 
-  @Inject private TraceRepository traceRepository;
+  @Inject TraceRepository traceRepository;
 
-  @Inject private ApplicationRepository applicationRepository;
+  @Inject ApplicationRepository applicationRepository;
 
-  @Inject private ClazzRepository clazzRepository;
+  @Inject ClazzRepository clazzRepository;
 
-  @Inject private CommitRepository commitRepository;
+  @Inject CommitRepository commitRepository;
 
-  @Inject private FileRevisionRepository fileRevisionRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject private FunctionRepository functionRepository;
+  @Inject FunctionRepository functionRepository;
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   @GET
   @Path("/applications/{landscapeToken}")
