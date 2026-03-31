@@ -61,7 +61,7 @@ public class FileDataServiceImpl implements FileDataService {
                         .withDescription("No corresponding file was sent before in CommitData.")
                         .asRuntimeException());
 
-    file.setLanguage(fileData.getLanguage());
+    file.setLanguage(fileData.getLanguage().toString());
     file.setPackageName(fileData.getPackageName());
     fileData.getImportNamesList().forEach(file::addImportNames);
     fileData.getMetricsMap().forEach(file::addMetric);

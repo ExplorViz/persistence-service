@@ -15,7 +15,6 @@ import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
-import net.explorviz.persistence.proto.Language;
 
 /**
  * Provides wrapper classes for turning single OGM Application objects into FlatLandscape city
@@ -183,7 +182,7 @@ public final class DefaultApplicationToCityConverter {
     }
 
     @Override
-    public Language getLanguage() {
+    public String getLanguage() {
       return ogmFile.getLanguage();
     }
 
