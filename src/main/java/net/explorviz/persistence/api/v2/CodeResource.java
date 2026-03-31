@@ -73,7 +73,6 @@ class CodeResource {
   @Produces(MediaType.APPLICATION_JSON)
   public List<String> getStaticApplicationNamesForLandscape(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
-    // TODO return all applications instead of only those with static data?
     return applicationRepository.findStaticApplicationNamesForLandscapeToken(
         session, landscapeToken);
   }

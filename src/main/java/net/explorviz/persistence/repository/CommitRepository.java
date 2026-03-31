@@ -366,7 +366,6 @@ public class CommitRepository {
         .orElse(new Commit(commitHash));
   }
 
-  // TODO might be more appropriate for FileRevisionRepository
   public record FileComparison(
       String fileFqn, FileRevision fileFirstCommit, FileRevision fileSecondCommit) {}
 }
