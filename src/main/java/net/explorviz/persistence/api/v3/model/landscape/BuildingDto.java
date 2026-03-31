@@ -28,6 +28,11 @@ import net.explorviz.persistence.proto.Language;
  *     determined
  * @param classIds IDs of all classes which are directly contained in this building
  * @param functionIds IDs of all top-level functions which are contained in this building
+ * @param allContainedClassIds ID values for all classes which are contained inside this Building,
+ *     <strong>even transitively</strong> (i.e. nested classes). This is required for faster lookups
+ * @param allContainedFunctionIds ID values for all functions which are contained inside this
+ *     Building, <strong>even transitively</strong> (i.e. inside nested classes). This is required
+ *     for faster lookups
  * @param metrics Metrics for this unit, i.e. numerical measurements gathered through analysis, such
  *     as cyclomatic complexity or lines of code
  */
@@ -39,6 +44,8 @@ public record BuildingDto(
     @JsonInclude(Include.NON_NULL) Language language,
     List<String> classIds,
     List<String> functionIds,
+    List<String> allContainedClassIds,
+    List<String> allContainedFunctionIds,
     @JsonInclude(Include.NON_EMPTY) Map<String, MetricValue> metrics) {
 
   public BuildingDto {
