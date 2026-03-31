@@ -14,7 +14,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
 public class ApplicationRepository {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   public Optional<Application> findApplicationByNameAndLandscapeToken(
       final Session session, final String name, final String tokenId) {

@@ -24,13 +24,13 @@ import org.neo4j.ogm.transaction.Transaction;
 @GrpcService
 public class FileDataServiceImpl implements FileDataService {
 
-  @Inject private ClazzRepository clazzRepository;
+  @Inject ClazzRepository clazzRepository;
 
-  @Inject private FileRevisionRepository fileRevisionRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject private FunctionRepository functionRepository;
+  @Inject FunctionRepository functionRepository;
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   @Blocking
   @Override

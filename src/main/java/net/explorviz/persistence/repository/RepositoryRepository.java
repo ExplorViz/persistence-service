@@ -13,7 +13,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class RepositoryRepository {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   public Optional<Repository> findRepositoryByNameAndLandscapeToken(
       final Session session, final String name, final String tokenId) {

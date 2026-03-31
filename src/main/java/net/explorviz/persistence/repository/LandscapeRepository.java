@@ -11,7 +11,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class LandscapeRepository {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   public Optional<Landscape> findLandscapeByTokenId(final Session session, final String tokenId) {
     return Optional.ofNullable(

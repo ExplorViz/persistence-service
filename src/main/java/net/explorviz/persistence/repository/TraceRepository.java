@@ -14,7 +14,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class TraceRepository {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   public Optional<Trace> findTraceById(final Session session, final String traceId) {
     return Optional.ofNullable(

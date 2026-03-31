@@ -42,14 +42,11 @@ public class FileRevisionRepository {
       ORDER BY length(p) DESC
       LIMIT 1;""";
   private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
-  @Inject
-  private SessionFactory sessionFactory;
-  @Inject
-  private ApplicationRepository applicationRepository;
-  @Inject
-  private DirectoryRepository directoryRepository;
-  @Inject
-  private LandscapeRepository landscapeRepository;
+
+  @Inject SessionFactory sessionFactory;
+  @Inject ApplicationRepository applicationRepository;
+  @Inject DirectoryRepository directoryRepository;
+  @Inject LandscapeRepository landscapeRepository;
 
   private FileRevision createRemainingFilePath(final Session session,
       final Directory startingDirectory, final String[] remainingPath) {

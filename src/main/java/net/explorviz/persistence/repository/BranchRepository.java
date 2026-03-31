@@ -11,7 +11,7 @@ import org.neo4j.ogm.session.SessionFactory;
 @ApplicationScoped
 public class BranchRepository {
 
-  @Inject private SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   public Optional<Branch> findBranchByNameAndRepositoryNameAndLandscapeToken(
       final Session session, final String branchName, final String repoName, final String tokenId) {
