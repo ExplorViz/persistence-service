@@ -29,11 +29,6 @@ public class SpanRepository {
             Span.class, "MATCH (s:Span {spanId: $spanId}) RETURN s;", Map.of("spanId", spanId)));
   }
 
-  public Optional<Span> findSpanById(final String spanId) {
-    final Session session = sessionFactory.openSession();
-    return findSpanById(session, spanId);
-  }
-
   public Span getOrCreateSpan(final Session session, final String spanId) {
     return findSpanById(session, spanId).orElse(new Span(spanId));
   }

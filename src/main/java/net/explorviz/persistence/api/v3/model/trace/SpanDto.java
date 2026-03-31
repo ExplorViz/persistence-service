@@ -1,5 +1,8 @@
 package net.explorviz.persistence.api.v3.model.trace;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import java.util.Optional;
 import net.explorviz.persistence.ogm.Span;
 
 /**
@@ -10,23 +13,21 @@ import net.explorviz.persistence.ogm.Span;
  * @param parentSpanId Span ID of the parent span. Put empty string for no parent
  * @param startTime Start time of the span, as Unix epoch timestamp
  * @param endTime End time of the span, as Unix epoch timestamp
- * @param methodHash This is a value we used to calculate to match spans with the functions they
- *     belong to, since multiple spans can refer to the same function. In the persistence-service,
- *     we no longer need a hash calculation as we can simply return the ID of the function node
+ * @param functionId ID of the flat landscape function that this span represents
  */
 public record SpanDto(
     String traceId,
     String spanId,
-    String parentSpanId,
+    @JsonInclude(Include.NON_NULL) String parentSpanId,
     long startTime,
     long endTime,
-    String methodHash) {
+    String functionId) {
 
   public SpanDto(final Span ogmSpan, final String traceId) {
     this(
         traceId,
         ogmSpan.getSpanId(),
-        ogmSpan.getParentSpan() != null ? ogmSpan.getParentSpan().getSpanId() : "",
+        Optional.ofNullable(ogmSpan.getParentSpan()).map(Span::getSpanId).orElse(null),
         ogmSpan.getStartTime(),
         ogmSpan.getEndTime(),
         ogmSpan.getFunction().getId().toString());

@@ -1,5 +1,6 @@
 package net.explorviz.persistence.api.v3;
 
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -8,7 +9,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import net.explorviz.persistence.api.v3.model.trace.TimestampDto;
 import net.explorviz.persistence.api.v3.model.trace.TraceDto;
 import net.explorviz.persistence.ogm.Trace;
@@ -45,12 +45,15 @@ class TraceResource {
         traceRepository.findHydratedTraces(session, landscapeToken, fromTimestamp, toTimestamp);
 
     return ogmTraces.stream()
-        .map(
+        .filter(
             t -> {
-              final Optional<String> commitHash =
-                  traceRepository.findCommitHashForTrace(session, landscapeToken, t.getTraceId());
-              return new TraceDto(t, landscapeToken, commitHash.orElse("UNKNOWN"));
+              if (t.getStartTime() == null || t.getEndTime() == null) {
+                Log.errorf("Trace missing start or end timestamp, ignoring: %s", t.getTraceId());
+                return false;
+              }
+              return true;
             })
+        .map(t -> new TraceDto(t, landscapeToken))
         .toList();
   }
 
