@@ -4,6 +4,7 @@ import com.google.common.collect.ObjectArrays;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;
+import java.util.Locale;
 import net.explorviz.persistence.avro.SpanData;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Clazz;
@@ -81,7 +82,7 @@ public class SpanPersistenceService {
 
     final FileRevision fileRevision =
         resolveFileRevision(session, spanData, splitFilePath, landscape);
-    fileRevision.setLanguage(spanData.getLanguage());
+    fileRevision.setLanguage(spanData.getLanguage().toUpperCase(Locale.ENGLISH));
     session.save(fileRevision);
 
     final Function function;
