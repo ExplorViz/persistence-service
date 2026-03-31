@@ -1,6 +1,5 @@
 package net.explorviz.persistence.ogm;
 
-import net.explorviz.persistence.avro.SpanData;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
@@ -24,12 +23,6 @@ public class Span implements Comparable<Span> {
 
   public Span() {
     // Empty constructor required by Neo4j OGM
-  }
-
-  public Span(final SpanData spanData) {
-    this.spanId = spanData.getSpanId();
-    this.startTime = spanData.getStartTime();
-    this.endTime = spanData.getEndTime();
   }
 
   public Span(final String spanId) {

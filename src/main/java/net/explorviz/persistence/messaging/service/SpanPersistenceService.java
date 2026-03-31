@@ -5,7 +5,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.List;
 import net.explorviz.persistence.avro.SpanData;
-import net.explorviz.persistence.messaging.SpanDataConsumer;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -21,36 +20,35 @@ import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.SpanRepository;
 import net.explorviz.persistence.repository.TraceRepository;
-import org.jboss.logging.Logger;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
 public class SpanPersistenceService {
 
-  private static final Logger LOGGER = Logger.getLogger(SpanDataConsumer.class);
+  @Inject ApplicationRepository applicationRepository;
 
-  @Inject private ApplicationRepository applicationRepository;
+  @Inject ClazzRepository clazzRepository;
 
-  @Inject private ClazzRepository clazzRepository;
+  @Inject CommitRepository commitRepository;
 
-  @Inject private CommitRepository commitRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject private FileRevisionRepository fileRevisionRepository;
+  @Inject FunctionRepository functionRepository;
 
-  @Inject private FunctionRepository functionRepository;
+  @Inject LandscapeRepository landscapeRepository;
 
-  @Inject private LandscapeRepository landscapeRepository;
+  @Inject SpanRepository spanRepository;
 
-  @Inject private SpanRepository spanRepository;
+  @Inject SessionFactory sessionFactory;
 
-  @Inject private SessionFactory sessionFactory;
-
-  @Inject private TraceRepository traceRepository;
+  @Inject TraceRepository traceRepository;
 
   public void saveSpanData(final Session session, final SpanData spanData) {
-    final Span span =
-        spanRepository.findSpanById(session, spanData.getSpanId()).orElse(new Span(spanData));
+    final Span span = spanRepository.getOrCreateSpan(session, spanData.getSpanId());
+
+    span.setStartTime(spanData.getStartTime());
+    span.setEndTime(spanData.getEndTime());
 
     if (!spanData.getParentId().isEmpty()) {
       final Span parentSpan = spanRepository.getOrCreateSpan(session, spanData.getParentId());
@@ -161,7 +159,7 @@ public class SpanPersistenceService {
                       .orElse(new Application(spanData.getApplicationName()));
               landscape.addApplication(application);
 
-              FileRevision fileRevision;
+              final FileRevision fileRevision;
 
               if (application.getRootDirectory() == null) {
                 // Application did not previously exist, build file structure from scratch
