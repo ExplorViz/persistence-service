@@ -158,7 +158,7 @@ public class ApplicationRepository {
         WHERE (l)
           -[:CONTAINS]->(:Repository)
           -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS*]->(:Directory)<-[:HAS_ROOT]-(a)
+          -[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
         RETURN DISTINCT a.name
         ORDER BY a.name ASC;
         """,
