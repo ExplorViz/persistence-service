@@ -100,7 +100,7 @@ public class TraceRepository {
           -[:CONTAINS]->(s:Span)
         WHERE
           (s)-[:REPRESENTS]->(:Function)
-            <-[:CONTAINS]-(:FileRevision)
+            <-[:CONTAINS*]-(:FileRevision)
             <-[:CONTAINS]-(:Commit {hash: $commitHash}) AND
           s.startTime >= $oldest AND s.startTime <= $newest
         WITH
