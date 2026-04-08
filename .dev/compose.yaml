@@ -1,0 +1,26 @@
+services:
+  neo4j:
+    image: neo4j:2026.02.2
+    hostname: ${NEO4J_HOSTNAME}
+    ports:
+      - ${NEO4J_BROWSER_PORT}:7474
+      - ${NEO4J_BOLT_PORT}:7687
+    volumes:
+      - neo4j:/data
+      - ./init.cypher:/import/init.cypher
+    environment:
+      - NEO4J_AUTH=none
+      - NEO4J_dbms_usage__report_enabled=false
+      - NEO4J_db_query_default__language=CYPHER_25
+      - NEO4J_PLUGINS=["apoc", "apoc-extended"]
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_initializer_neo4j_0=CALL apoc.cypher.runSchemaFile("init.cypher")
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  neo4j:
+    name: neo4j
