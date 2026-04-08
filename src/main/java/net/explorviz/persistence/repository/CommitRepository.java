@@ -36,7 +36,7 @@ public class CommitRepository {
           all(file IN filesInCommit WHERE file.hasFileData) AND
           NOT isEmpty(filesInCommit)
         RETURN c
-        ORDER BY c.commitDate DESC
+        ORDER BY c.authorDate DESC
         LIMIT 1;""",
             Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }
@@ -56,7 +56,8 @@ public class CommitRepository {
   }
 
   /**
-   * Returns every commit (along with its branch and parent relations) in the specified repository.
+   * Returns every commit (along with its branch and parent relations) in the specified repository,
+   * ordered by author date (ascending, meaning oldest first).
    */
   public List<Commit> findCommitsWithBranchForRepositoryAndLandscapeToken(
       final Session session, final String landscapeToken, final String repositoryName) {
@@ -69,14 +70,14 @@ public class CommitRepository {
         OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
         OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
         RETURN DISTINCT c, r, b, h
-        ORDER BY c.commitDate ASC;
+        ORDER BY c.authorDate ASC;
         """,
             Map.of("tokenId", landscapeToken, "repoName", repositoryName)));
   }
 
   /**
    * Returns every commit (along with its branch and parent relations) in the specified repository
-   * for a given application.
+   * for a given application, ordered by author date (ascending, meaning oldest first).
    */
   public List<Commit> findCommitsWithBranchForApplicationAndLandscapeToken(
       final Session session, final String landscapeToken, final String applicationName) {
@@ -91,7 +92,7 @@ public class CommitRepository {
         OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
         OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
         RETURN DISTINCT c, r, b, h
-        ORDER BY c.commitDate ASC;
+        ORDER BY c.authorDate ASC;
         """,
             Map.of("tokenId", landscapeToken, "appName", applicationName)));
   }

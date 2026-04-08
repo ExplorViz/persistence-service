@@ -110,12 +110,12 @@ class ExampleDataResource {
         MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
         MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
 
-        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", commitDate: 1000})
+        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", authorDate: 1000})
         MERGE (commit1)-[:BELONGS_TO]->(main)
-        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", commitDate: 2000})
+        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", authorDate: 2000})
         MERGE (commit2)-[:BELONGS_TO]->(main)
         MERGE (commit2)-[:HAS_PARENT]->(commit1)
-        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", commitDate: 3000})
+        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", authorDate: 3000})
         MERGE (commit3)-[:BELONGS_TO]->(feature)
         MERGE (commit3)-[:HAS_PARENT]->(commit2)
 
@@ -186,12 +186,12 @@ class ExampleDataResource {
         MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
         MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
 
-        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", commitDate: 1000})
+        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", authorDate: 1000})
         MERGE (commit1)-[:BELONGS_TO]->(main)
-        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", commitDate: 2000})
+        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", authorDate: 2000})
         MERGE (commit2)-[:BELONGS_TO]->(feature)
         MERGE (commit2)-[:HAS_PARENT]->(commit1)
-        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", commitDate: 3000})
+        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", authorDate: 3000})
         MERGE (commit3)-[:BELONGS_TO]->(main)
         MERGE (commit3)-[:HAS_PARENT]->(commit1)
 
@@ -264,13 +264,13 @@ class ExampleDataResource {
     final Commit commit2 = new Commit("commit2");
     final Commit commit3 = new Commit("commit3");
     commit1.setBranch(branch1);
-    commit1.setCommitDate(Instant.ofEpochMilli(1000));
+    commit1.setAuthorDate(Instant.ofEpochMilli(1000));
     commit2.setBranch(branch1);
     commit2.addParent(commit1);
-    commit2.setCommitDate(Instant.ofEpochMilli(1000));
+    commit2.setAuthorDate(Instant.ofEpochMilli(1000));
     commit3.setBranch(branch2);
     commit3.addParent(commit1);
-    commit1.setCommitDate(Instant.ofEpochMilli(1500));
+    commit1.setAuthorDate(Instant.ofEpochMilli(1500));
     repository.addCommit(commit1);
     repository.addCommit(commit2);
     repository.addCommit(commit3);
