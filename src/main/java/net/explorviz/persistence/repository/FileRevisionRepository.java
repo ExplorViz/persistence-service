@@ -128,7 +128,7 @@ public class FileRevisionRepository {
   public FileRevision createFileStructureForNewApplicationFromFqn(final Session session,
       final Application application, final String[] splitFileFqn) {
 
-    final Directory rootDir = new Directory("*");
+    final Directory rootDir = new Directory(Application.ROOT_NAME_PLACEHOLDER_RUNTIME);
     application.setRootDirectory(rootDir);
     session.save(application);
     return createRemainingFilePath(session, rootDir, splitFileFqn);

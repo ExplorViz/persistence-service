@@ -16,6 +16,11 @@ public class ApplicationRepository {
 
   @Inject SessionFactory sessionFactory;
 
+  /**
+   * Returns the application object with the given name within the landscape with the provided
+   * token. The application is hydrated to contain its root directory, and additionally any files
+   * and subdirectories that are directly contained within the root directory.
+   */
   public Optional<Application> findApplicationByNameAndLandscapeToken(
       final Session session, final String name, final String tokenId) {
     return Optional.ofNullable(
@@ -25,7 +30,8 @@ public class ApplicationRepository {
         MATCH (l:Landscape {tokenId: $tokenId})
           -[:CONTAINS]->(app:Application {name: $name})
           -[h:HAS_ROOT]->(appRoot:Directory)
-        RETURN app, h, appRoot;
+        OPTIONAL MATCH (appRoot)-[c:CONTAINS]->(n:FileRevision|Directory)
+        RETURN app, h, appRoot, c, n;
         """,
             Map.of("tokenId", tokenId, "name", name)));
   }

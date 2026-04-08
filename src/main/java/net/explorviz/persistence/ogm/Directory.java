@@ -9,6 +9,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 public class Directory implements Comparable<Directory> {
+
   @Id
   @GeneratedValue
   private Long id;

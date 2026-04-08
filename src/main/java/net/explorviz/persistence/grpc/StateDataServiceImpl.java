@@ -5,6 +5,7 @@ import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import java.util.List;
+import java.util.Objects;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
@@ -97,25 +98,44 @@ public class StateDataServiceImpl implements StateDataService {
     stateData
         .getApplicationPathsMap()
         .forEach(
-            (String k, String v) -> {
+            (final String applicationName, final String applicationPath) -> {
               final Application application =
                   applicationRepository
                       .findApplicationByNameAndLandscapeToken(
-                          session, k, stateData.getLandscapeToken())
-                      .orElse(new Application(k));
+                          session, applicationName, stateData.getLandscapeToken())
+                      .orElse(new Application(applicationName));
               landscape.addApplication(application);
 
-              if (v.isEmpty()) {
-                application.setRootDirectory(repository.getRootDirectory());
-              } else {
-                final Directory applicationRootDirectory =
-                    directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(
-                        session,
-                        (repository.getName() + "/" + v).split("/"),
-                        stateData.getRepositoryName(),
-                        stateData.getLandscapeToken());
-                application.setRootDirectory(applicationRootDirectory);
+              final Directory applicationRootDirectory =
+                  directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(
+                      session,
+                      (repository.getName() + "/" + applicationPath).split("/"),
+                      stateData.getRepositoryName(),
+                      stateData.getLandscapeToken());
+
+              final Directory existingAppRoot = application.getRootDirectory();
+              if (existingAppRoot != null
+                  && !Objects.equals(existingAppRoot.getId(), applicationRootDirectory.getId())) {
+
+                if (Application.ROOT_NAME_PLACEHOLDER_RUNTIME.equals(existingAppRoot.getName())) {
+                  existingAppRoot
+                      .getFileRevisions()
+                      .forEach(applicationRootDirectory::addFileRevision);
+                  existingAppRoot
+                      .getSubdirectories()
+                      .forEach(applicationRootDirectory::addSubdirectory);
+                  session.delete(existingAppRoot);
+                } else {
+                  throw new IllegalArgumentException(
+                      "Application \""
+                          + applicationName
+                          + "\" already exists with different root directory path. ID of existing "
+                          + "application root: "
+                          + existingAppRoot.getId());
+                }
               }
+
+              application.setRootDirectory(applicationRootDirectory);
               session.save(application);
               session.clear();
             });
