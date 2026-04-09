@@ -1,0 +1,4 @@
+# Stores commits with bulk changes, such as reformatting of the entire codebase.
+# To make git ignore these commits when using git blame, use the following:
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+eb6e04c47b7358e084bbcc76b76c2a1f079a6ec0
