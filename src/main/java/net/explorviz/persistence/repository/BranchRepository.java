@@ -19,11 +19,11 @@ public class BranchRepository {
         session.queryForObject(
             Branch.class,
             """
-                MATCH (:Landscape {tokenId: $tokenId})
-                  -[:CONTAINS]->(:Repository {name: $repoName})
-                  -[:CONTAINS]->(b:Branch {name: $branchName})
-                RETURN b;
-                """,
+            MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(b:Branch {name: $branchName})
+            RETURN b;
+            """,
             Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }
 

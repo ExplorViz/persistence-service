@@ -42,18 +42,18 @@ public class TraceRepository {
         session.query(
             Trace.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)
-        WHERE EXISTS {
-          MATCH (t)-[:CONTAINS]->(s:Span)
-          WHERE s.startTime >= $from AND s.startTime <= $to
-        }
-        CALL apoc.path.subgraphAll(t, {
-          relationshipFilter: "CONTAINS>|REPRESENTS>|HAS_PARENT>"
-        })
-        YIELD relationships
-        UNWIND relationships as r
-        RETURN startNode(r), r, endNode(r);
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)
+            WHERE EXISTS {
+              MATCH (t)-[:CONTAINS]->(s:Span)
+              WHERE s.startTime >= $from AND s.startTime <= $to
+            }
+            CALL apoc.path.subgraphAll(t, {
+              relationshipFilter: "CONTAINS>|REPRESENTS>|HAS_PARENT>"
+            })
+            YIELD relationships
+            UNWIND relationships as r
+            RETURN startNode(r), r, endNode(r);
+            """,
             Map.of("tokenId", landscapeToken, "from", from, "to", to)));
   }
 
@@ -74,15 +74,15 @@ public class TraceRepository {
         session.queryForObject(
             String.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace {traceId: $traceId})
-        MATCH (t)
-          -[:CONTAINS]->(:Span)
-          -[:REPRESENTS]->(:Function)
-          <-[:CONTAINS]-(:FileRevision)
-          <-[:CONTAINS]-(c:Commit)
-        LIMIT 1
-        RETURN c.hash;
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace {traceId: $traceId})
+            MATCH (t)
+              -[:CONTAINS]->(:Span)
+              -[:REPRESENTS]->(:Function)
+              <-[:CONTAINS]-(:FileRevision)
+              <-[:CONTAINS]-(c:Commit)
+            LIMIT 1
+            RETURN c.hash;
+            """,
             Map.of("tokenId", landscapeToken, "traceId", traceId)));
   }
 
@@ -125,16 +125,16 @@ public class TraceRepository {
       final long bucketSize) {
     return session.queryDto(
         """
-            MATCH (l:Landscape {tokenId: $tokenId})
-              -[:CONTAINS]->(t:Trace)
-              -[:CONTAINS]->(s:Span)
-            WHERE
-              s.startTime >= $oldest AND s.startTime <= $newest
-            WITH
-              s, toInteger(s.startTime / $bucketSize) * $bucketSize AS bucket
-            RETURN bucket AS startTimeEpochNano, COUNT(s) AS spanCount
-            ORDER BY bucket ASC;
-            """,
+        MATCH (l:Landscape {tokenId: $tokenId})
+          -[:CONTAINS]->(t:Trace)
+          -[:CONTAINS]->(s:Span)
+        WHERE
+          s.startTime >= $oldest AND s.startTime <= $newest
+        WITH
+          s, toInteger(s.startTime / $bucketSize) * $bucketSize AS bucket
+        RETURN bucket AS startTimeEpochNano, COUNT(s) AS spanCount
+        ORDER BY bucket ASC;
+        """,
         Map.of(
             "tokenId",
             landscapeToken,

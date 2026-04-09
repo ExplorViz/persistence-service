@@ -15,9 +15,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 public class Function implements Comparable<Function> {
-  @Id
-  @GeneratedValue
-  private Long id;
+  @Id @GeneratedValue private Long id;
 
   private String name;
 
@@ -31,8 +29,7 @@ public class Function implements Comparable<Function> {
 
   private final Set<String> outgoingMethodCalls;
 
-  @Properties
-  private final Map<String, Double> metrics;
+  @Properties private final Map<String, Double> metrics;
 
   private int startLine;
 

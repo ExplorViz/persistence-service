@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.explorviz.persistence.avro.SpanData;
+import net.explorviz.persistence.messaging.SpanDataConsumer;
 import net.explorviz.persistence.ogm.Application;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Clazz;
@@ -25,7 +26,6 @@ import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
 import net.explorviz.persistence.ogm.Landscape;
 import net.explorviz.persistence.ogm.Repository;
-import net.explorviz.persistence.messaging.SpanDataConsumer;
 import net.explorviz.persistence.repository.CommitRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
@@ -115,18 +115,19 @@ class SpanDataServiceTest {
           session.queryForObject(
               Application.class,
               """
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Function {name: $funName})
-                <-[:REPRESENTS]-(:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
-          RETURN app;""",
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Function {name: $funName})
+                    <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
+              RETURN app;
+              """,
               params);
 
       assertNotNull(result);
@@ -178,9 +179,9 @@ class SpanDataServiceTest {
           """;
 
       String dbNodeCountQuery =
-        """
-        RETURN COUNT { MATCH (n) RETURN n };
-        """;
+          """
+          RETURN COUNT { MATCH (n) RETURN n };
+          """;
 
       Map<String, Object> params = new HashMap<>();
       params.put("landscapeToken", landscapeToken);
@@ -277,28 +278,29 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(fun:Function {name: $funName})
-                <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
-                <-[:CONTAINS]-(trace1:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(l:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(fun:Function {name: $funName})
+                    <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(trace1:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(l:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (l)-[:CONTAINS]->(trace2:Trace {traceId: $traceIdTwo})
-                -[:CONTAINS]->(span2:Span {spanId: $spanIdTwo})
-                -[:REPRESENTS]->(fun)
+              MATCH (l)-[:CONTAINS]->(trace2:Trace {traceId: $traceIdTwo})
+                    -[:CONTAINS]->(span2:Span {spanId: $spanIdTwo})
+                    -[:REPRESENTS]->(fun)
 
-          WHERE trace1 <> trace2
-            AND span1 <> span2
-            AND NOT EXISTS { MATCH (trace1)-[:CONTAINS]->(span2) }
-            AND NOT EXISTS { MATCH (trace2)-[:CONTAINS]->(span1) }
-          } as exists;""",
+              WHERE trace1 <> trace2
+                AND span1 <> span2
+                AND NOT EXISTS { MATCH (trace1)-[:CONTAINS]->(span2) }
+                AND NOT EXISTS { MATCH (trace2)-[:CONTAINS]->(span1) }
+              } as exists;
+              """,
               params);
 
       assertNotNull(databaseIsCorrect);
@@ -373,27 +375,27 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileNameOne})
-                -[:CONTAINS]->(fun1:Function {name: $funName})
-                <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
-                <-[:CONTAINS]-(t:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileNameOne})
+                    -[:CONTAINS]->(fun1:Function {name: $funName})
+                    <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(t:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (file2:FileRevision {name: $fileNameTwo})-[:CONTAINS]->(fun2:Function {name: $funName2})
-          MATCH (fun2)<-[:REPRESENTS]-(span2:Span {spanId: $spanId2})
-                <-[:CONTAINS]-(t)
-          MATCH (span2)-[:HAS_PARENT]->(span1)
+              MATCH (file2:FileRevision {name: $fileNameTwo})-[:CONTAINS]->(fun2:Function {name: $funName2})
+              MATCH (fun2)<-[:REPRESENTS]-(span2:Span {spanId: $spanId2})
+                    <-[:CONTAINS]-(t)
+              MATCH (span2)-[:HAS_PARENT]->(span1)
 
-          WHERE fun1 <> fun2
-          } AS exists
-          """,
+              WHERE fun1 <> fun2
+              } AS exists
+              """,
               params);
 
       assertTrue(databaseIsCorrect);
@@ -465,27 +467,27 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName})
-                -[:CONTAINS]->(fun1:Function {name: $funName})
-                <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
-                <-[:CONTAINS]-(t:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(fun1:Function {name: $funName})
+                    <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(t:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (file)-[:CONTAINS]->(fun2:Function {name: $funName2})
-          MATCH (fun2)<-[:REPRESENTS]-(span2:Span {spanId: $spanId2})
-                <-[:CONTAINS]-(t)
-          MATCH (span2)-[:HAS_PARENT]->(span1)
+              MATCH (file)-[:CONTAINS]->(fun2:Function {name: $funName2})
+              MATCH (fun2)<-[:REPRESENTS]-(span2:Span {spanId: $spanId2})
+                    <-[:CONTAINS]-(t)
+              MATCH (span2)-[:HAS_PARENT]->(span1)
 
-          WHERE fun1 <> fun2
-          } AS exists
-          """,
+              WHERE fun1 <> fun2
+              } AS exists
+              """,
               params);
 
       assertTrue(databaseIsCorrect);
@@ -542,27 +544,28 @@ class SpanDataServiceTest {
           session.queryForObject(
               Application.class,
               """
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Function {name: $funName})
-                <-[:REPRESENTS]-(:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
-          RETURN app;""",
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Function {name: $funName})
+                    <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
+              RETURN app;
+              """,
               params);
 
       Commit commit =
           session.queryForObject(
               Commit.class,
               """
-          MATCH (c:Commit {hash: $commitHash})
-          RETURN c;
-          """,
+              MATCH (c:Commit {hash: $commitHash})
+              RETURN c;
+              """,
               Map.of("commitHash", commitHash));
 
       assertNotNull(result);
@@ -644,36 +647,37 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(sharedDir:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileNameOne})
-                -[:CONTAINS]->(fun1:Function {name: $funName})
-                <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
-                <-[:CONTAINS]-(t:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(sharedDir:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileNameOne})
+                    -[:CONTAINS]->(fun1:Function {name: $funName})
+                    <-[:REPRESENTS]-(span1:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(t:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (sharedDir)-[:CONTAINS]->(:Directory {name: $dirFour})
-                -[:CONTAINS]->(file2:FileRevision {name: $fileNameTwo})
-                -[:CONTAINS]->(fun2:Function {name: $funNameTwo})
-                <-[:REPRESENTS]-(span2:Span {spanId: $spanIdTwo})
-                <-[:CONTAINS]-(t)
-          } AS exists
-          """,
+              MATCH (sharedDir)-[:CONTAINS]->(:Directory {name: $dirFour})
+                    -[:CONTAINS]->(file2:FileRevision {name: $fileNameTwo})
+                    -[:CONTAINS]->(fun2:Function {name: $funNameTwo})
+                    <-[:REPRESENTS]-(span2:Span {spanId: $spanIdTwo})
+                    <-[:CONTAINS]-(t)
+              } AS exists
+              """,
               params);
 
       Result result =
           session.query(
               """
-          RETURN
-            COUNT {(:Directory {name: $dirOne})} AS dirOne,
-            COUNT {(:Directory {name: $dirTwo})} AS dirTwo,
-            COUNT {(:Directory {name: $dirThree})} AS dirThree,
-            COUNT {(:Directory {name: $dirFour})} AS dirFour""",
+              RETURN
+                COUNT {(:Directory {name: $dirOne})} AS dirOne,
+                COUNT {(:Directory {name: $dirTwo})} AS dirTwo,
+                COUNT {(:Directory {name: $dirThree})} AS dirThree,
+                COUNT {(:Directory {name: $dirFour})} AS dirFour;
+              """,
               params);
 
       Map<String, Object> countMap = result.queryResults().iterator().next();
@@ -734,22 +738,23 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Clazz {name: $classNameOne})
-                -[:CONTAINS]->(:Clazz {name: $classNameTwo})
-                -[:CONTAINS]->(:Clazz {name: $classNameThree})
-                -[:CONTAINS]->(:Function {name: $funName})
-                <-[:REPRESENTS]-(:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
-          } as exists;""",
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                    -[:CONTAINS]->(:Clazz {name: $classNameTwo})
+                    -[:CONTAINS]->(:Clazz {name: $classNameThree})
+                    -[:CONTAINS]->(:Function {name: $funName})
+                    <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
+              } as exists;
+              """,
               params);
 
       assertTrue(databaseIsCorrect);
@@ -827,29 +832,30 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Clazz {name: $classNameOne})
-                -[:CONTAINS]->(:Clazz {name: $classNameTwo})
-                -[:CONTAINS]->(c:Clazz {name: $classNameThree})
-                -[:CONTAINS]->(f1:Function {name: $funName})
-                <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
-                <-[:CONTAINS]-(t:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                    -[:CONTAINS]->(:Clazz {name: $classNameTwo})
+                    -[:CONTAINS]->(c:Clazz {name: $classNameThree})
+                    -[:CONTAINS]->(f1:Function {name: $funName})
+                    <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(t:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (c)-[:CONTAINS]->(f2:Function {name: $funNameTwo})
-                  <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
-                  <-[:CONTAINS]-(t)
+              MATCH (c)-[:CONTAINS]->(f2:Function {name: $funNameTwo})
+                      <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
+                      <-[:CONTAINS]-(t)
 
-          WHERE f1 <> f2
-            AND s1 <> s2
-          } as exists""",
+              WHERE f1 <> f2
+                AND s1 <> s2
+              } as exists;
+              """,
               params);
 
       assertTrue(databaseIsCorrect);
@@ -928,30 +934,31 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Clazz {name: $classNameOne})
-                -[:CONTAINS]->(c2:Clazz {name: $classNameTwo})
-                -[:CONTAINS]->(f1:Function {name: $funName})
-                <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
-                <-[:CONTAINS]-(t:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                    -[:CONTAINS]->(c2:Clazz {name: $classNameTwo})
+                    -[:CONTAINS]->(f1:Function {name: $funName})
+                    <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(t:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (c)-[:CONTAINS]->(c3:Clazz {name: $classNameThree})
-                  -[:CONTAINS]->(f2:Function {name: $funNameTwo})
-                  <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
-                  <-[:CONTAINS]-(t)
+              MATCH (c)-[:CONTAINS]->(c3:Clazz {name: $classNameThree})
+                      -[:CONTAINS]->(f2:Function {name: $funNameTwo})
+                      <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
+                      <-[:CONTAINS]-(t)
 
-          WHERE f1 <> f2
-            AND s1 <> s2
-            AND c2 <> c3
-          } as exists""",
+              WHERE f1 <> f2
+                AND s1 <> s2
+                AND c2 <> c3
+              } as exists;
+              """,
               params);
 
       assertTrue(databaseIsCorrect);
@@ -1010,22 +1017,23 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Clazz {name: $classNameOne})
-                -[:CONTAINS]->(:Clazz {name: $classNameTwo})
-                -[:CONTAINS]->(:Clazz {name: $classNameThree})
-                -[:CONTAINS]->(:Function {name: $funName})
-                <-[:REPRESENTS]-(:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
-          } as exists;""",
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                    -[:CONTAINS]->(:Clazz {name: $classNameTwo})
+                    -[:CONTAINS]->(:Clazz {name: $classNameThree})
+                    -[:CONTAINS]->(:Function {name: $funName})
+                    <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
+              } as exists;
+              """,
               params);
 
       assertTrue(databaseIsCorrect);
@@ -1106,29 +1114,30 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Clazz {name: $classNameOne})
-                -[:CONTAINS]->(:Clazz {name: $classNameTwo})
-                -[:CONTAINS]->(c:Clazz {name: $classNameThree})
-                -[:CONTAINS]->(f1:Function {name: $funName})
-                <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
-                <-[:CONTAINS]-(t:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                    -[:CONTAINS]->(:Clazz {name: $classNameTwo})
+                    -[:CONTAINS]->(c:Clazz {name: $classNameThree})
+                    -[:CONTAINS]->(f1:Function {name: $funName})
+                    <-[:REPRESENTS]-(s1:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(t:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (c)-[:CONTAINS]->(f2:Function {name: $funNameTwo})
-                  <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
-                  <-[:CONTAINS]-(t)
+              MATCH (c)-[:CONTAINS]->(f2:Function {name: $funNameTwo})
+                      <-[:REPRESENTS]-(s2:Span {spanId: $spanIdTwo})
+                      <-[:CONTAINS]-(t)
 
-          WHERE f1 <> f2
-            AND s1 <> s2
-          } as exists""",
+              WHERE f1 <> f2
+                AND s1 <> s2
+              } as exists;
+              """,
               params);
 
       assertTrue(databaseIsCorrect);
@@ -1222,25 +1231,25 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (l:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(repo:Repository {name: $repoName})
-                -[:CONTAINS]->(:Commit {hash: $commitHash})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(:Function {name: $funName})
+              RETURN EXISTS {
+              MATCH (l:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(repo:Repository {name: $repoName})
+                    -[:CONTAINS]->(:Commit {hash: $commitHash})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(:Function {name: $funName})
 
-          MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
-                <-[:BELONGS_TO]-(commit)
+              MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
+                    <-[:BELONGS_TO]-(commit)
 
-          MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(file)
+              MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file)
 
-          MATCH (l)-[:CONTAINS]->(:Application {name: $appName})-[:HAS_ROOT]->(root)
-          } as exists;
-          """,
+              MATCH (l)-[:CONTAINS]->(:Application {name: $appName})-[:HAS_ROOT]->(root)
+              } as exists;
+              """,
               params);
 
       assertNotNull(databaseIsCorrect);
@@ -1296,27 +1305,27 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory {name: $repoRoot})
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(d:Directory {name: $dirThree})
-                -[:CONTAINS]->(fileD:FileRevision {name: $fileName})
-                -[:CONTAINS]->(funD:Function {name: $funName})
-                <-[:REPRESENTS]-(span:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory {name: $repoRoot})
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(d:Directory {name: $dirThree})
+                    -[:CONTAINS]->(fileD:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(funD:Function {name: $funName})
+                    <-[:REPRESENTS]-(span:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          MATCH (d)-[:CONTAINS]->(fileS:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(funS:Function {name: $funName})
+              MATCH (d)-[:CONTAINS]->(fileS:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(funS:Function {name: $funName})
 
-          WHERE NOT EXISTS { MATCH (:Span)-[:REPRESENTS]->(funS) }
-            AND fileD.hash IS NULL
-            AND funS <> funD
-          } as exists;
-          """,
+              WHERE NOT EXISTS { MATCH (:Span)-[:REPRESENTS]->(funS) }
+                AND fileD.hash IS NULL
+                AND funS <> funD
+              } as exists;
+              """,
               params);
 
       assertNotNull(databaseIsCorrect);
@@ -1379,19 +1388,20 @@ class SpanDataServiceTest {
           session.queryForObject(
               Commit.class,
               """
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(:Function {name: $funName})
-                <-[:REPRESENTS]-(:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
-          MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
-          RETURN commit;""",
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(:Function {name: $funName})
+                    <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
+              MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+              RETURN commit;
+              """,
               params);
 
       assertNodeCounts(
@@ -1449,30 +1459,31 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(dir:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(fun:Function {name: $funName})
-          MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(dir:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(fun:Function {name: $funName})
+              MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
 
-          MATCH (dir)-[:CONTAINS]->(fileDyn:FileRevision {name: $fileName})
-                -[:CONTAINS]->(funDyn:Function {name: $funName})
-                <-[:REPRESENTS]-(span:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              MATCH (dir)-[:CONTAINS]->(fileDyn:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(funDyn:Function {name: $funName})
+                    <-[:REPRESENTS]-(span:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(fileDyn) }
-            AND NOT EXISTS { MATCH (file)-[:CONTAINS]->(funDyn) }
-            AND NOT EXISTS { MATCH (fileDyn)-[:CONTAINS]->(fun) }
-            AND fileDyn.hash IS NULL
-            AND file <> fileDyn
-            AND fun <> funDyn
-          } as exists;""",
+              WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(fileDyn) }
+                AND NOT EXISTS { MATCH (file)-[:CONTAINS]->(funDyn) }
+                AND NOT EXISTS { MATCH (fileDyn)-[:CONTAINS]->(fun) }
+                AND fileDyn.hash IS NULL
+                AND file <> fileDyn
+                AND fun <> funDyn
+              } as exists;
+              """,
               params);
 
       assertNodeCounts(
@@ -1554,35 +1565,36 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(dir:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(fun1:Function {name: $funName})
-          MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(dir:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(fun1:Function {name: $funName})
+              MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
 
-          MATCH (dir)-[:CONTAINS]->(file2:FileRevision {name: $fileName})
-                <-[:REPRESENTS]-(span:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
-          MATCH (file2)-[:CONTAINS]->(fun2:Function {name: $unknownFunName})
+              MATCH (dir)-[:CONTAINS]->(file2:FileRevision {name: $fileName})
+                    <-[:REPRESENTS]-(span:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
+              MATCH (file2)-[:CONTAINS]->(fun2:Function {name: $unknownFunName})
 
-          MATCH (dir)-[:CONTAINS]->(file3:FileRevision {name: $unknownFileName})
-                <-[:REPRESENTS]-(span)
-          MATCH (file3)-[:CONTAINS]->(fun3:Function {name: $funName})
+              MATCH (dir)-[:CONTAINS]->(file3:FileRevision {name: $unknownFileName})
+                    <-[:REPRESENTS]-(span)
+              MATCH (file3)-[:CONTAINS]->(fun3:Function {name: $funName})
 
-          WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file2) }
-            AND NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file3) }
-            AND fun1 <> fun2
-            AND fun1 <> fun3
-            AND fun2 <> fun3
-            AND file2.hash IS NULL
-            AND file <> file2
-          } as exists;""",
+              WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file2) }
+                AND NOT EXISTS { MATCH (commit)-[:CONTAINS]->(file3) }
+                AND fun1 <> fun2
+                AND fun1 <> fun3
+                AND fun2 <> fun3
+                AND file2.hash IS NULL
+                AND file <> file2
+              } as exists;
+              """,
               params);
 
       assertNotNull(databaseIsCorrect);
@@ -1645,21 +1657,22 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(dir:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(fun:Function {name: $funName})
-          MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+              RETURN EXISTS {
+              MATCH (:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(dir:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(fun:Function {name: $funName})
+              MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
 
-          WHERE NOT EXISTS { MATCH (dir)-[:CONTAINS]->(:Directory {name: $innerDir}) }
-            AND NOT EXISTS { MATCH (:Span)-[:REPRESENTS]->(file) }
-            AND NOT EXISTS { MATCH (:FileRevision {name: $innerFile}) }
-            AND NOT EXISTS { MATCH (:Function {name: $innerFunction}) }
-          } as exists;""",
+              WHERE NOT EXISTS { MATCH (dir)-[:CONTAINS]->(:Directory {name: $innerDir}) }
+                AND NOT EXISTS { MATCH (:Span)-[:REPRESENTS]->(file) }
+                AND NOT EXISTS { MATCH (:FileRevision {name: $innerFile}) }
+                AND NOT EXISTS { MATCH (:Function {name: $innerFunction}) }
+              } as exists;
+              """,
               params);
 
       spanDataConsumer.consume(testSpanData);
@@ -1668,31 +1681,32 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (app:Application {name: $appName})
-                -[:HAS_ROOT]->(:Directory)
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(dir:Directory {name: $dirThree})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(fun:Function {name: $funName})
-          MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+              RETURN EXISTS {
+              MATCH (app:Application {name: $appName})
+                    -[:HAS_ROOT]->(:Directory)
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(dir:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(fun:Function {name: $funName})
+              MATCH (commit:Commit {hash: $commitHash})-[:CONTAINS]->(file)
 
-          MATCH (dir)-[:CONTAINS]->(:Directory {name: $innerDir})
-                -[:CONTAINS]->(innerFile:FileRevision {name: $innerFile})
-                -[:CONTAINS]->(innerFun:Function {name: $innerFunction})
-                <-[:REPRESENTS]-(span:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(app)
+              MATCH (dir)-[:CONTAINS]->(:Directory {name: $innerDir})
+                    -[:CONTAINS]->(innerFile:FileRevision {name: $innerFile})
+                    -[:CONTAINS]->(innerFun:Function {name: $innerFunction})
+                    <-[:REPRESENTS]-(span:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(app)
 
-          WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(innerFile) }
-            AND NOT EXISTS { MATCH (file)-[:CONTAINS]->(innerFun) }
-            AND NOT EXISTS { MATCH (innerFile)-[:CONTAINS]->(fun) }
-            AND innerFile.hash IS NULL
-            AND file <> innerFile
-            AND fun <> innerFun
-          } as exists;""",
+              WHERE NOT EXISTS { MATCH (commit)-[:CONTAINS]->(innerFile) }
+                AND NOT EXISTS { MATCH (file)-[:CONTAINS]->(innerFun) }
+                AND NOT EXISTS { MATCH (innerFile)-[:CONTAINS]->(fun) }
+                AND innerFile.hash IS NULL
+                AND file <> innerFile
+                AND fun <> innerFun
+              } as exists;
+              """,
               params);
 
       assertNotNull(oldDatabaseIsCorrect);
@@ -1729,9 +1743,9 @@ class SpanDataServiceTest {
           session.queryForObject(
               FileRevision.class,
               """
-          MATCH (f:FileRevision {name: $fileName, hash: $fileHash})
-          RETURN f;
-          """,
+              MATCH (f:FileRevision {name: $fileName, hash: $fileHash})
+              RETURN f;
+              """,
               Map.of("fileName", baseFileName, "fileHash", baseFileHash));
 
       Clazz clazz = new Clazz(className);
@@ -1761,28 +1775,28 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (l:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(repo:Repository {name: $repoName})
-                -[:CONTAINS]->(:Commit {hash: $commitHash})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(:Function {name: $funName})
+              RETURN EXISTS {
+              MATCH (l:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(repo:Repository {name: $repoName})
+                    -[:CONTAINS]->(:Commit {hash: $commitHash})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(:Function {name: $funName})
 
-          MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
-                <-[:BELONGS_TO]-(commit)
+              MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
+                    <-[:BELONGS_TO]-(commit)
 
-          MATCH (file)-[:CONTAINS]->(:Clazz {name: $className})
-                -[:CONTAINS]->(:Function {name: $funNameTwo})
+              MATCH (file)-[:CONTAINS]->(:Clazz {name: $className})
+                    -[:CONTAINS]->(:Function {name: $funNameTwo})
 
-          MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(:Directory {name: $dirThree})
-                -[:CONTAINS]->(file)
+              MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file)
 
-          MATCH (l)-[:CONTAINS]->(:Application {name: $appName})-[:HAS_ROOT]->(root)
-          } as exists;
-          """,
+              MATCH (l)-[:CONTAINS]->(:Application {name: $appName})-[:HAS_ROOT]->(root)
+              } as exists;
+              """,
               params);
 
       SpanData testSpanData =
@@ -1807,15 +1821,15 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(:Clazz {name: $className})
-                -[:CONTAINS]->(:Function {name: $funNameTwo})
-                <-[:REPRESENTS]-(:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
-          } as exists;
-          """,
+              RETURN EXISTS {
+              MATCH (file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(:Clazz {name: $className})
+                    -[:CONTAINS]->(:Function {name: $funNameTwo})
+                    <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(:Landscape {tokenId: $landscapeToken})
+              } as exists;
+              """,
               params);
 
       assertTrue(preparedDatabaseIsCorrect);
@@ -1884,34 +1898,34 @@ class SpanDataServiceTest {
           session.queryForObject(
               Boolean.class,
               """
-          RETURN EXISTS {
-          MATCH (l:Landscape {tokenId: $landscapeToken})
-                -[:CONTAINS]->(repo:Repository {name: $repoName})
-                -[:CONTAINS]->(:Commit {hash: $commitHash})
-                -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
-                -[:CONTAINS]->(:Function {name: $funName})
+              RETURN EXISTS {
+              MATCH (l:Landscape {tokenId: $landscapeToken})
+                    -[:CONTAINS]->(repo:Repository {name: $repoName})
+                    -[:CONTAINS]->(:Commit {hash: $commitHash})
+                    -[:CONTAINS]->(file:FileRevision {name: $fileName, hash: $fileHash})
+                    -[:CONTAINS]->(:Function {name: $funName})
 
-          MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
-                <-[:BELONGS_TO]-(commit)
+              MATCH (repo)-[:CONTAINS]->(:Branch {name: $branchName})
+                    <-[:BELONGS_TO]-(commit)
 
-          MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
-                -[:CONTAINS]->(:Directory {name: $dirOne})
-                -[:CONTAINS]->(:Directory {name: $dirTwo})
-                -[:CONTAINS]->(d:Directory {name: $dirThree})
-                -[:CONTAINS]->(file)
+              MATCH (repo)-[:HAS_ROOT]->(root:Directory {name: $repoRoot})
+                    -[:CONTAINS]->(:Directory {name: $dirOne})
+                    -[:CONTAINS]->(:Directory {name: $dirTwo})
+                    -[:CONTAINS]->(d:Directory {name: $dirThree})
+                    -[:CONTAINS]->(file)
 
-          MATCH (d)-[:CONTAINS]->(file2:FileRevision {name: $fileName})
-                -[:CONTAINS]->(:Clazz {name: $className})
-                -[:CONTAINS]->(:Function {name: $funNameTwo})
-                <-[:REPRESENTS]-(:Span {spanId: $spanId})
-                <-[:CONTAINS]-(:Trace {traceId: $traceId})
-                <-[:CONTAINS]-(l)
+              MATCH (d)-[:CONTAINS]->(file2:FileRevision {name: $fileName})
+                    -[:CONTAINS]->(:Clazz {name: $className})
+                    -[:CONTAINS]->(:Function {name: $funNameTwo})
+                    <-[:REPRESENTS]-(:Span {spanId: $spanId})
+                    <-[:CONTAINS]-(:Trace {traceId: $traceId})
+                    <-[:CONTAINS]-(l)
 
-          MATCH (l)-[:CONTAINS]->(:Application {name: $appName})-[:HAS_ROOT]->(root)
+              MATCH (l)-[:CONTAINS]->(:Application {name: $appName})-[:HAS_ROOT]->(root)
 
-          WHERE file <> file2
-          } as exists;
-          """,
+              WHERE file <> file2
+              } as exists;
+              """,
               params);
 
       assertTrue(databaseIsCorrect);

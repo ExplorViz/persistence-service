@@ -2,21 +2,9 @@
 
 echo "Running pre-commit hook"
 
-./gradlew checkstyleMain
+./gradlew spotlessApply checkstyleMain pmdMain test
 if [ $? -ne 0 ]; then
-  echo "Checkstyle violations found, fix before commit"
-  exit 1
-fi
-
-./gradlew pmdMain
-if [ $? -ne 0 ]; then
-  echo "PMD violations found, fix before commit"
-  exit 1
-fi
-
-./gradlew test
-if [ $? -ne 0 ]; then
-  echo "Tests failed, fix before commit"
+  echo "Pre-commit hook failed"
   exit 1
 fi
 

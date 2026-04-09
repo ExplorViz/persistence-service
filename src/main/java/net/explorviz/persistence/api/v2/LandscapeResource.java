@@ -119,11 +119,7 @@ class LandscapeResource {
       timestamps =
           traceRepository
               .findTimestampsForLandscapeTokenAndTimeRange(
-                  session,
-                  landscapeToken,
-                  newestTimestamp,
-                  oldestTimestamp,
-                  defaultBucketSizeNano)
+                  session, landscapeToken, newestTimestamp, oldestTimestamp, defaultBucketSizeNano)
               .stream()
               .map(TimestampDto::new)
               .toList();

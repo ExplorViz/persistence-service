@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.common.collect.Iterators;
 import com.google.protobuf.Timestamp;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -255,16 +254,16 @@ class CommitServiceTest {
         session.queryForObject(
             Boolean.class,
             """
-        RETURN EXISTS {
-        MATCH (:Landscape {tokenId: $landscapeToken})
-          -[:CONTAINS]->(r:Repository {name: $repoName})
-          -[:CONTAINS]->(c1:Commit {hash: $commitHashOne})
+            RETURN EXISTS {
+            MATCH (:Landscape {tokenId: $landscapeToken})
+              -[:CONTAINS]->(r:Repository {name: $repoName})
+              -[:CONTAINS]->(c1:Commit {hash: $commitHashOne})
 
-        MATCH (r)
-          -[:CONTAINS]->(:Commit {hash: $commitHashTwo})
-          -[:HAS_PARENT]->(c1)
-        } AS exists
-        """,
+            MATCH (r)
+              -[:CONTAINS]->(:Commit {hash: $commitHashTwo})
+              -[:HAS_PARENT]->(c1)
+            } AS exists
+            """,
             Map.of(
                 "landscapeToken",
                 landscapeToken,
@@ -392,46 +391,46 @@ class CommitServiceTest {
         session.queryForObject(
             Boolean.class,
             """
-        RETURN EXISTS {
-        MATCH (:Landscape {tokenId: $landscapeToken})
-          -[:CONTAINS]->(r:Repository {name: $repoName})
-          -[:HAS_ROOT]->(:Directory {name: $repoName})
-          -[:CONTAINS]->(src:Directory {name: 'src'})
+            RETURN EXISTS {
+            MATCH (:Landscape {tokenId: $landscapeToken})
+              -[:CONTAINS]->(r:Repository {name: $repoName})
+              -[:HAS_ROOT]->(:Directory {name: $repoName})
+              -[:CONTAINS]->(src:Directory {name: 'src'})
 
-        MATCH (r)-[:CONTAINS]->(c1:Commit {hash: $commitHashOne})
-        MATCH (c1)-[:CONTAINS]->(f1:FileRevision {name: $fileNameOne, hash: $fileHashOne})
-        MATCH (src)-[:CONTAINS]->(f1)
-        MATCH (c1)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
-        MATCH (src)-[:CONTAINS]->(f2)
-        MATCH (c1)-[:CONTAINS]->(f_del:FileRevision {name: $fileNameDel, hash: $fileHashDel})
-        MATCH (src)-[:CONTAINS]->(f_del)
-        MATCH (c1)-[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
-        MATCH (c1)-[:BELONGS_TO]->(branch:Branch {name: $branchName})
+            MATCH (r)-[:CONTAINS]->(c1:Commit {hash: $commitHashOne})
+            MATCH (c1)-[:CONTAINS]->(f1:FileRevision {name: $fileNameOne, hash: $fileHashOne})
+            MATCH (src)-[:CONTAINS]->(f1)
+            MATCH (c1)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
+            MATCH (src)-[:CONTAINS]->(f2)
+            MATCH (c1)-[:CONTAINS]->(f_del:FileRevision {name: $fileNameDel, hash: $fileHashDel})
+            MATCH (src)-[:CONTAINS]->(f_del)
+            MATCH (c1)-[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
+            MATCH (c1)-[:BELONGS_TO]->(branch:Branch {name: $branchName})
 
-        MATCH (r)-[:CONTAINS]->(c2:Commit {hash: $commitHashTwo})
-        MATCH (c2)-[:CONTAINS]->(f3:FileRevision {name: $fileNameThree, hash: $fileHashThree})
-        MATCH (src)-[:CONTAINS]->(f3)
-        MATCH (c2)-[:CONTAINS]->(f1_mod:FileRevision {name: $fileNameOne, hash: $fileHashOneMod})
-        MATCH (src)-[:CONTAINS]->(f1_mod)
-        MATCH (c2)-[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
-        MATCH (c2)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
-        MATCH (c2)-[:BELONGS_TO]->(branch)
-        
-        MATCH (r)-[:CONTAINS]->(t)
+            MATCH (r)-[:CONTAINS]->(c2:Commit {hash: $commitHashTwo})
+            MATCH (c2)-[:CONTAINS]->(f3:FileRevision {name: $fileNameThree, hash: $fileHashThree})
+            MATCH (src)-[:CONTAINS]->(f3)
+            MATCH (c2)-[:CONTAINS]->(f1_mod:FileRevision {name: $fileNameOne, hash: $fileHashOneMod})
+            MATCH (src)-[:CONTAINS]->(f1_mod)
+            MATCH (c2)-[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
+            MATCH (c2)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
+            MATCH (c2)-[:BELONGS_TO]->(branch)
 
-        WHERE NOT EXISTS {
-          MATCH (c2)-[:CONTAINS]->(f_del)
-        }
-        } AS exists
-        """,
+            MATCH (r)-[:CONTAINS]->(t)
+
+            WHERE NOT EXISTS {
+              MATCH (c2)-[:CONTAINS]->(f_del)
+            }
+            } AS exists
+            """,
             params);
 
     Integer dbSize =
         session.queryForObject(
             Integer.class,
             """
-        MATCH (n) RETURN count(n);
-        """,
+            MATCH (n) RETURN count(n);
+            """,
             Map.of());
 
     assertEquals(13, dbSize);

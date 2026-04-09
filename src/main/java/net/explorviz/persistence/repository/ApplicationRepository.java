@@ -27,12 +27,12 @@ public class ApplicationRepository {
         session.queryForObject(
             Application.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(app:Application {name: $name})
-          -[h:HAS_ROOT]->(appRoot:Directory)
-        OPTIONAL MATCH (appRoot)-[c:CONTAINS]->(n:FileRevision|Directory)
-        RETURN app, h, appRoot, c, n;
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(app:Application {name: $name})
+              -[h:HAS_ROOT]->(appRoot:Directory)
+            OPTIONAL MATCH (appRoot)-[c:CONTAINS]->(n:FileRevision|Directory)
+            RETURN app, h, appRoot, c, n;
+            """,
             Map.of("tokenId", tokenId, "name", name)));
   }
 
@@ -49,18 +49,18 @@ public class ApplicationRepository {
         session.query(
             Application.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-        MATCH (func:Function)
-        WHERE
-          (l)-[:CONTAINS]->(:Trace)-[:CONTAINS]->(:Span)-[:REPRESENTS]->(func)
+            MATCH (l:Landscape {tokenId: $tokenId})
+            MATCH (func:Function)
+            WHERE
+              (l)-[:CONTAINS]->(:Trace)-[:CONTAINS]->(:Span)-[:REPRESENTS]->(func)
 
-        MATCH p = (a:Application)-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(endNode)
-        WHERE
-          func IN nodes(p)
-        UNWIND relationships(p) AS rel
-        WITH DISTINCT rel AS r
-        RETURN startNode(r), r, endNode(r);
-        """,
+            MATCH p = (a:Application)-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(endNode)
+            WHERE
+              func IN nodes(p)
+            UNWIND relationships(p) AS rel
+            WITH DISTINCT rel AS r
+            RETURN startNode(r), r, endNode(r);
+            """,
             Map.of("tokenId", landscapeToken)));
   }
 
@@ -79,22 +79,22 @@ public class ApplicationRepository {
         session.query(
             Application.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(:Repository {name: $repoName})
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
-        MATCH (c)-[:CONTAINS]->(f:FileRevision)
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(c:Commit {hash: $commitHash})
+            MATCH (c)-[:CONTAINS]->(f:FileRevision)
 
-        CALL apoc.path.subgraphAll(f, {
-          relationshipFilter: "CONTAINS>"
-        })
-        YIELD relationships AS fileContentRels
+            CALL apoc.path.subgraphAll(f, {
+              relationshipFilter: "CONTAINS>"
+            })
+            YIELD relationships AS fileContentRels
 
-        MATCH p = (:Application)-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(f:FileRevision)
+            MATCH p = (:Application)-[:HAS_ROOT]->(:Directory)-[:CONTAINS]->*(f:FileRevision)
 
-        WITH relationships(p) + fileContentRels AS rels
-        UNWIND rels as r
-        RETURN DISTINCT startNode(r), r, endNode(r);
-        """,
+            WITH relationships(p) + fileContentRels AS rels
+            UNWIND rels as r
+            RETURN DISTINCT startNode(r), r, endNode(r);
+            """,
             Map.of(
                 "tokenId", landscapeToken, "repoName", repositoryName, "commitHash", commitHash)));
   }
@@ -160,14 +160,14 @@ public class ApplicationRepository {
         session.query(
             String.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application)
-        WHERE (l)
-          -[:CONTAINS]->(:Repository)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
-        RETURN DISTINCT a.name
-        ORDER BY a.name ASC;
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application)
+            WHERE (l)
+              -[:CONTAINS]->(:Repository)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
+            RETURN DISTINCT a.name
+            ORDER BY a.name ASC;
+            """,
             Map.of("tokenId", landscapeToken)));
   }
 }

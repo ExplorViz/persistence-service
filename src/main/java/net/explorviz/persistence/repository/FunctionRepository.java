@@ -33,7 +33,8 @@ public class FunctionRepository {
         NOT (:Commit)-[:CONTAINS]->(file) AND
         all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
         size(nodes(p)) = size($pathSegments)
-      RETURN func;""";
+      RETURN func;
+      """;
 
   private static final String FIND_BY_FQN_AND_LANDSCAPE_TOKEN_AND_COMMIT_HASH_STATEMENT =
       """
@@ -52,7 +53,8 @@ public class FunctionRepository {
         all(j IN range(0, length(p)) WHERE nodes(p)[j].name = $pathSegments[j]) AND
         size(nodes(p)) = size($pathSegments)
       MATCH (file)<-[:CONTAINS]-(:Commit {hash: $commitHash})
-      RETURN func;""";
+      RETURN func;
+      """;
 
   @Inject FileRevisionRepository fileRevisionRepository;
 

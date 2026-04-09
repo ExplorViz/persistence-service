@@ -40,16 +40,24 @@ build:
     paths:
       - build
 
-pmd:
+spotless:
   stage: code-analysis
-  script: ./gradlew pmdMain
+  script: ./gradlew spotlessCheck
   artifacts:
     paths:
       - build
 
+
 checkstyle:
   stage: code-analysis
   script: ./gradlew checkstyleMain
+  artifacts:
+    paths:
+      - build
+
+pmd:
+  stage: code-analysis
+  script: ./gradlew pmdMain
   artifacts:
     paths:
       - build

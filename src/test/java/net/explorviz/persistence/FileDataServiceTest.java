@@ -128,9 +128,9 @@ class FileDataServiceTest {
         session.queryForObject(
             FileRevision.class,
             """
-        MATCH (f:FileRevision {hash: $fileHash})
-        RETURN f;
-        """,
+            MATCH (f:FileRevision {hash: $fileHash})
+            RETURN f;
+            """,
             Map.of("fileHash", fileHash));
 
     for (String k : file.getMetrics().keySet()) {
@@ -212,9 +212,9 @@ class FileDataServiceTest {
         session.query(
             FileRevision.class,
             """
-        MATCH (f:FileRevision {hash: $fileHash})
-        RETURN f;
-        """,
+            MATCH (f:FileRevision {hash: $fileHash})
+            RETURN f;
+            """,
             Map.of("fileHash", fileHash));
 
     List<FileRevision> fileList = new ArrayList<>();
@@ -408,29 +408,29 @@ class FileDataServiceTest {
         session.queryForObject(
             Boolean.class,
             """
-        RETURN EXISTS {
-        MATCH (:Landscape {tokenId: $landscapeToken})
-          -[:CONTAINS]->(:Repository {name: $repoName})
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
+            RETURN EXISTS {
+            MATCH (:Landscape {tokenId: $landscapeToken})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(c:Commit {hash: $commitHash})
 
-        MATCH (c)-[:CONTAINS]->(fs:FileRevision {name: $fileNameSuper, hash: $fileHashSuper})
-          -[:CONTAINS]->(cs:Clazz {name: $classNameSuper, type: $classType})
-        MATCH (cs)-[:CONTAINS]->(:Field {name: $fieldNameSuper, type: $fieldType})
-        MATCH (cs)-[:CONTAINS]->(fun:Function {name: $functionName, returnType: $functionReturnType})
-        MATCH (cs)-[:CONTAINS]->(ci:Clazz {name: $innerClassName, type: $classType})
+            MATCH (c)-[:CONTAINS]->(fs:FileRevision {name: $fileNameSuper, hash: $fileHashSuper})
+              -[:CONTAINS]->(cs:Clazz {name: $classNameSuper, type: $classType})
+            MATCH (cs)-[:CONTAINS]->(:Field {name: $fieldNameSuper, type: $fieldType})
+            MATCH (cs)-[:CONTAINS]->(fun:Function {name: $functionName, returnType: $functionReturnType})
+            MATCH (cs)-[:CONTAINS]->(ci:Clazz {name: $innerClassName, type: $classType})
 
-        MATCH (c)-[:CONTAINS]->(fc:FileRevision {name: $fileNameClass, hash: $fileHashClass})
-          -[:CONTAINS]->(cc:Clazz {name: $classNameClass, type: $classType})
-        MATCH (cc)-[:CONTAINS]->(:Field {name: $fieldNameClass, type: $fieldType})
-        MATCH (cc)-[:INHERITS]->(cs)
+            MATCH (c)-[:CONTAINS]->(fc:FileRevision {name: $fileNameClass, hash: $fileHashClass})
+              -[:CONTAINS]->(cc:Clazz {name: $classNameClass, type: $classType})
+            MATCH (cc)-[:CONTAINS]->(:Field {name: $fieldNameClass, type: $fieldType})
+            MATCH (cc)-[:INHERITS]->(cs)
 
-        WHERE NOT EXISTS { MATCH (fs)-[:CONTAINS]->(fun) }
-          AND NOT EXISTS { MATCH (fs)-[:CONTAINS]->(ci) }
-          AND NOT EXISTS { MATCH (cc)-[:CONTAINS]->(fun) }
-          AND NOT EXISTS { MATCH (cc)-[:CONTAINS]->(ci) }
-          AND NOT EXISTS { MATCH (cc)-[:INHERITS]->(ci) }
-        } AS exists
-        """,
+            WHERE NOT EXISTS { MATCH (fs)-[:CONTAINS]->(fun) }
+              AND NOT EXISTS { MATCH (fs)-[:CONTAINS]->(ci) }
+              AND NOT EXISTS { MATCH (cc)-[:CONTAINS]->(fun) }
+              AND NOT EXISTS { MATCH (cc)-[:CONTAINS]->(ci) }
+              AND NOT EXISTS { MATCH (cc)-[:INHERITS]->(ci) }
+            } AS exists
+            """,
             params);
 
     assertTrue(databaseIsCorrect);
@@ -615,22 +615,22 @@ class FileDataServiceTest {
         session.queryForObject(
             Boolean.class,
             """
-        RETURN EXISTS {
-        MATCH (:Landscape {tokenId: $landscapeToken})
-          -[:CONTAINS]->(:Repository {name: $repoName})
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
+            RETURN EXISTS {
+            MATCH (:Landscape {tokenId: $landscapeToken})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(c:Commit {hash: $commitHash})
 
-        MATCH (c)-[:CONTAINS]->(fs:FileRevision {name: $fileNameSuper, hash: $fileHashSuper})
-          -[:CONTAINS]->(cs:Clazz {name: $classNameSuper, type: $classType})
-        MATCH (cs)-[:CONTAINS]->(:Field {name: $fieldNameSuper, type: $fieldType})
-        MATCH (cs)-[:CONTAINS]->(fun:Function {name: $functionName, returnType: $functionReturnType})
-        MATCH (cs)-[:CONTAINS]->(ci:Clazz {name: $innerClassName, type: $classType})
+            MATCH (c)-[:CONTAINS]->(fs:FileRevision {name: $fileNameSuper, hash: $fileHashSuper})
+              -[:CONTAINS]->(cs:Clazz {name: $classNameSuper, type: $classType})
+            MATCH (cs)-[:CONTAINS]->(:Field {name: $fieldNameSuper, type: $fieldType})
+            MATCH (cs)-[:CONTAINS]->(fun:Function {name: $functionName, returnType: $functionReturnType})
+            MATCH (cs)-[:CONTAINS]->(ci:Clazz {name: $innerClassName, type: $classType})
 
-        MATCH (c)-[:CONTAINS]->(fc:FileRevision {name: $fileNameClass, hash: $fileHashClass})
-          -[:CONTAINS]->(cc:Clazz {name: $classNameClass, type: $classType})
-        MATCH (cc)-[:INHERITS]->(cs)
-        } AS exists
-        """,
+            MATCH (c)-[:CONTAINS]->(fc:FileRevision {name: $fileNameClass, hash: $fileHashClass})
+              -[:CONTAINS]->(cc:Clazz {name: $classNameClass, type: $classType})
+            MATCH (cc)-[:INHERITS]->(cs)
+            } AS exists
+            """,
             params);
 
     assertTrue(databaseIsCorrect);
@@ -783,28 +783,28 @@ class FileDataServiceTest {
         session.queryForObject(
             Boolean.class,
             """
-        RETURN EXISTS {
-        MATCH (:Landscape {tokenId: $landscapeToken})
-          -[:CONTAINS]->(:Repository {name: $repoName})
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
+            RETURN EXISTS {
+            MATCH (:Landscape {tokenId: $landscapeToken})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(c:Commit {hash: $commitHash})
 
-        MATCH (c)-[:CONTAINS]->(f1:FileRevision {name: $fileNameOne, hash: $fileHashOne})
-          -[:CONTAINS]->(fun1:Function {name: $funName, returnType: $returnType})
-        MATCH (fun1)-[:CONTAINS]->(param1:Parameter {name: $paramNameOne, type: $paramTypeOne})
+            MATCH (c)-[:CONTAINS]->(f1:FileRevision {name: $fileNameOne, hash: $fileHashOne})
+              -[:CONTAINS]->(fun1:Function {name: $funName, returnType: $returnType})
+            MATCH (fun1)-[:CONTAINS]->(param1:Parameter {name: $paramNameOne, type: $paramTypeOne})
 
-        MATCH (c)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
-          -[:CONTAINS]->(fun2:Function {name: $funName, returnType: $returnType})
-        MATCH (fun2)-[:CONTAINS]->(param2:Parameter {name: $paramNameOne, type: $paramTypeOne})
-        MATCH (fun2)-[:CONTAINS]->(param3:Parameter {name: $paramNameTwo, type: $paramTypeTwo})
+            MATCH (c)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
+              -[:CONTAINS]->(fun2:Function {name: $funName, returnType: $returnType})
+            MATCH (fun2)-[:CONTAINS]->(param2:Parameter {name: $paramNameOne, type: $paramTypeOne})
+            MATCH (fun2)-[:CONTAINS]->(param3:Parameter {name: $paramNameTwo, type: $paramTypeTwo})
 
-        WHERE NOT EXISTS { MATCH (f2)-[:CONTAINS]->(fun1) }
-          AND NOT EXISTS { MATCH (f1)-[:CONTAINS]->(fun2) }
-          AND NOT EXISTS { MATCH (fun1)-[:CONTAINS]->(param2) }
-          AND NOT EXISTS { MATCH (fun1)-[:CONTAINS]->(param3) }
-          AND NOT EXISTS { MATCH (fun2)-[:CONTAINS]->(param1) }
-          AND param1 <> param2
-        } AS exists
-        """,
+            WHERE NOT EXISTS { MATCH (f2)-[:CONTAINS]->(fun1) }
+              AND NOT EXISTS { MATCH (f1)-[:CONTAINS]->(fun2) }
+              AND NOT EXISTS { MATCH (fun1)-[:CONTAINS]->(param2) }
+              AND NOT EXISTS { MATCH (fun1)-[:CONTAINS]->(param3) }
+              AND NOT EXISTS { MATCH (fun2)-[:CONTAINS]->(param1) }
+              AND param1 <> param2
+            } AS exists
+            """,
             params);
 
     assertTrue(databaseIsCorrect);
@@ -907,10 +907,14 @@ class FileDataServiceTest {
     Boolean databaseCorrectAfterPersistFile =
         session.queryForObject(Boolean.class, dbQuery, params);
 
-    Boolean fileHasFileData = session.queryForObject(Boolean.class, """
-      MATCH (f:FileRevision {hash: $fileHash, name: $fileName})
-      RETURN f.hasFileData;
-    """, params);
+    Boolean fileHasFileData =
+        session.queryForObject(
+            Boolean.class,
+            """
+              MATCH (f:FileRevision {hash: $fileHash, name: $fileName})
+              RETURN f.hasFileData;
+            """,
+            params);
 
     assertTrue(databaseCorrectBeforePersistFile);
     assertEquals(Status.FAILED_PRECONDITION.getCode(), ex.getStatus().getCode());
@@ -1074,10 +1078,14 @@ class FileDataServiceTest {
     Boolean databaseCorrectAfterPersistFileOne =
         session.queryForObject(Boolean.class, dbQuery, params);
 
-    Boolean fileOneHasFileData = session.queryForObject(Boolean.class, """
-      MATCH (f:FileRevision {hash: $fileHashSuper, name: $fileNameSuper})
-      RETURN f.hasFileData;
-    """, params);
+    Boolean fileOneHasFileData =
+        session.queryForObject(
+            Boolean.class,
+            """
+              MATCH (f:FileRevision {hash: $fileHashSuper, name: $fileNameSuper})
+              RETURN f.hasFileData;
+            """,
+            params);
 
     StatusRuntimeException exTwo =
         assertThrows(
@@ -1091,10 +1099,14 @@ class FileDataServiceTest {
     Boolean databaseCorrectAfterPersistFileTwo =
         session.queryForObject(Boolean.class, dbQuery, params);
 
-    Boolean fileTwoHasFileData = session.queryForObject(Boolean.class, """
-      MATCH (f:FileRevision {hash: $fileHashClass, name: $fileNameClass})
-      RETURN f.hasFileData;
-    """, params);
+    Boolean fileTwoHasFileData =
+        session.queryForObject(
+            Boolean.class,
+            """
+              MATCH (f:FileRevision {hash: $fileHashClass, name: $fileNameClass})
+              RETURN f.hasFileData;
+            """,
+            params);
 
     assertTrue(databaseCorrectBeforePersistFile);
     assertEquals(Status.INVALID_ARGUMENT.getCode(), ex.getStatus().getCode());

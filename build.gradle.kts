@@ -1,9 +1,10 @@
 plugins {
     java
     id("io.quarkus")
+    id("com.diffplug.spotless") version "8.4.0"
+    checkstyle
+    pmd
 }
-
-apply(from = "code-analysis/code-analysis.gradle")
 
 repositories {
     mavenCentral()
@@ -80,4 +81,44 @@ registerGitHook("registerPreMergeCommitHook", "pre-commit", "pre-merge-commit")
 tasks.named("quarkusGenerateCode") {
     dependsOn("registerPreCommitHook")
     dependsOn("registerPreMergeCommitHook")
+}
+
+pmd {
+    // Empty ruleset is necessary for exclude-pattern
+    // https://stackoverflow.com/questions/32247190/pmd-exclude-pattern-with-gradle
+    ruleSets = listOf()
+    ruleSetFiles = files("code-analysis/pmd.xml")
+    isIgnoreFailures = false
+    toolVersion = "6.53.0"
+}
+
+checkstyle {
+    configDirectory.set(file("code-analysis"))
+    configFile = file("code-analysis/checkstyle.xml")
+    maxWarnings = 0
+    isIgnoreFailures = false
+    toolVersion = "10.12.5"
+}
+
+spotless {
+    java {
+        target("src/*/java/**/*.java")
+        googleJavaFormat().reflowLongStrings()
+        formatAnnotations()
+    }
+
+    flexmark {
+        target("**/*.md")
+        flexmark()
+    }
+
+    format("misc") {
+        // define the files to apply `misc` to
+        target("*.gradle", "*.gradle.kts", ".gitattributes", ".gitignore")
+
+        // define the steps to apply to those files
+        trimTrailingWhitespace()
+        leadingTabsToSpaces()
+        endWithNewline()
+    }
 }

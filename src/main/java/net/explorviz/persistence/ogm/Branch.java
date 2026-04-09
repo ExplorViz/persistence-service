@@ -6,9 +6,7 @@ import org.neo4j.ogm.annotation.NodeEntity;
 
 @NodeEntity
 public class Branch {
-  @Id
-  @GeneratedValue
-  private Long id;
+  @Id @GeneratedValue private Long id;
 
   private String name;
 

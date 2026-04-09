@@ -27,17 +27,18 @@ public class CommitRepository {
         session.queryForObject(
             Commit.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(:Repository {name: $repoName})
-          -[:CONTAINS]->(c:Commit)
-          -[:BELONGS_TO]->(:Branch {name: $branchName})
-        WITH c, [(c)-[:CONTAINS]->(f:FileRevision) | f] AS filesInCommit
-        WHERE
-          all(file IN filesInCommit WHERE file.hasFileData) AND
-          NOT isEmpty(filesInCommit)
-        RETURN c
-        ORDER BY c.commitDate DESC
-        LIMIT 1;""",
+            MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(c:Commit)
+              -[:BELONGS_TO]->(:Branch {name: $branchName})
+            WITH c, [(c)-[:CONTAINS]->(f:FileRevision) | f] AS filesInCommit
+            WHERE
+              all(file IN filesInCommit WHERE file.hasFileData) AND
+              NOT isEmpty(filesInCommit)
+            RETURN c
+            ORDER BY c.commitDate DESC
+            LIMIT 1;
+            """,
             Map.of("tokenId", tokenId, "repoName", repoName, "branchName", branchName)));
   }
 
@@ -47,11 +48,11 @@ public class CommitRepository {
         session.queryForObject(
             Commit.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(:Repository)
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
-        RETURN c;
-        """,
+            MATCH (:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(:Repository)
+              -[:CONTAINS]->(c:Commit {hash: $commitHash})
+            RETURN c;
+            """,
             Map.of("tokenId", tokenId, "commitHash", commitHash)));
   }
 
@@ -65,13 +66,13 @@ public class CommitRepository {
         session.query(
             Commit.class,
             """
-        MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(repo:Repository {name: $repoName})
-        MATCH (repo)-[:CONTAINS]->(c:Commit)
-        OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
-        OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
-        RETURN DISTINCT c, r, b, h
-        ORDER BY c.authorDate ASC;
-        """,
+            MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(repo:Repository {name: $repoName})
+            MATCH (repo)-[:CONTAINS]->(c:Commit)
+            OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
+            OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
+            RETURN DISTINCT c, r, b, h
+            ORDER BY c.authorDate ASC;
+            """,
             Map.of("tokenId", landscapeToken, "repoName", repositoryName)));
   }
 
@@ -85,15 +86,15 @@ public class CommitRepository {
         session.query(
             Commit.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application {name: $appName})
-        MATCH (repo:Repository)<-[:CONTAINS]-(l)
-        WHERE (repo)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
-        MATCH (repo)-[:CONTAINS]->(c:Commit)
-        OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
-        OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
-        RETURN DISTINCT c, r, b, h
-        ORDER BY c.authorDate ASC;
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(a:Application {name: $appName})
+            MATCH (repo:Repository)<-[:CONTAINS]-(l)
+            WHERE (repo)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*0..]->(:Directory)<-[:HAS_ROOT]-(a)
+            MATCH (repo)-[:CONTAINS]->(c:Commit)
+            OPTIONAL MATCH (c)-[r:BELONGS_TO]->(b:Branch)
+            OPTIONAL MATCH (c)-[h:HAS_PARENT]->()
+            RETURN DISTINCT c, r, b, h
+            ORDER BY c.authorDate ASC;
+            """,
             Map.of("tokenId", landscapeToken, "appName", applicationName)));
   }
 
@@ -112,26 +113,26 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(repo:Repository)
-          -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
-        MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
-        WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
-        MATCH p = (a)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(containingDir:Directory)
-          -[:CONTAINS]->(f:FileRevision)
-        WHERE
-          (c1)-[:CONTAINS]->(f) AND
-          NOT (c2)-[:CONTAINS]->(f) AND
-          EXISTS {
-            MATCH (containingDir)-[:CONTAINS]->(f2:FileRevision)<-[:CONTAINS]-(c2)
-            WHERE f.name = f2.name AND f <> f2
-          }
-        RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(repo:Repository)
+              -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
+            MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
+            MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
+            WHERE
+              (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
+            MATCH p = (a)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS]->*(containingDir:Directory)
+              -[:CONTAINS]->(f:FileRevision)
+            WHERE
+              (c1)-[:CONTAINS]->(f) AND
+              NOT (c2)-[:CONTAINS]->(f) AND
+              EXISTS {
+                MATCH (containingDir)-[:CONTAINS]->(f2:FileRevision)<-[:CONTAINS]-(c2)
+                WHERE f.name = f2.name AND f <> f2
+              }
+            RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
+            """,
             Map.of(
                 "tokenId",
                 landscapeToken,
@@ -157,26 +158,26 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(repo:Repository)
-          -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
-        MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
-        WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
-        MATCH p = (a)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(containingDir:Directory)
-          -[:CONTAINS]->(f:FileRevision)
-        WHERE
-          (c2)-[:CONTAINS]->(f) AND
-          NOT (c1)-[:CONTAINS]->(f) AND
-          NOT EXISTS {
-            MATCH (containingDir)-[:CONTAINS]->(f2:FileRevision)<-[:CONTAINS]-(c1)
-            WHERE f.name = f2.name AND f <> f2
-          }
-        RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(repo:Repository)
+              -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
+            MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
+            MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
+            WHERE
+              (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
+            MATCH p = (a)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS]->*(containingDir:Directory)
+              -[:CONTAINS]->(f:FileRevision)
+            WHERE
+              (c2)-[:CONTAINS]->(f) AND
+              NOT (c1)-[:CONTAINS]->(f) AND
+              NOT EXISTS {
+                MATCH (containingDir)-[:CONTAINS]->(f2:FileRevision)<-[:CONTAINS]-(c1)
+                WHERE f.name = f2.name AND f <> f2
+              }
+            RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
+            """,
             Map.of(
                 "tokenId",
                 landscapeToken,
@@ -202,26 +203,26 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(repo:Repository)
-          -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
-        MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
-        WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
-        MATCH p = (a)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS]->*(containingDir:Directory)
-          -[:CONTAINS]->(f:FileRevision)
-        WHERE
-          (c1)-[:CONTAINS]->(f) AND
-          NOT (c2)-[:CONTAINS]->(f) AND
-          NOT EXISTS {
-            MATCH (containingDir)-[:CONTAINS]->(f2:FileRevision)<-[:CONTAINS]-(c2)
-            WHERE f.name = f2.name AND f <> f2
-          }
-        RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(repo:Repository)
+              -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
+            MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
+            MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
+            WHERE
+              (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
+            MATCH p = (a)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS]->*(containingDir:Directory)
+              -[:CONTAINS]->(f:FileRevision)
+            WHERE
+              (c1)-[:CONTAINS]->(f) AND
+              NOT (c2)-[:CONTAINS]->(f) AND
+              NOT EXISTS {
+                MATCH (containingDir)-[:CONTAINS]->(f2:FileRevision)<-[:CONTAINS]-(c2)
+                WHERE f.name = f2.name AND f <> f2
+              }
+            RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
+            """,
             Map.of(
                 "tokenId",
                 landscapeToken,
@@ -248,21 +249,21 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(repo:Repository)
-          -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
-        MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
-        WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
-        MATCH p = (a)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS*0..]->(d:Directory)
-        WHERE
-          (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c2) AND
-          NOT (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
-        RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(repo:Repository)
+              -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
+            MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
+            MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
+            WHERE
+              (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
+            MATCH p = (a)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS*0..]->(d:Directory)
+            WHERE
+              (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c2) AND
+              NOT (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
+            RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
+            """,
             Map.of(
                 "tokenId",
                 landscapeToken,
@@ -289,21 +290,21 @@ public class CommitRepository {
         session.query(
             String.class,
             """
-        MATCH (l:Landscape {tokenId: $tokenId})
-          -[:CONTAINS]->(repo:Repository)
-          -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
-        MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
-        MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
-        WHERE
-          (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
-        MATCH p = (a)
-          -[:HAS_ROOT]->(:Directory)
-          -[:CONTAINS*0..]->(d:Directory)
-        WHERE
-          (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1) AND
-          NOT (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c2)
-        RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
-        """,
+            MATCH (l:Landscape {tokenId: $tokenId})
+              -[:CONTAINS]->(repo:Repository)
+              -[:CONTAINS]->(c1:Commit {hash: $firstCommitHash})
+            MATCH (repo)-[:CONTAINS]->(c2:Commit {hash: $secondCommitHash})
+            MATCH (l)-[:CONTAINS]->(a:Application {name: $appName})
+            WHERE
+              (a)-[:HAS_ROOT]->(:Directory)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1)
+            MATCH p = (a)
+              -[:HAS_ROOT]->(:Directory)
+              -[:CONTAINS*0..]->(d:Directory)
+            WHERE
+              (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c1) AND
+              NOT (d)-[:CONTAINS*]->(:FileRevision)<-[:CONTAINS]-(c2)
+            RETURN apoc.text.join([node IN nodes(p)[1..] | node.name], "/");
+            """,
             Map.of(
                 "tokenId",
                 landscapeToken,

@@ -36,7 +36,8 @@ public class RepositoryRepository {
             """
             MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository)
             RETURN DISTINCT r.name
-            ORDER BY r.name ASC;""",
+            ORDER BY r.name ASC;
+            """,
             Map.of("tokenId", landscapeToken)));
   }
 

@@ -22,11 +22,11 @@ public class TagRepository {
         session.queryForObject(
             Tag.class,
             """
-                MATCH (:Landscape {tokenId: $landscapeToken})
-                  -[:CONTAINS]->(:Repository {name: $repoName})
-                  -[:CONTAINS]->(t:Tag {name: $name})
-                RETURN t;
-                """,
+            MATCH (:Landscape {tokenId: $landscapeToken})
+              -[:CONTAINS]->(:Repository {name: $repoName})
+              -[:CONTAINS]->(t:Tag {name: $name})
+            RETURN t;
+            """,
             Map.of("name", tagName, "repoName", repoName, "landscapeToken", landscapeToken)));
   }
 }

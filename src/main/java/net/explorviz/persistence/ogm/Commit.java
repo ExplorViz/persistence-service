@@ -13,19 +13,15 @@ import org.neo4j.ogm.annotation.typeconversion.DateLong;
 @NodeEntity
 @RegisterForReflection
 public class Commit {
-  @Id
-  @GeneratedValue
-  private Long id;
+  @Id @GeneratedValue private Long id;
 
   private String hash;
 
   private String author;
 
-  @DateLong
-  private Instant authorDate;
+  @DateLong private Instant authorDate;
 
-  @DateLong
-  private Instant commitDate;
+  @DateLong private Instant commitDate;
 
   @Relationship(type = "BELONGS_TO", direction = Relationship.Direction.OUTGOING)
   private Branch branch;

@@ -4,7 +4,6 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.FileData;
-//import net.explorviz.persistence.proto.SpanData;
 import net.explorviz.persistence.proto.StateDataRequest;
 
 /** Utility class to map Java exceptions to gRPC exceptions. */

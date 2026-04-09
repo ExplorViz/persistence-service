@@ -8,8 +8,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 public class Landscape {
-  @Id
-  private String tokenId;
+  @Id private String tokenId;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<Trace> traces = new HashSet<>();

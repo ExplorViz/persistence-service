@@ -105,47 +105,47 @@ class ExampleDataResource {
     final Result result =
         session.query(
             """
-        MERGE (l:Landscape {tokenId: "mytokenvalue"})
-        MERGE (l)-[:CONTAINS]->(repo:Repository {name: $repoName})
-        MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
-        MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
+            MERGE (l:Landscape {tokenId: "mytokenvalue"})
+            MERGE (l)-[:CONTAINS]->(repo:Repository {name: $repoName})
+            MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
+            MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
 
-        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", authorDate: 1000})
-        MERGE (commit1)-[:BELONGS_TO]->(main)
-        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", authorDate: 2000})
-        MERGE (commit2)-[:BELONGS_TO]->(main)
-        MERGE (commit2)-[:HAS_PARENT]->(commit1)
-        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", authorDate: 3000})
-        MERGE (commit3)-[:BELONGS_TO]->(feature)
-        MERGE (commit3)-[:HAS_PARENT]->(commit2)
+            MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", authorDate: 1000})
+            MERGE (commit1)-[:BELONGS_TO]->(main)
+            MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", authorDate: 2000})
+            MERGE (commit2)-[:BELONGS_TO]->(main)
+            MERGE (commit2)-[:HAS_PARENT]->(commit1)
+            MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", authorDate: 3000})
+            MERGE (commit3)-[:BELONGS_TO]->(feature)
+            MERGE (commit3)-[:HAS_PARENT]->(commit2)
 
-        MERGE (l)-[:CONTAINS]->(app:Application {name: $repoName})
-        MERGE (app)-[:HAS_ROOT]->(rootDir:Directory {name: $repoName})
-        MERGE (rootDir)-[:CONTAINS]->(d1:Directory {name: "net"})
-        MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
-        MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "persistence"})
-        MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+            MERGE (l)-[:CONTAINS]->(app:Application {name: $repoName})
+            MERGE (app)-[:HAS_ROOT]->(rootDir:Directory {name: $repoName})
+            MERGE (rootDir)-[:CONTAINS]->(d1:Directory {name: "net"})
+            MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
+            MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "persistence"})
+            MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
 
-        MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "ClassA.java"})
-        MERGE (file1)-[:CONTAINS]->(class1:Clazz {name: "ClassA"})
-        MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "ClassB.java"})
-        MERGE (file2)-[:CONTAINS]->(class2:Clazz {name: "ClassB"})
-        MERGE (outerDir)-[:CONTAINS]->(file2modified:FileRevision {name: "ClassB.java"})
-        MERGE (file2modified)-[:CONTAINS]->(class2modified:Clazz {name: "ClassB"})
-        MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "ClassC.java"})
-        MERGE (file3)-[:CONTAINS]->(class3:Clazz {name: "ClassC"})
+            MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "ClassA.java"})
+            MERGE (file1)-[:CONTAINS]->(class1:Clazz {name: "ClassA"})
+            MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "ClassB.java"})
+            MERGE (file2)-[:CONTAINS]->(class2:Clazz {name: "ClassB"})
+            MERGE (outerDir)-[:CONTAINS]->(file2modified:FileRevision {name: "ClassB.java"})
+            MERGE (file2modified)-[:CONTAINS]->(class2modified:Clazz {name: "ClassB"})
+            MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "ClassC.java"})
+            MERGE (file3)-[:CONTAINS]->(class3:Clazz {name: "ClassC"})
 
-        MERGE (repo)-[:HAS_ROOT]->(rootDir)
-        MERGE (commit1)-[:CONTAINS]->(file1)
-        MERGE (commit2)-[:CONTAINS]->(file1)
-        MERGE (commit2)-[:CONTAINS]->(file2)
-        MERGE (commit3)-[:CONTAINS]->(file2modified)
-        MERGE (commit3)-[:CONTAINS]->(file3)
+            MERGE (repo)-[:HAS_ROOT]->(rootDir)
+            MERGE (commit1)-[:CONTAINS]->(file1)
+            MERGE (commit2)-[:CONTAINS]->(file1)
+            MERGE (commit2)-[:CONTAINS]->(file2)
+            MERGE (commit3)-[:CONTAINS]->(file2modified)
+            MERGE (commit3)-[:CONTAINS]->(file3)
 
-        RETURN
-          [file1, file2, file2modified, file3] AS files,
-          [class1, class2, class2modified, class3] AS classes;
-        """,
+            RETURN
+              [file1, file2, file2modified, file3] AS files,
+              [class1, class2, class2modified, class3] AS classes;
+            """,
             Map.of("repoName", repoName));
 
     result
@@ -181,47 +181,47 @@ class ExampleDataResource {
     final Result result =
         session.query(
             """
-        MERGE (l:Landscape {tokenId: "mytokenvalue"})
-        MERGE (l)-[:CONTAINS]->(repo:Repository {name: $repoName})
-        MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
-        MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
+            MERGE (l:Landscape {tokenId: "mytokenvalue"})
+            MERGE (l)-[:CONTAINS]->(repo:Repository {name: $repoName})
+            MERGE (repo)-[:CONTAINS]->(main:Branch {name: "main"})
+            MERGE (repo)-[:CONTAINS]->(feature: Branch {name: "feature-a"})
 
-        MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", authorDate: 1000})
-        MERGE (commit1)-[:BELONGS_TO]->(main)
-        MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", authorDate: 2000})
-        MERGE (commit2)-[:BELONGS_TO]->(feature)
-        MERGE (commit2)-[:HAS_PARENT]->(commit1)
-        MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", authorDate: 3000})
-        MERGE (commit3)-[:BELONGS_TO]->(main)
-        MERGE (commit3)-[:HAS_PARENT]->(commit1)
+            MERGE (repo)-[:CONTAINS]->(commit1:Commit {hash: "commit1", authorDate: 1000})
+            MERGE (commit1)-[:BELONGS_TO]->(main)
+            MERGE (repo)-[:CONTAINS]->(commit2:Commit {hash: "commit2", authorDate: 2000})
+            MERGE (commit2)-[:BELONGS_TO]->(feature)
+            MERGE (commit2)-[:HAS_PARENT]->(commit1)
+            MERGE (repo)-[:CONTAINS]->(commit3:Commit {hash: "commit3", authorDate: 3000})
+            MERGE (commit3)-[:BELONGS_TO]->(main)
+            MERGE (commit3)-[:HAS_PARENT]->(commit1)
 
-        MERGE (l)-[:CONTAINS]->(app:Application {name: $repoName})
-        MERGE (app)-[:HAS_ROOT]->(rootDir:Directory {name: $repoName})
-        MERGE (rootDir)-[:CONTAINS]->(d1:Directory {name: "net"})
-        MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
-        MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "persistence"})
-        MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
+            MERGE (l)-[:CONTAINS]->(app:Application {name: $repoName})
+            MERGE (app)-[:HAS_ROOT]->(rootDir:Directory {name: $repoName})
+            MERGE (rootDir)-[:CONTAINS]->(d1:Directory {name: "net"})
+            MERGE (d1)-[:CONTAINS]->(d2:Directory {name: "explorviz"})
+            MERGE (d2)-[:CONTAINS]->(outerDir:Directory {name: "persistence"})
+            MERGE (outerDir)-[:CONTAINS]->(innerDir:Directory {name: "innerpackage"})
 
-        MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "ClassA.java"})
-        MERGE (file1)-[:CONTAINS]->(class1:Clazz {name: "ClassA"})
-        MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "ClassB.java"})
-        MERGE (file2)-[:CONTAINS]->(class2:Clazz {name: "ClassB"})
-        MERGE (outerDir)-[:CONTAINS]->(file2modified:FileRevision {name: "ClassB.java"})
-        MERGE (file2modified)-[:CONTAINS]->(class2modified:Clazz {name: "ClassB"})
-        MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "ClassC.java"})
-        MERGE (file3)-[:CONTAINS]->(class3:Clazz {name: "ClassC"})
+            MERGE (outerDir)-[:CONTAINS]->(file1:FileRevision {name: "ClassA.java"})
+            MERGE (file1)-[:CONTAINS]->(class1:Clazz {name: "ClassA"})
+            MERGE (outerDir)-[:CONTAINS]->(file2:FileRevision {name: "ClassB.java"})
+            MERGE (file2)-[:CONTAINS]->(class2:Clazz {name: "ClassB"})
+            MERGE (outerDir)-[:CONTAINS]->(file2modified:FileRevision {name: "ClassB.java"})
+            MERGE (file2modified)-[:CONTAINS]->(class2modified:Clazz {name: "ClassB"})
+            MERGE (innerDir)-[:CONTAINS]->(file3:FileRevision {name: "ClassC.java"})
+            MERGE (file3)-[:CONTAINS]->(class3:Clazz {name: "ClassC"})
 
-        MERGE (repo)-[:HAS_ROOT]->(rootDir)
-        MERGE (commit1)-[:CONTAINS]->(file1)
-        MERGE (commit2)-[:CONTAINS]->(file1)
-        MERGE (commit2)-[:CONTAINS]->(file2)
-        MERGE (commit3)-[:CONTAINS]->(file2modified)
-        MERGE (commit3)-[:CONTAINS]->(file3)
+            MERGE (repo)-[:HAS_ROOT]->(rootDir)
+            MERGE (commit1)-[:CONTAINS]->(file1)
+            MERGE (commit2)-[:CONTAINS]->(file1)
+            MERGE (commit2)-[:CONTAINS]->(file2)
+            MERGE (commit3)-[:CONTAINS]->(file2modified)
+            MERGE (commit3)-[:CONTAINS]->(file3)
 
-        RETURN
-          [file1, file2, file2modified, file3] AS files,
-          [class1, class2, class2modified, class3] AS classes;
-        """,
+            RETURN
+              [file1, file2, file2modified, file3] AS files,
+              [class1, class2, class2modified, class3] AS classes;
+            """,
             Map.of("repoName", repoName));
 
     result

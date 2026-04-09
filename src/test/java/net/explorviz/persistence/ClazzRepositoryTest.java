@@ -1,7 +1,15 @@
 package net.explorviz.persistence;
 
+import static net.explorviz.persistence.util.TestUtils.assertNodeCounts;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import java.util.HashMap;
+import java.util.Map;
 import net.explorviz.persistence.ogm.Clazz;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.repository.ClazzRepository;
@@ -10,22 +18,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
-import java.util.HashMap;
-import java.util.Map;
-
-import static net.explorviz.persistence.util.TestUtils.assertNodeCounts;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 public class ClazzRepositoryTest {
-  @Inject
-  ClazzRepository clazzRepository;
+  @Inject ClazzRepository clazzRepository;
 
-  @Inject
-  SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
   private Session session;
 
@@ -45,8 +43,9 @@ public class ClazzRepositoryTest {
     session.save(file1);
 
     Map<String, Object> resultMap =
-        clazzRepository.findLongestMatchingClassPathByFileRevisionsId(session, classPath,
-            file1.getId()).orElse(null);
+        clazzRepository
+            .findLongestMatchingClassPathByFileRevisionsId(session, classPath, file1.getId())
+            .orElse(null);
 
     assert resultMap != null;
 
@@ -80,8 +79,9 @@ public class ClazzRepositoryTest {
     session.save(file1);
 
     Map<String, Object> resultMap =
-        clazzRepository.findLongestMatchingClassPathByFileRevisionsId(session, classPath,
-            file1.getId()).orElse(null);
+        clazzRepository
+            .findLongestMatchingClassPathByFileRevisionsId(session, classPath, file1.getId())
+            .orElse(null);
 
     assert resultMap != null;
 
@@ -106,8 +106,9 @@ public class ClazzRepositoryTest {
     session.save(file1);
 
     Map<String, Object> resultMap =
-        clazzRepository.findLongestMatchingClassPathByFileRevisionsId(session, classPath,
-            file1.getId()).orElse(null);
+        clazzRepository
+            .findLongestMatchingClassPathByFileRevisionsId(session, classPath, file1.getId())
+            .orElse(null);
 
     assert resultMap != null;
 
@@ -143,8 +144,9 @@ public class ClazzRepositoryTest {
     session.save(file1);
 
     Map<String, Object> resultMap =
-        clazzRepository.findLongestMatchingClassPathByFileRevisionsId(session, classPath,
-            file1.getId()).orElse(null);
+        clazzRepository
+            .findLongestMatchingClassPathByFileRevisionsId(session, classPath, file1.getId())
+            .orElse(null);
 
     assert resultMap != null;
 
@@ -175,16 +177,21 @@ public class ClazzRepositoryTest {
     params.put("classNameTwo", classPath[1]);
     params.put("classNameThree", classPath[2]);
 
-    Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
-        RETURN EXISTS {
-        MATCH (file:FileRevision)
-        WHERE id(file)=$fileId
-        
-        MATCH (file)
-              -[:CONTAINS]->(:Clazz {name: $classNameOne})
-              -[:CONTAINS]->(:Clazz {name: $classNameTwo})
-              -[:CONTAINS]->(:Clazz {name: $classNameThree})
-        } as exists;""", params);
+    Boolean databaseIsCorrect =
+        session.queryForObject(
+            Boolean.class,
+            """
+            RETURN EXISTS {
+            MATCH (file:FileRevision)
+            WHERE id(file)=$fileId
+
+            MATCH (file)
+                  -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                  -[:CONTAINS]->(:Clazz {name: $classNameTwo})
+                  -[:CONTAINS]->(:Clazz {name: $classNameThree})
+            } as exists;
+            """,
+            params);
 
     assertNotNull(clazz);
     assertEquals(classPath[classPath.length - 1], clazz.getName());
@@ -219,16 +226,21 @@ public class ClazzRepositoryTest {
     params.put("classNameTwo", classPath[1]);
     params.put("classNameThree", classPath[2]);
 
-    Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
-        RETURN EXISTS {
-        MATCH (file:FileRevision)
-        WHERE id(file)=$fileId
-        
-        MATCH (file)
-              -[:CONTAINS]->(:Clazz {name: $classNameOne})
-              -[:CONTAINS]->(:Clazz {name: $classNameTwo})
-              -[:CONTAINS]->(:Clazz {name: $classNameThree})
-        } as exists;""", params);
+    Boolean databaseIsCorrect =
+        session.queryForObject(
+            Boolean.class,
+            """
+            RETURN EXISTS {
+            MATCH (file:FileRevision)
+            WHERE id(file)=$fileId
+
+            MATCH (file)
+                  -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                  -[:CONTAINS]->(:Clazz {name: $classNameTwo})
+                  -[:CONTAINS]->(:Clazz {name: $classNameThree})
+            } as exists;
+            """,
+            params);
 
     assertNotNull(clazz);
     assertEquals(classPath[classPath.length - 1], clazz.getName());
@@ -256,16 +268,21 @@ public class ClazzRepositoryTest {
     params.put("classNameTwo", classPath[1]);
     params.put("classNameThree", classPath[2]);
 
-    Boolean databaseIsCorrect = session.queryForObject(Boolean.class, """
-        RETURN EXISTS {
-        MATCH (file:FileRevision)
-        WHERE id(file)=$fileId
-        
-        MATCH (file)
-              -[:CONTAINS]->(:Clazz {name: $classNameOne})
-              -[:CONTAINS]->(:Clazz {name: $classNameTwo})
-              -[:CONTAINS]->(:Clazz {name: $classNameThree})
-        } as exists;""", params);
+    Boolean databaseIsCorrect =
+        session.queryForObject(
+            Boolean.class,
+            """
+            RETURN EXISTS {
+            MATCH (file:FileRevision)
+            WHERE id(file)=$fileId
+
+            MATCH (file)
+                  -[:CONTAINS]->(:Clazz {name: $classNameOne})
+                  -[:CONTAINS]->(:Clazz {name: $classNameTwo})
+                  -[:CONTAINS]->(:Clazz {name: $classNameThree})
+            } as exists;
+            """,
+            params);
 
     assertNotNull(clazz);
     assertEquals(classPath[classPath.length - 1], clazz.getName());

@@ -23,20 +23,25 @@ import org.neo4j.ogm.session.SessionFactory;
 
 @QuarkusTest
 class FileRevisionRepositoryTest {
-  @Inject
-  FileRevisionRepository fileRevisionRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject
-  SessionFactory sessionFactory;
+  @Inject SessionFactory sessionFactory;
 
-  private Optional<FileRevision> getFileRevisionFromHash(final Session session,
-      final String fileHash, final String repoName, final String landscapeTokenId) {
-    return Optional.ofNullable(session.queryForObject(FileRevision.class, """
-        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $repoName})
-        MATCH (r)-[:CONTAINS]->(c:Commit)-[:CONTAINS]->(f:FileRevision {hash: $fileHash})
-        RETURN f
-        LIMIT 1;
-        """, Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash)));
+  private Optional<FileRevision> getFileRevisionFromHash(
+      final Session session,
+      final String fileHash,
+      final String repoName,
+      final String landscapeTokenId) {
+    return Optional.ofNullable(
+        session.queryForObject(
+            FileRevision.class,
+            """
+            MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(r:Repository {name: $repoName})
+            MATCH (r)-[:CONTAINS]->(c:Commit)-[:CONTAINS]->(f:FileRevision {hash: $fileHash})
+            RETURN f
+            LIMIT 1;
+            """,
+            Map.of("tokenId", landscapeTokenId, "repoName", repoName, "fileHash", fileHash)));
   }
 
   @BeforeEach
@@ -50,8 +55,7 @@ class FileRevisionRepositoryTest {
     Session session = sessionFactory.openSession();
 
     FileRevision file =
-        getFileRevisionFromHash(session, "hash1", "testRepo", "testToken")
-            .orElse(null);
+        getFileRevisionFromHash(session, "hash1", "testRepo", "testToken").orElse(null);
 
     assertNull(file);
   }
@@ -78,8 +82,7 @@ class FileRevisionRepositoryTest {
     session.save(landscape);
 
     FileRevision foundFile =
-        getFileRevisionFromHash(session, fileHash, repoName, token)
-            .orElse(null);
+        getFileRevisionFromHash(session, fileHash, repoName, token).orElse(null);
 
     assertNotNull(foundFile);
   }
@@ -108,11 +111,12 @@ class FileRevisionRepositoryTest {
         FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(fileName).build();
 
     FileRevision file =
-        fileRevisionRepository.createFileStructureFromStaticData(session, fileIdentifier, repoName,
-            token, commit);
+        fileRevisionRepository.createFileStructureFromStaticData(
+            session, fileIdentifier, repoName, token, commit);
 
     Result result =
-        session.query("MATCH (f:FileRevision {hash: $fileHash}) RETURN COUNT(f) as res;",
+        session.query(
+            "MATCH (f:FileRevision {hash: $fileHash}) RETURN COUNT(f) as res;",
             Map.of("fileHash", fileHash));
 
     assertNotNull(file);
@@ -143,19 +147,19 @@ class FileRevisionRepositoryTest {
         FileIdentifier.newBuilder().setFileHash(fileHash).setFilePath(fileName).build();
 
     FileRevision file =
-        fileRevisionRepository.createFileStructureFromStaticData(session, fileIdentifier, repoName,
-            token, commit);
+        fileRevisionRepository.createFileStructureFromStaticData(
+            session, fileIdentifier, repoName, token, commit);
 
     FileRevision foundFile =
-        getFileRevisionFromHash(session, fileHash, repoName, token)
-            .orElse(null);
+        getFileRevisionFromHash(session, fileHash, repoName, token).orElse(null);
 
     FileRevision file2 =
-        fileRevisionRepository.createFileStructureFromStaticData(session, fileIdentifier, repoName,
-            token, commit);
+        fileRevisionRepository.createFileStructureFromStaticData(
+            session, fileIdentifier, repoName, token, commit);
 
     Result result =
-        session.query("MATCH (f:FileRevision {hash: $fileHash}) RETURN COUNT(f) as res;",
+        session.query(
+            "MATCH (f:FileRevision {hash: $fileHash}) RETURN COUNT(f) as res;",
             Map.of("fileHash", fileHash));
 
     assertNotNull(file);
