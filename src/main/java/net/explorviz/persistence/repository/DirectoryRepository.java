@@ -72,4 +72,44 @@ public class DirectoryRepository {
 
     return lastDir;
   }
+
+  /**
+   * Moves all directories and files from the source directory to the target directory. If a
+   * directory or file with the same relative path is already present in the target directory, then
+   * the node is not moved. An exception to this is if a file is already present under the same
+   * name, but not with the same hash; in this case, the file is also moved. The source directory
+   * and any children which have an equivalent node already present in the target directory are
+   * deleted after the merge.
+   *
+   * @param session OGM session object
+   * @param sourceDirectoryId ID of the directory node whose child nodes to migrate
+   * @param destinationDirectoryId ID of the target node into which the source's child nodes should
+   *     be reparented
+   */
+  public void mergeDirectories(
+      final Session session, final long sourceDirectoryId, final long destinationDirectoryId) {
+    session.query(
+        """
+        MATCH (src:Directory) WHERE id(src) = $sourceDirId
+        MATCH (dst:Directory) WHERE id(dst) = $destinationDirId
+        MATCH p1 = (src)-[:CONTAINS]->*(:Directory)-[r:CONTAINS]->(notInDst:Directory|FileRevision)
+        MATCH p2 = (dst)-[:CONTAINS]->*(dstParent:Directory)
+        WHERE
+         length(p2) = length(p1) - 1 AND
+         all(i IN range(1, length(p2)) WHERE nodes(p1)[i].name = nodes(p2)[i].name) AND
+         NOT EXISTS {
+           MATCH (dstParent)-[:CONTAINS]->(dstChild:Directory)
+           WHERE
+             dstChild.name = notInDst.name AND
+             labels(dstChild) = labels(notInDst) AND
+             coalesce(dstChild.hash, "NONE") = coalesce(notInDst.hash, "NONE")
+         }
+        DELETE r
+        MERGE (dstParent)-[:CONTAINS]->(notInDst)
+        MATCH (src)-[:CONTAINS*0..]->(n)
+        WHERE NOT (dst)-[:CONTAINS*0..]->(n)
+        DETACH DELETE n;
+        """,
+        Map.of("sourceDirId", sourceDirectoryId, "destinationDirId", destinationDirectoryId));
+  }
 }

@@ -118,13 +118,8 @@ public class StateDataServiceImpl implements StateDataService {
                   && !Objects.equals(existingAppRoot.getId(), applicationRootDirectory.getId())) {
 
                 if (Application.ROOT_NAME_PLACEHOLDER_RUNTIME.equals(existingAppRoot.getName())) {
-                  existingAppRoot
-                      .getFileRevisions()
-                      .forEach(applicationRootDirectory::addFileRevision);
-                  existingAppRoot
-                      .getSubdirectories()
-                      .forEach(applicationRootDirectory::addSubdirectory);
-                  session.delete(existingAppRoot);
+                  directoryRepository.mergeDirectories(
+                      session, existingAppRoot.getId(), applicationRootDirectory.getId());
                 } else {
                   throw new IllegalArgumentException(
                       "Application \""
