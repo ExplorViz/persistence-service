@@ -75,8 +75,8 @@ fun registerGitHook(taskName: String, hookFile: String, targetHook: String) =
         rename { "$targetHook" }
     }
 
-registerGitHook("registerPreCommitHook", "pre-commit", "pre-commit")
-registerGitHook("registerPreMergeCommitHook", "pre-commit", "pre-merge-commit")
+registerGitHook("registerPreCommitHook", "pre-commit.sh", "pre-commit")
+registerGitHook("registerPreMergeCommitHook", "pre-commit.sh", "pre-merge-commit")
 
 tasks.named("quarkusGenerateCode") {
     dependsOn("registerPreCommitHook")

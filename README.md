@@ -311,6 +311,8 @@ Deletes all data gathered from runtime analysis associated with a landscape from
 Version 3 features a redesign of the endpoints, allowing many of the calculations to be moved from the [frontend](https://git.se.informatik.uni-kiel.de/ExplorViz/code/frontend) to the persistence-service.
 The central change is the switch to a flat data model as opposed to a deeply nested one, allowing fast lookups for visualization objects.
 
+Be sure to update this README when implementing new endpoints.
+
 ### GET /v3/landscapes/{landscapeToken}/structure/runtime
 
 ```Java
@@ -385,28 +387,15 @@ Deletes all data gathered from runtime analysis associated with a landscape from
 
 ## Code Style
 
-We recommend using the [IntelliJ IDEA IDE](https://www.jetbrains.com/idea/). As part of a git pre-commit hook, your code is automatically formatted to follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html) using [Spotless](https://github.com/diffplug/spotless).
-To integrate this format with IntelliJ's formatter, we recommend the  official [google-java-format](https://plugins.jetbrains.com/plugin/8527-google-java-format) plugin.
+### Formatting
 
-Follow these steps to use it:
-1. Under `File -> Settings -> Plugins -> Marketplace` search for `google-java-format`
-2. Install the plugin and press the `Restart IDE` button
-3. Under `File -> Settings -> google-java-format Settings` check `Enable google-java-format`
-(The value of `Code style` should be set to `Default Google Java style`)
-4. Under `Help -> Edit Custom VM Options...` add the following lines from the [documentation](https://github.com/google/google-java-format/blob/master/README.md#intellij-android-studio-and-other-jetbrains-ides):
+We recommend using the [IntelliJ IDEA IDE](https://www.jetbrains.com/idea/). Your code should follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html). This is enforced using [Spotless](https://github.com/diffplug/spotless) as part of a pre-commit hook. Before committing, run `./gradlew spotlessApply` to automatically fix any formatting issues.
 
-```
---add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
---add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED
---add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
---add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
---add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
---add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
-```
+To integrate this format with IntelliJ's formatter (`Ctrl + Alt + L` shortcut), we recommend the  official [google-java-format](https://plugins.jetbrains.com/plugin/8527-google-java-format) plugin. Carefully follow [these](https://github.com/google/google-java-format/blob/master/README.md#intellij-android-studio-and-other-jetbrains-ides) instructions to install it. Alternatively, you can use one of the plugins for the [Spotless IDE hook](https://github.com/diffplug/spotless/blob/main/plugin-gradle/IDE_HOOK.md). This hook also integrates with Visual Studio Code.
 
-5. Restart the IDE
+### Pre-commit hook
 
-Pressing `CTRL + ALT + L` (default auto-format configuration of IntelliJ IDEA) should now reformat the code using the Google Java Style Guide.
+As part of a git pre-commit hook, your code is checked using [Spotless](https://github.com/diffplug/spotless), [Checkstyle](https://checkstyle.sourceforge.io/) and [PMD](https://pmd.github.io/). If any of these checks fails, the commit is blocked until the issues are resolved. Additionally, all tests must pass for the commit to be successful. Please ensure that all issues are adequately resolved before commiting your changes. If absolutely required, you can skip the pre-commit hook validation using the `--no-verify` flag, but ensure the issues are addressed before creating a merge request.
 
 ## Running the application in dev mode
 
@@ -416,7 +405,7 @@ You can run your application in dev mode that enables live reloading using:
 ./gradlew quarkusDev
 ```
 
-When starting the persistence-service in dev mode, a Neo4j Docker container is automatically started as part of Quarkus's [Dev Services](https://docs.quarkiverse.io/quarkus-neo4j/dev/index.html#dev-services). If an existing Neo4j container is reachable via the default URI (http://localhost:7687), e.g. when running Neo4j as part of the [Docker deployment](https://git.se.informatik.uni-kiel.de/ExplorViz/code/deployment/-/tree/main/docker), then that instance is used instead.
+When starting the persistence-service in dev mode, a Neo4j Docker container is automatically started as part of Quarkus's [Dev Services](https://docs.quarkiverse.io/quarkus-neo4j/dev/index.html#dev-services). If an existing Neo4j container is reachable via the default URI (http://localhost:7687), e.g. when running Neo4j as part of the [Docker deployment](https://git.se.informatik.uni-kiel.de/ExplorViz/code/deployment/-/tree/main/docker) or via the Docker compose included in this repository's `.dev` folder, then that instance is used instead.
 
 An overview of the available endpoints is provided in the Quarkus Dev UI at http://localhost:8085/q/dev/. If you are only concerned with providing data to the frontend, you can use the dev-exclusive `/example` endpoints to populate the database with example data.
 
