@@ -27,7 +27,7 @@ dependencies {
     implementation("io.quarkus:quarkus-grpc")
     implementation("io.quarkus:quarkus-arc")
     implementation("io.quarkus:quarkus-container-image-jib")
-    implementation("org.neo4j:neo4j-ogm-quarkus:4.2.3")
+    implementation("org.neo4j:neo4j-ogm-quarkus:4.2.5")
 
     implementation("io.quarkus:quarkus-messaging-kafka")
     implementation("io.confluent:kafka-avro-serializer:7.9.0")
@@ -113,10 +113,15 @@ spotless {
     }
 
     format("misc") {
-        // define the files to apply `misc` to
-        target("*.gradle", "*.gradle.kts", ".gitattributes", ".gitignore")
+        target(
+            "*.gradle",
+            "*.gradle.kts",
+            ".gitattributes",
+            ".gitignore",
+            ".git-blame-ignore-revs",
+            "src/main/resources/application.properties",
+        )
 
-        // define the steps to apply to those files
         trimTrailingWhitespace()
         leadingTabsToSpaces()
         endWithNewline()

@@ -22,7 +22,7 @@ cleanup() {
 
 echo "Running pre-commit hook"
 echo
-echo "WARNING: To ensure the pre-commit checks are only run on staged changes,\
+echo "WARNING: To ensure the pre-commit checks are only run on staged changes, \
 your unstaged changes will be stashed."
 echo "This script should automatically restore the unstaged changes when exiting."
 echo "In the event that this fails, you should be able to manually restore the changes using:"
