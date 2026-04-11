@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -36,14 +37,8 @@ import org.neo4j.ogm.session.SessionFactory;
  */
 @IfBuildProfile("dev")
 @Path("/example")
-@SuppressWarnings({
-  "PMD.AvoidDuplicateLiterals",
-  "PMD.CloseResource",
-  "PMD.UseObjectForClearerAPI",
-  "PMD.NcssCount",
-  "PMD.TooManyMethods"
-})
-class ExampleDataResource {
+@SuppressWarnings({"PMD.NcssCount", "PMD.TooManyMethods"})
+public class ExampleDataResource {
 
   @Inject SessionFactory sessionFactory;
 
@@ -406,6 +401,7 @@ class ExampleDataResource {
    * Executes all Cypher statements in the given file. Each statement is expected to be separated by
    * semicolon. Lines starting with // and empty lines are ignored.
    */
+  @SuppressWarnings("PMD.CloseResource") // This is handled by the BufferedReader
   private void executeCypherFile(final String resourceFilePath) {
     final InputStream fileInputStream =
         Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceFilePath);
@@ -413,7 +409,8 @@ class ExampleDataResource {
       throw new InternalServerErrorException(
           "Requested resource file could not be found: " + resourceFilePath);
     }
-    try (BufferedReader reader = new BufferedReader(new InputStreamReader(fileInputStream))) {
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(fileInputStream, StandardCharsets.UTF_8))) {
       final String[] cypherStatements =
           reader
               .lines()

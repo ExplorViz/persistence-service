@@ -181,4 +181,22 @@ public class FileRevision implements Comparable<FileRevision> {
         ? id.compareTo(other.id)
         : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
   }
+
+  @Override
+  public boolean equals(final Object other) {
+    if (this == other) {
+      return true;
+    }
+
+    if (!(other instanceof final FileRevision otherFile)) {
+      return false;
+    }
+
+    return id != null && id.equals(otherFile.id);
+  }
+
+  @Override
+  public int hashCode() {
+    return id != null ? id.hashCode() : System.identityHashCode(this);
+  }
 }

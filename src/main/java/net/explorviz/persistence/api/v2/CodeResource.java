@@ -46,8 +46,8 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @Path("/v2/code")
-@SuppressWarnings("PMD.UseObjectForClearerAPI")
-class CodeResource {
+@SuppressWarnings("PMD.CouplingBetweenObjects")
+public class CodeResource {
 
   /**
    * Dummy branch point expected by frontend if no branch point exists (e.g. for the main branch).
@@ -94,7 +94,7 @@ class CodeResource {
         commitRepository.findCommitsWithBranchForApplicationAndLandscapeToken(
             session, landscapeToken, applicationName);
 
-    final Map<String, ArrayList<String>> branchToCommitsMap = new HashMap<>();
+    final Map<String, List<String>> branchToCommitsMap = new HashMap<>();
     final Map<String, BranchPointDto> branchToBranchPointMap = new HashMap<>();
 
     for (final Commit commit : commits) {

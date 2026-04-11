@@ -27,8 +27,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @Path("/v2/landscapes/{landscapeToken}")
-@SuppressWarnings("PMD.UseObjectForClearerAPI")
-class LandscapeResource {
+public class LandscapeResource {
 
   @Inject SessionFactory sessionFactory;
 

@@ -11,7 +11,7 @@ import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
 
 @ApplicationScoped
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseObjectForClearerAPI"})
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
 public class ApplicationRepository {
 
   @Inject SessionFactory sessionFactory;

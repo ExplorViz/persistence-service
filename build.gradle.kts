@@ -72,7 +72,7 @@ fun registerGitHook(taskName: String, hookFile: String, targetHook: String) =
     tasks.register<Copy>(taskName) {
         from("code-analysis/$hookFile")
         into(".git/hooks")
-        rename { "$targetHook" }
+        rename { targetHook }
     }
 
 registerGitHook("registerPreCommitHook", "pre-commit.sh", "pre-commit")
@@ -84,12 +84,14 @@ tasks.named("quarkusGenerateCode") {
 }
 
 pmd {
+    toolVersion = "7.23.0"
+    isIgnoreFailures = false
+
     // Empty ruleset is necessary for exclude-pattern
     // https://stackoverflow.com/questions/32247190/pmd-exclude-pattern-with-gradle
     ruleSets = listOf()
-    ruleSetFiles = files("code-analysis/pmd.xml")
-    isIgnoreFailures = false
-    toolVersion = "6.53.0"
+    ruleSetConfig = resources.text.fromFile("code-analysis/pmd.xml")
+    sourceSets = listOf(java.sourceSets.main.get())
 }
 
 checkstyle {

@@ -26,8 +26,7 @@ import org.neo4j.ogm.session.SessionFactory;
 
 /** Contains endpoints concerning git repository analysis. */
 @Path("/v3/landscapes/{landscapeToken}")
-@SuppressWarnings("PMD.UseObjectForClearerAPI")
-class EvolutionResource {
+public class EvolutionResource {
 
   /**
    * Dummy branch point expected by frontend if no branch point exists (e.g. for the main branch).
@@ -66,7 +65,7 @@ class EvolutionResource {
         commitRepository.findCommitsWithBranchForRepositoryAndLandscapeToken(
             session, landscapeToken, repositoryName);
 
-    final Map<String, ArrayList<String>> branchToCommitMap = new HashMap<>();
+    final Map<String, List<String>> branchToCommitMap = new HashMap<>();
     final Map<String, BranchPointDto> branchToBranchPointMap = new HashMap<>();
 
     for (final Commit commit : commits) {

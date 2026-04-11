@@ -23,8 +23,7 @@ import org.neo4j.ogm.session.SessionFactory;
  * analysis of traces.
  */
 @Path("/v3/landscapes/{landscapeToken}")
-@SuppressWarnings("PMD.UseObjectForClearerAPI")
-class TraceResource {
+public class TraceResource {
 
   @Inject SessionFactory sessionFactory;
 

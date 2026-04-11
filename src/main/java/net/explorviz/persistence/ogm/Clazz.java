@@ -162,4 +162,22 @@ public class Clazz implements Comparable<Clazz> {
         ? id.compareTo(other.id)
         : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
   }
+
+  @Override
+  public boolean equals(final Object other) {
+    if (this == other) {
+      return true;
+    }
+
+    if (!(other instanceof final Clazz otherClass)) {
+      return false;
+    }
+
+    return id != null && id.equals(otherClass.id);
+  }
+
+  @Override
+  public int hashCode() {
+    return id != null ? id.hashCode() : System.identityHashCode(this);
+  }
 }

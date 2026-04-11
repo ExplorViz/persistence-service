@@ -78,4 +78,22 @@ public class Span implements Comparable<Span> {
 
     return endCompare == 0 ? spanId.compareTo(other.spanId) : endCompare;
   }
+
+  @Override
+  public boolean equals(final Object other) {
+    if (this == other) {
+      return true;
+    }
+
+    if (!(other instanceof final Span otherSpan)) {
+      return false;
+    }
+
+    return spanId != null && spanId.equals(otherSpan.spanId);
+  }
+
+  @Override
+  public int hashCode() {
+    return spanId != null ? spanId.hashCode() : System.identityHashCode(this);
+  }
 }

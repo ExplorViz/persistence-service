@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 @Priority(Interceptor.Priority.APPLICATION)
 public class LogSlowMethodInterceptor {
 
-  @Inject /* default */ ScheduledExecutorService scheduler;
+  @Inject ScheduledExecutorService scheduler;
 
   @AroundInvoke
   @SuppressWarnings("PMD.SignatureDeclareThrowsException")

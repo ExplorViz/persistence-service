@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.api.v3.model.landscape.BuildingDto;
@@ -40,10 +41,10 @@ public final class LandscapeFlattener {
       String parentDistrictId,
       String parentBuildingId,
       String parentFqn,
-      HashSet<DistrictDto> districts,
-      HashSet<BuildingDto> buildings,
-      HashSet<ClazzDto> classes,
-      HashSet<FunctionDto> functions) {
+      Set<DistrictDto> districts,
+      Set<BuildingDto> buildings,
+      Set<ClazzDto> classes,
+      Set<FunctionDto> functions) {
 
     private Context withParent(final DistrictDto district) {
       districts.add(district);
@@ -104,11 +105,11 @@ public final class LandscapeFlattener {
 
   /** Aggregates all landscape models across multiple cities to produce the final result lists. */
   private record FlatteningResult(
-      HashSet<CityDto> cities,
-      HashSet<DistrictDto> districts,
-      HashSet<BuildingDto> buildings,
-      HashSet<ClazzDto> classes,
-      HashSet<FunctionDto> functions) {}
+      Set<CityDto> cities,
+      Set<DistrictDto> districts,
+      Set<BuildingDto> buildings,
+      Set<ClazzDto> classes,
+      Set<FunctionDto> functions) {}
 
   /**
    * Produces a flat landscape with the given landscape token ID from a collection of

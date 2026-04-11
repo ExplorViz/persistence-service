@@ -101,4 +101,22 @@ public class Function implements Comparable<Function> {
         ? id.compareTo(other.id)
         : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
   }
+
+  @Override
+  public boolean equals(final Object other) {
+    if (this == other) {
+      return true;
+    }
+
+    if (!(other instanceof final Function otherFunction)) {
+      return false;
+    }
+
+    return id != null && id.equals(otherFunction.id);
+  }
+
+  @Override
+  public int hashCode() {
+    return id != null ? id.hashCode() : System.identityHashCode(this);
+  }
 }
