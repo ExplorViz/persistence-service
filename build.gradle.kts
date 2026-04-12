@@ -95,11 +95,15 @@ pmd {
 }
 
 checkstyle {
-    configDirectory.set(file("code-analysis"))
-    configFile = file("code-analysis/checkstyle.xml")
-    maxWarnings = 0
+    toolVersion = "13.4.0"
     isIgnoreFailures = false
-    toolVersion = "10.12.5"
+    maxWarnings = 0
+    config = resources.text.fromFile("code-analysis/checkstyle.xml")
+    configDirectory.set(file("code-analysis"))
+    configProperties = mapOf(
+        "org.checkstyle.google.suppressionfilter.config" to file("code-analysis/checkstyle-suppressions.xml").path,
+    )
+    sourceSets = listOf(java.sourceSets.main.get())
 }
 
 spotless {

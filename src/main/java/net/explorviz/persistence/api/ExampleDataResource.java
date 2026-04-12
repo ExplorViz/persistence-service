@@ -336,7 +336,7 @@ public class ExampleDataResource {
     return "Successfully created example \"monorepo\"";
   }
 
-  /** code-agent analysis of spring-petclinic repository, limited to the two latest commits. */
+  /** Code-agent analysis of spring-petclinic repository, limited to the two latest commits. */
   @GET
   @Path("/petclinic-static")
   public String createPetclinicStatic() {
@@ -345,7 +345,7 @@ public class ExampleDataResource {
     return "Successfully created example \"petclinic-static\"";
   }
 
-  /** trace-generator result using the "petclinic" preset. */
+  /** Trace-generator result using the "petclinic" preset. */
   @GET
   @Path("/petclinic-runtime")
   public String createPetclinicRuntime() {
