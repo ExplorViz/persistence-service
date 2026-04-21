@@ -11,6 +11,13 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 
 # Table of Contents
 
+- [Development Instructions](#development-instructions)
+  - [Prerequisites](#prerequisites)
+  - [Code Style](#code-style)
+  - [Running the application in dev mode](#running-the-application-in-dev-mode)
+  - [Packaging and running the application](#packaging-and-running-the-application)
+  - [Creating a native executable](#creating-a-native-executable)
+  - [Testing](#testing)
 - [Database Model](#database-model)
   - [Node Fields](#node-fields)
     - [Application](#application)
@@ -49,13 +56,88 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
     - [GET /v3/landscapes/{landscapeToken}/repositories](#get-v3landscapeslandscapetokenrepositories)
     - [GET /v3/landscapes/{landscapeToken}/commit-tree/{repositoryName}](#get-v3landscapeslandscapetokencommit-treerepositoryname)
     - [DELETE /v3/landscapes/{landscapeToken}/trace-data](#delete-v3landscapeslandscapetokentrace-data)
-- [Development Instructions](#development-instructions)
-  - [Prerequisites](#prerequisites)
-  - [Code Style](#code-style)
-  - [Running the application in dev mode](#running-the-application-in-dev-mode)
-  - [Packaging and running the application](#packaging-and-running-the-application)
-  - [Creating a native executable](#creating-a-native-executable)
-  - [Testing](#testing)
+
+# Development Instructions
+
+## Prerequisites
+
+- **Java**: JDK 17 or higher
+- **Docker**: Installed and running, since the persistence-service starts its own Docker container in dev mode and when running tests
+
+## Code Style
+
+### Formatting
+
+We recommend using the [IntelliJ IDEA IDE](https://www.jetbrains.com/idea/). Your code should follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html). This is enforced using [Spotless](https://github.com/diffplug/spotless) as part of a pre-commit hook. Before committing, run `./gradlew spotlessApply` to automatically fix any formatting issues.
+
+To integrate this format with IntelliJ's formatter (`Ctrl + Alt + L` shortcut), we recommend the  official [google-java-format](https://plugins.jetbrains.com/plugin/8527-google-java-format) plugin. Carefully follow [these](https://github.com/google/google-java-format/blob/master/README.md#intellij-android-studio-and-other-jetbrains-ides) instructions to install it. Alternatively, you can use one of the plugins for the [Spotless IDE hook](https://github.com/diffplug/spotless/blob/main/plugin-gradle/IDE_HOOK.md). This hook also integrates with Visual Studio Code.
+
+### Pre-commit hook
+
+As part of a git pre-commit hook, your code is checked using [Spotless](https://github.com/diffplug/spotless), [Checkstyle](https://checkstyle.sourceforge.io/) and [PMD](https://pmd.github.io/). If any of these checks fails, the commit is blocked until the issues are resolved. Additionally, all tests must pass for the commit to be successful. Please ensure that all issues are adequately resolved before commiting your changes. If absolutely required, you can skip the pre-commit hook validation using the `--no-verify` flag, but ensure the issues are addressed before creating a merge request.
+
+## Running the application in dev mode
+
+You can run your application in dev mode that enables live reloading using:
+
+```shell script
+./gradlew quarkusDev
+```
+
+When starting the persistence-service in dev mode, a Neo4j Docker container is automatically started as part of Quarkus's [Dev Services](https://docs.quarkiverse.io/quarkus-neo4j/dev/index.html#dev-services). If an existing Neo4j container is reachable via the default URI (http://localhost:7687), e.g. when running Neo4j as part of the [Docker deployment](https://git.se.informatik.uni-kiel.de/ExplorViz/code/deployment/-/tree/main/docker) or via the Docker compose included in this repository's `.dev` folder, then that instance is used instead.
+
+An overview of the available endpoints is provided in the Quarkus Dev UI at http://localhost:8085/q/dev/. If you are only concerned with providing data to the frontend, you can use the dev-exclusive `/example` endpoints to populate the database with example data.
+
+You can also inspect and manipulate the current state of the database using [Neo4j Browser](https://neo4j.com/docs/browser/). By default, the browser runs on http://localhost:7474.
+
+## Packaging and running the application
+
+The application can be packaged using:
+
+```shell script
+./gradlew build
+```
+
+It produces the `quarkus-run.jar` file in the `build/quarkus-app/` directory.
+Be aware that it’s not an _über-jar_ as the dependencies are copied into the `build/quarkus-app/lib/` directory.
+
+The application is now runnable using `java -jar build/quarkus-app/quarkus-run.jar`.
+
+If you want to build an _über-jar_, execute the following command:
+
+```shell script
+./gradlew build -Dquarkus.package.jar.type=uber-jar
+```
+
+The application, packaged as an _über-jar_, is now runnable using `java -jar build/*-runner.jar`.
+
+## Creating a native executable
+
+You can create a native executable using:
+
+```shell script
+./gradlew build -Dquarkus.native.enabled=true
+```
+
+Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+
+```shell script
+./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
+```
+
+You can then execute your native executable with: `./build/persistence-service-1.0.0-SNAPSHOT-runner`
+
+If you want to learn more about building native executables, please consult <https://quarkus.io/guides/gradle-tooling>.
+
+## Testing
+
+To ensure the persistence-service is working properly, there are a number of tests that can be executed using the following command:
+
+```
+./gradlew quarkusTest
+```
+
+The tests are also run as part of the git pre-commit hook.
 
 # Database Model
 
@@ -197,8 +279,8 @@ The persistence-service communicates with the [code-agent](https://git.se.inform
 
 ## Updating the Database Model
 
-The database model was created using the web application arrows.app.
-This is free to use and is officially recommended by Neo4j.
+The database model was created using the web application [arrows.app](https://arrows.app/).
+It is free to use and is officially recommended by Neo4j.
 
 The model can be exported in formats such as PNG and JSON.
 The latest versions can be found under `./resources/`.
@@ -377,83 +459,3 @@ void deleteTraceData(String landscapeToken);
 ```
 
 Deletes all data gathered from runtime analysis associated with a landscape from the database.
-
-# Development Instructions
-
-## Prerequisites
-
-- Java 17 or higher
-- A running Docker application, since the persistence-service starts its own docker container
-
-## Code Style
-
-### Formatting
-
-We recommend using the [IntelliJ IDEA IDE](https://www.jetbrains.com/idea/). Your code should follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html). This is enforced using [Spotless](https://github.com/diffplug/spotless) as part of a pre-commit hook. Before committing, run `./gradlew spotlessApply` to automatically fix any formatting issues.
-
-To integrate this format with IntelliJ's formatter (`Ctrl + Alt + L` shortcut), we recommend the  official [google-java-format](https://plugins.jetbrains.com/plugin/8527-google-java-format) plugin. Carefully follow [these](https://github.com/google/google-java-format/blob/master/README.md#intellij-android-studio-and-other-jetbrains-ides) instructions to install it. Alternatively, you can use one of the plugins for the [Spotless IDE hook](https://github.com/diffplug/spotless/blob/main/plugin-gradle/IDE_HOOK.md). This hook also integrates with Visual Studio Code.
-
-### Pre-commit hook
-
-As part of a git pre-commit hook, your code is checked using [Spotless](https://github.com/diffplug/spotless), [Checkstyle](https://checkstyle.sourceforge.io/) and [PMD](https://pmd.github.io/). If any of these checks fails, the commit is blocked until the issues are resolved. Additionally, all tests must pass for the commit to be successful. Please ensure that all issues are adequately resolved before commiting your changes. If absolutely required, you can skip the pre-commit hook validation using the `--no-verify` flag, but ensure the issues are addressed before creating a merge request.
-
-## Running the application in dev mode
-
-You can run your application in dev mode that enables live reloading using:
-
-```shell script
-./gradlew quarkusDev
-```
-
-When starting the persistence-service in dev mode, a Neo4j Docker container is automatically started as part of Quarkus's [Dev Services](https://docs.quarkiverse.io/quarkus-neo4j/dev/index.html#dev-services). If an existing Neo4j container is reachable via the default URI (http://localhost:7687), e.g. when running Neo4j as part of the [Docker deployment](https://git.se.informatik.uni-kiel.de/ExplorViz/code/deployment/-/tree/main/docker) or via the Docker compose included in this repository's `.dev` folder, then that instance is used instead.
-
-An overview of the available endpoints is provided in the Quarkus Dev UI at http://localhost:8085/q/dev/. If you are only concerned with providing data to the frontend, you can use the dev-exclusive `/example` endpoints to populate the database with example data.
-
-## Packaging and running the application
-
-The application can be packaged using:
-
-```shell script
-./gradlew build
-```
-
-It produces the `quarkus-run.jar` file in the `build/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `build/quarkus-app/lib/` directory.
-
-The application is now runnable using `java -jar build/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./gradlew build -Dquarkus.package.jar.type=uber-jar
-```
-
-The application, packaged as an _über-jar_, is now runnable using `java -jar build/*-runner.jar`.
-
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
-./gradlew build -Dquarkus.native.enabled=true
-```
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
-
-```shell script
-./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./build/persistence-service-1.0.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/gradle-tooling>.
-
-## Testing
-
-To ensure the persistence-service is working properly, there are a number of tests that can be executed using the following command:
-
-```
-./gradlew quarkusTest
-```
-
-The tests are also run as part of the git pre-commit hook.
