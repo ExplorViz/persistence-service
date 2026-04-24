@@ -193,7 +193,25 @@ public class TraceRepository {
    * @param targetFileId ID of the target file
    * @param requestCount Number of requests between the files
    */
-  public record FileCommunication(Long sourceFileId, Long targetFileId, long requestCount) {}
+  public record FileCommunication(
+      Long sourceFileId,
+      String sourceFileName,
+      Long targetFileId,
+      String targetFileName,
+      long requestCount,
+      long functionCount,
+      long executionTime) {}
+
+  /**
+   * Represents a function called between files and its request count.
+   *
+   * @param functionId ID of the called function
+   * @param functionName Name of the called function
+   * @param requestCount Number of requests to this function
+   * @param executionTime Accumulated execution time of all spans for this function
+   */
+  public record FunctionCommunication(
+      Long functionId, String functionName, long requestCount, long executionTime) {}
 
   /**
    * Finds aggregated communication between files for a given landscape and time range.
@@ -213,10 +231,52 @@ public class TraceRepository {
         WHERE child.startTime >= $from AND child.startTime <= $to
         MATCH (child)-[:REPRESENTS]->(childFunc:Function)<-[:CONTAINS*]-(childFile:FileRevision)
         MATCH (parent)-[:REPRESENTS]->(parentFunc:Function)<-[:CONTAINS*]-(parentFile:FileRevision)
-        WITH parentFile, childFile, COUNT(child) AS requestCount
-        RETURN id(parentFile) AS sourceFileId, id(childFile) AS targetFileId, requestCount;
+        WITH parentFile, childFile, COUNT(child) AS requestCount, COUNT(DISTINCT childFunc) AS functionCount, SUM(child.endTime - child.startTime) AS executionTime
+        RETURN id(parentFile) AS sourceFileId, parentFile.name AS sourceFileName, id(childFile) AS targetFileId, childFile.name AS targetFileName, requestCount, functionCount, executionTime;
         """,
         Map.of("tokenId", landscapeToken, "from", from, "to", to),
         FileCommunication.class);
+  }
+
+  /**
+   * Finds unique functions called from a source file to a target file within a given time range.
+   *
+   * @param session OGM session object
+   * @param landscapeToken String identifier of the visualization landscape
+   * @param sourceFileId ID of the source file
+   * @param targetFileId ID of the target file
+   * @param from Lower bound of time range to include (epoch nanosecond value)
+   * @param to Upper bound of time range to include (epoch nanosecond value)
+   * @return List of unique functions called from source to target
+   */
+  public List<FunctionCommunication> findCalledFunctionsBetweenFiles(
+      final Session session,
+      final String landscapeToken,
+      final long sourceFileId,
+      final long targetFileId,
+      final long from,
+      final long to) {
+    return session.queryDto(
+        """
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)-[:CONTAINS]->(child:Span)
+        MATCH (child)-[:HAS_PARENT]->(parent:Span)
+        WHERE child.startTime >= $from AND child.startTime <= $to
+        MATCH (child)-[:REPRESENTS]->(childFunc:Function)<-[:CONTAINS*]-(childFile:FileRevision)
+        MATCH (parent)-[:REPRESENTS]->(parentFunc:Function)<-[:CONTAINS*]-(parentFile:FileRevision)
+        WHERE id(childFile) = $targetFileId AND id(parentFile) = $sourceFileId
+        RETURN id(childFunc) AS functionId, childFunc.name AS functionName, COUNT(child) AS requestCount, SUM(child.endTime - child.startTime) AS executionTime;
+        """,
+        Map.of(
+            "tokenId",
+            landscapeToken,
+            "sourceFileId",
+            sourceFileId,
+            "targetFileId",
+            targetFileId,
+            "from",
+            from,
+            "to",
+            to),
+        FunctionCommunication.class);
   }
 }
