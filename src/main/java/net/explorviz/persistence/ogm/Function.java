@@ -91,15 +91,7 @@ public class Function implements Comparable<Function> {
 
   @Override
   public int compareTo(final Function other) {
-    final int nameComparison = name.compareTo(other.name);
-
-    if (nameComparison != 0) {
-      return nameComparison;
-    }
-
-    return id != null && other.id != null
-        ? id.compareTo(other.id)
-        : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
+    return name.compareTo(other.name);
   }
 
   @Override

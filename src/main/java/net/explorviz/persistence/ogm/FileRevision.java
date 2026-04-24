@@ -167,19 +167,7 @@ public class FileRevision implements Comparable<FileRevision> {
 
   @Override
   public int compareTo(final FileRevision other) {
-    final int nameComparison = name.compareTo(other.name);
-
-    if (nameComparison != 0) {
-      return nameComparison;
-    }
-
-    if (hash != null & other.hash != null && hash.compareTo(other.hash) != 0) {
-      return hash.compareTo(other.hash);
-    }
-
-    return id != null && other.id != null
-        ? id.compareTo(other.id)
-        : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
+    return name.compareTo(other.name);
   }
 
   @Override
