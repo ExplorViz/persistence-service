@@ -7,8 +7,11 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import net.explorviz.persistence.api.v3.model.CommunicationDto;
 import net.explorviz.persistence.api.v3.model.trace.TimestampDto;
 import net.explorviz.persistence.api.v3.model.trace.TraceDto;
 import net.explorviz.persistence.ogm.Trace;
@@ -54,6 +57,61 @@ public class TraceResource {
             })
         .map(t -> new TraceDto(t, landscapeToken))
         .toList();
+  }
+
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("/file-communication")
+  public List<CommunicationDto> getAggregatedFileCommunication(
+      @RestPath final String landscapeToken, @RestQuery final Long from, @RestQuery final Long to) {
+
+    final Session session = sessionFactory.openSession();
+
+    final long fromTimestamp = Objects.requireNonNullElse(from, Long.MIN_VALUE);
+    final long toTimestamp = Objects.requireNonNullElse(to, Long.MAX_VALUE);
+
+    final List<TraceRepository.FileCommunication> communications =
+        traceRepository.findAggregatedFileCommunication(
+            session, landscapeToken, fromTimestamp, toTimestamp);
+
+    final Map<String, CommunicationDto> mergedCommunications = new HashMap<>();
+
+    for (final TraceRepository.FileCommunication c : communications) {
+      final String sourceId = c.sourceFileId().toString();
+      final String targetId = c.targetFileId().toString();
+
+      // Create a consistent key for merging (e.g., sorted IDs)
+      final String mergeKey =
+          c.sourceFileId() <= c.targetFileId()
+              ? sourceId + "-" + targetId
+              : targetId + "-" + sourceId;
+
+      mergedCommunications.compute(
+          mergeKey,
+          (key, existing) -> {
+            if (existing == null) {
+              return new CommunicationDto(
+                  key,
+                  "Communication",
+                  sourceId,
+                  targetId,
+                  false,
+                  Map.of("requestCount", c.requestCount()));
+            } else {
+              final long totalCount =
+                  existing.metrics().get("requestCount").longValue() + c.requestCount();
+              return new CommunicationDto(
+                  key,
+                  "Communication",
+                  existing.sourceFileId(),
+                  existing.targetFileId(),
+                  true,
+                  Map.of("requestCount", totalCount));
+            }
+          });
+    }
+
+    return List.copyOf(mergedCommunications.values());
   }
 
   @GET

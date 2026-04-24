@@ -152,15 +152,7 @@ public class Clazz implements Comparable<Clazz> {
 
   @Override
   public int compareTo(final Clazz other) {
-    final int nameComparison = name.compareTo(other.name);
-
-    if (nameComparison != 0) {
-      return nameComparison;
-    }
-
-    return id != null && other.id != null
-        ? id.compareTo(other.id)
-        : Integer.compare(System.identityHashCode(this), System.identityHashCode(other));
+    return name.compareTo(other.name);
   }
 
   @Override

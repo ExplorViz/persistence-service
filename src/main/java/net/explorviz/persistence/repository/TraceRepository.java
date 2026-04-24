@@ -185,4 +185,38 @@ public class TraceRepository {
    * @param spanCount Number of spans in the time range
    */
   public record Timestamp(long startTimeEpochNano, long spanCount) {}
+
+  /**
+   * Represents aggregated communication between two files.
+   *
+   * @param sourceFileId ID of the source file
+   * @param targetFileId ID of the target file
+   * @param requestCount Number of requests between the files
+   */
+  public record FileCommunication(Long sourceFileId, Long targetFileId, long requestCount) {}
+
+  /**
+   * Finds aggregated communication between files for a given landscape and time range.
+   *
+   * @param session OGM session object
+   * @param landscapeToken String identifier of the visualization landscape
+   * @param from Lower bound of time range to include (epoch nanosecond value)
+   * @param to Upper bound of time range to include (epoch nanosecond value)
+   * @return List of aggregated file communications
+   */
+  public List<FileCommunication> findAggregatedFileCommunication(
+      final Session session, final String landscapeToken, final long from, final long to) {
+    return session.queryDto(
+        """
+        MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)-[:CONTAINS]->(child:Span)
+        MATCH (child)-[:HAS_PARENT]->(parent:Span)
+        WHERE child.startTime >= $from AND child.startTime <= $to
+        MATCH (child)-[:REPRESENTS]->(childFunc:Function)<-[:CONTAINS*]-(childFile:FileRevision)
+        MATCH (parent)-[:REPRESENTS]->(parentFunc:Function)<-[:CONTAINS*]-(parentFile:FileRevision)
+        WITH parentFile, childFile, COUNT(child) AS requestCount
+        RETURN id(parentFile) AS sourceFileId, id(childFile) AS targetFileId, requestCount;
+        """,
+        Map.of("tokenId", landscapeToken, "from", from, "to", to),
+        FileCommunication.class);
+  }
 }
