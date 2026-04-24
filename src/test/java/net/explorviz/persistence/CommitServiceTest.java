@@ -357,11 +357,11 @@ class CommitServiceTest {
                         .setFileHash(fileHashOneMod)
                         .setFilePath(filePathOne)
                         .build()))
-            .addAllUnchangedFiles(
+            .addAllDeletedFiles(
                 List.of(
                     FileIdentifier.newBuilder()
-                        .setFileHash(fileHashTwo)
-                        .setFilePath(filePathTwo)
+                        .setFileHash(fileHashDel)
+                        .setFilePath(filePathDel)
                         .build()))
             .build();
 

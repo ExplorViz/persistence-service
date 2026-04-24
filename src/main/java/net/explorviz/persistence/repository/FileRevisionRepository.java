@@ -189,13 +189,13 @@ public class FileRevisionRepository {
         session.queryForObject(
             FileRevision.class,
             """
-            MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Repository {name: $repoName})
-              -[:HAS_ROOT]->(root:Directory)
-            MATCH p = (root)-[:CONTAINS]->*(file:FileRevision {hash: $fileHash})
-            WHERE all(j in range(1, length(p)) WHERE nodes(p)[j].name=$pathSegments[j-1])
-              AND length(p)=size($pathSegments)
-            RETURN file
-            LIMIT 1;
+                MATCH (:Landscape {tokenId: $tokenId})-[:CONTAINS]->(:Repository {name: $repoName})
+                  -[:HAS_ROOT]->(root:Directory)
+                MATCH p = (root)-[:CONTAINS]->*(file:FileRevision {hash: $fileHash})
+                WHERE all(j in range(1, length(p)) WHERE nodes(p)[j].name=$pathSegments[j-1])
+                  AND length(p)=size($pathSegments)
+                RETURN file
+                LIMIT 1;
             """,
             Map.of(
                 "tokenId",
@@ -230,17 +230,17 @@ public class FileRevisionRepository {
         session.queryForObject(
             FileRevision.class,
             """
-            MATCH (l:Landscape {tokenId: $tokenId})
-              -[:CONTAINS]->(:Application {name: $appName})
-              -[:HAS_ROOT]->(appRootDir:Directory)
-            MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
-            WHERE
-              length(p) = size($pathSegments) AND
-              all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
-              EXISTS {
-                (:Commit {hash: $commitHash})-[:CONTAINS]->(file)
-              }
-            RETURN file;
+                MATCH (l:Landscape {tokenId: $tokenId})
+                  -[:CONTAINS]->(:Application {name: $appName})
+                  -[:HAS_ROOT]->(appRootDir:Directory)
+                MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
+                WHERE
+                  length(p) = size($pathSegments) AND
+                  all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
+                  EXISTS {
+                    (:Commit {hash: $commitHash})-[:CONTAINS]->(file)
+                  }
+                RETURN file;
             """,
             Map.of(
                 "tokenId",
@@ -262,15 +262,15 @@ public class FileRevisionRepository {
         session.queryForObject(
             FileRevision.class,
             """
-            MATCH (l:Landscape {tokenId: $tokenId})
-              -[:CONTAINS]->(:Application {name: $appName})
-              -[:HAS_ROOT]->(appRootDir:Directory)
-            MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
-            WHERE
-              length(p) = size($pathSegments) AND
-              all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
-              NOT (:Commit)-[:CONTAINS]->(file)
-            RETURN file;
+                MATCH (l:Landscape {tokenId: $tokenId})
+                  -[:CONTAINS]->(:Application {name: $appName})
+                  -[:HAS_ROOT]->(appRootDir:Directory)
+                MATCH p = (appRootDir)-[:CONTAINS]->*(file:FileRevision)
+                WHERE
+                  length(p) = size($pathSegments) AND
+                  all(j IN range(1, length(p)) WHERE nodes(p)[j].name = $pathSegments[j-1]) AND
+                  NOT (:Commit)-[:CONTAINS]->(file)
+                RETURN file;
             """,
             Map.of(
                 "tokenId",
@@ -298,22 +298,55 @@ public class FileRevisionRepository {
     final Result result =
         session.query(
             """
-            MATCH (l:Landscape {tokenId: $tokenId})
-              -[:CONTAINS]->(:Application {name: $appName})
-              -[:HAS_ROOT]->(appRoot:Directory)
-            WHERE (l)
-              -[:CONTAINS]->(:Repository)
-              -[:HAS_ROOT]->(:Directory)
-              -[:CONTAINS*0..]->(appRoot)
-            MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)
-            WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
-            WITH f, [node IN nodes(p)[1..] | node.name] AS nodeNames
-            RETURN DISTINCT
-              f AS file,
-              apoc.text.join(nodeNames, "/") AS filePath;
+                MATCH (l:Landscape {tokenId: $tokenId})
+                  -[:CONTAINS]->(:Application {name: $appName})
+                  -[:HAS_ROOT]->(appRoot:Directory)
+                WHERE (l)
+                  -[:CONTAINS]->(:Repository)
+                  -[:HAS_ROOT]->(:Directory)
+                  -[:CONTAINS*0..]->(appRoot)
+                MATCH p = (appRoot)-[:CONTAINS]->*(f:FileRevision)
+                WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+                WITH f, [node IN nodes(p)[1..] | node.name] AS nodeNames
+                RETURN DISTINCT
+                  f AS file,
+                  apoc.text.join(nodeNames, "/") AS filePath;
             """,
             Map.of(
                 "tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
+
+    result
+        .queryResults()
+        .forEach(
+            queryResult ->
+                filePathToFileRevisionMap.put(
+                    (String) queryResult.get("filePath"), (FileRevision) queryResult.get("file")));
+
+    return filePathToFileRevisionMap;
+  }
+
+  public Map<String, FileRevision> findStaticFilesWithFqnForRepositoryAndCommitAndLandscapeToken(
+      final Session session,
+      final String repoName,
+      final String commitHash,
+      final String landscapeToken) {
+
+    final Map<String, FileRevision> filePathToFileRevisionMap = new HashMap<>();
+
+    final Result result =
+        session.query(
+            """
+                MATCH (l:Landscape {tokenId: $tokenId})
+                  -[:CONTAINS]->(:Repository {name: $repoName})
+                  -[:HAS_ROOT]->(repoRoot:Directory)
+                MATCH p = (repoRoot)-[:CONTAINS*]->(f:FileRevision)
+                WHERE (:Commit {hash: $commitHash})-[:CONTAINS]->(f)
+                WITH f, [node IN nodes(p)[1..] | node.name] AS nodeNames
+                RETURN DISTINCT
+                  f AS file,
+                  apoc.text.join(nodeNames, "/") AS filePath;
+            """,
+            Map.of("tokenId", landscapeToken, "repoName", repoName, "commitHash", commitHash));
 
     result
         .queryResults()

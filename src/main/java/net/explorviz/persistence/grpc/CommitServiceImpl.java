@@ -8,6 +8,8 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -15,6 +17,7 @@ import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.ogm.Tag;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
+import net.explorviz.persistence.proto.FileIdentifier;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.BranchRepository;
 import net.explorviz.persistence.repository.CommitRepository;
@@ -107,29 +110,31 @@ public class CommitServiceImpl implements CommitService {
                     commitData.getLandscapeToken(),
                     commit));
 
-    commitData
-        .getUnchangedFilesList()
-        .forEach(
-            f -> {
-              final String[] pathSegments = f.getFilePath().split("/");
-              final FileRevision unchangedFile =
-                  fileRevisionRepository
-                      .getFileRevisionFromHashAndPath(
-                          session,
-                          f.getFileHash(),
-                          commitData.getRepositoryName(),
-                          commitData.getLandscapeToken(),
-                          pathSegments)
-                      .orElse(
-                          fileRevisionRepository.createFileStructureFromStaticData(
-                              session,
-                              f,
-                              commitData.getRepositoryName(),
-                              commitData.getLandscapeToken(),
-                              commit));
+    if (!commitData.getParentCommitId().isEmpty()
+        && !NO_PARENT_ID.equals(commitData.getParentCommitId())) {
+      final Map<String, FileRevision> parentFiles =
+          fileRevisionRepository.findStaticFilesWithFqnForRepositoryAndCommitAndLandscapeToken(
+              session,
+              commitData.getRepositoryName(),
+              commitData.getParentCommitId(),
+              commitData.getLandscapeToken());
 
-              commit.addFileRevision(unchangedFile);
-            });
+      final List<String> modifiedPaths =
+          commitData.getModifiedFilesList().stream()
+              .map(FileIdentifier::getFilePath)
+              .collect(Collectors.toList());
+      final List<String> deletedPaths =
+          commitData.getDeletedFilesList().stream()
+              .map(FileIdentifier::getFilePath)
+              .collect(Collectors.toList());
+
+      parentFiles.forEach(
+          (path, fileRevision) -> {
+            if (!modifiedPaths.contains(path) && !deletedPaths.contains(path)) {
+              commit.addFileRevision(fileRevision);
+            }
+          });
+    }
 
     commitData
         .getTagsList()
