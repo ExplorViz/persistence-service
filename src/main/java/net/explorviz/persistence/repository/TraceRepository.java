@@ -211,7 +211,14 @@ public class TraceRepository {
    * @param executionTime Accumulated execution time of all spans for this function
    */
   public record FunctionCommunication(
-      Long functionId, String functionName, long requestCount, long executionTime) {}
+      Long functionId,
+      String functionName,
+      Long sourceFileId,
+      String sourceFileName,
+      Long targetFileId,
+      String targetFileName,
+      long requestCount,
+      long executionTime) {}
 
   /**
    * Finds aggregated communication between files for a given landscape and time range.
@@ -258,13 +265,18 @@ public class TraceRepository {
       final long to) {
     return session.queryDto(
         """
+        MATCH (sourceNode) WHERE id(sourceNode) = $sourceFileId
+        MATCH (targetNode) WHERE id(targetNode) = $targetFileId
         MATCH (l:Landscape {tokenId: $tokenId})-[:CONTAINS]->(t:Trace)-[:CONTAINS]->(child:Span)
         MATCH (child)-[:HAS_PARENT]->(parent:Span)
         WHERE child.startTime >= $from AND child.startTime <= $to
         MATCH (child)-[:REPRESENTS]->(childFunc:Function)<-[:CONTAINS*]-(childFile:FileRevision)
         MATCH (parent)-[:REPRESENTS]->(parentFunc:Function)<-[:CONTAINS*]-(parentFile:FileRevision)
-        WHERE id(childFile) = $targetFileId AND id(parentFile) = $sourceFileId
-        RETURN id(childFunc) AS functionId, childFunc.name AS functionName, COUNT(child) AS requestCount, SUM(child.endTime - child.startTime) AS executionTime;
+        WHERE (sourceNode)-[:CONTAINS*0..]->(parentFile) AND (targetNode)-[:CONTAINS*0..]->(childFile)
+        RETURN id(childFunc) AS functionId, childFunc.name AS functionName,
+               id(parentFile) AS sourceFileId, parentFile.name AS sourceFileName,
+               id(childFile) AS targetFileId, childFile.name AS targetFileName,
+               COUNT(child) AS requestCount, SUM(child.endTime - child.startTime) AS executionTime;
         """,
         Map.of(
             "tokenId",

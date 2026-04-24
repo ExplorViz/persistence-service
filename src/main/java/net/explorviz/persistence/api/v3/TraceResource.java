@@ -12,14 +12,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import net.explorviz.persistence.api.v3.model.AggregatedFileCommunicationDto;
+import net.explorviz.persistence.api.v3.model.AggregatedEntityCommunicationDto;
 import net.explorviz.persistence.api.v3.model.CommunicationDto;
-import net.explorviz.persistence.api.v3.model.FileCommunicationFunctionsDto;
+import net.explorviz.persistence.api.v3.model.EntityPairCommunicationDto;
 import net.explorviz.persistence.api.v3.model.MetricSummaryDto;
 import net.explorviz.persistence.api.v3.model.SimpleFunctionDto;
 import net.explorviz.persistence.api.v3.model.trace.TimestampDto;
 import net.explorviz.persistence.api.v3.model.trace.TraceDto;
-import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Trace;
 import net.explorviz.persistence.repository.TraceRepository;
 import org.jboss.resteasy.reactive.RestPath;
@@ -71,7 +70,7 @@ public class TraceResource {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @Path("/file-communication")
-  public AggregatedFileCommunicationDto getAggregatedFileCommunication(
+  public AggregatedEntityCommunicationDto getAggregatedFileCommunication(
       @RestPath final String landscapeToken, @RestQuery final Long from, @RestQuery final Long to) {
 
     final Session session = sessionFactory.openSession();
@@ -162,7 +161,7 @@ public class TraceResource {
       maxExecution = 0;
     }
 
-    return new AggregatedFileCommunicationDto(
+    return new AggregatedEntityCommunicationDto(
         Map.of(
             REQUEST_COUNT, new MetricSummaryDto(minRequest, maxRequest),
             FUNCTION_COUNT, new MetricSummaryDto(minFunction, maxFunction),
@@ -172,11 +171,11 @@ public class TraceResource {
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  @Path("/file-communication/{sourceFileId}/{targetFileId}/functions")
-  public FileCommunicationFunctionsDto getCalledFunctionsBetweenFiles(
+  @Path("/communication/{sourceEntityId}/{targetEntityId}")
+  public List<EntityPairCommunicationDto> getCalledFunctionsBetweenFiles(
       @RestPath final String landscapeToken,
-      @RestPath final Long sourceFileId,
-      @RestPath final Long targetFileId,
+      @RestPath final Long sourceEntityId,
+      @RestPath final Long targetEntityId,
       @RestQuery final Long from,
       @RestQuery final Long to) {
 
@@ -187,41 +186,85 @@ public class TraceResource {
 
     final List<TraceRepository.FunctionCommunication> forwardFunctions =
         traceRepository.findCalledFunctionsBetweenFiles(
-            session, landscapeToken, sourceFileId, targetFileId, fromTimestamp, toTimestamp);
+            session, landscapeToken, sourceEntityId, targetEntityId, fromTimestamp, toTimestamp);
 
     final List<TraceRepository.FunctionCommunication> backwardFunctions =
         traceRepository.findCalledFunctionsBetweenFiles(
-            session, landscapeToken, targetFileId, sourceFileId, fromTimestamp, toTimestamp);
+            session, landscapeToken, targetEntityId, sourceEntityId, fromTimestamp, toTimestamp);
 
-    final List<SimpleFunctionDto> functionDtos = new ArrayList<>();
+    final Map<String, FilePairData> pairDataMap = new HashMap<>();
 
     forwardFunctions.forEach(
-        f ->
-            functionDtos.add(
-                new SimpleFunctionDto(
-                    f.functionId().toString(),
-                    f.functionName(),
-                    true,
-                    f.requestCount(),
-                    f.executionTime())));
+        f -> {
+          final String key =
+              Math.min(f.sourceFileId(), f.targetFileId())
+                  + "-"
+                  + Math.max(f.sourceFileId(), f.targetFileId());
+          final FilePairData data = pairDataMap.computeIfAbsent(key, k -> new FilePairData());
+          if (data.srcId == null) {
+            data.srcId = f.sourceFileId();
+            data.srcName = f.sourceFileName();
+            data.tgtId = f.targetFileId();
+            data.tgtName = f.targetFileName();
+          }
+          data.forward = true;
+
+          final boolean isForward = f.sourceFileId().equals(data.srcId);
+          data.functions.add(
+              new SimpleFunctionDto(
+                  f.functionId().toString(),
+                  f.functionName(),
+                  isForward,
+                  f.requestCount(),
+                  f.executionTime()));
+        });
 
     backwardFunctions.forEach(
-        f ->
-            functionDtos.add(
-                new SimpleFunctionDto(
-                    f.functionId().toString(),
-                    f.functionName(),
-                    false,
-                    f.requestCount(),
-                    f.executionTime())));
+        f -> {
+          final String key =
+              Math.min(f.sourceFileId(), f.targetFileId())
+                  + "-"
+                  + Math.max(f.sourceFileId(), f.targetFileId());
+          final FilePairData data = pairDataMap.computeIfAbsent(key, k -> new FilePairData());
+          if (data.srcId == null) {
+            data.srcId = f.sourceFileId();
+            data.srcName = f.sourceFileName();
+            data.tgtId = f.targetFileId();
+            data.tgtName = f.targetFileName();
+          }
+          data.backward = true;
 
-    final FileRevision sourceFile = session.load(FileRevision.class, sourceFileId);
-    final FileRevision targetFile = session.load(FileRevision.class, targetFileId);
+          final boolean isForward = f.sourceFileId().equals(data.srcId);
+          data.functions.add(
+              new SimpleFunctionDto(
+                  f.functionId().toString(),
+                  f.functionName(),
+                  isForward,
+                  f.requestCount(),
+                  f.executionTime()));
+        });
 
-    final String sourceFileName = sourceFile != null ? sourceFile.getName() : "Unknown";
-    final String targetFileName = targetFile != null ? targetFile.getName() : "Unknown";
+    return pairDataMap.values().stream()
+        .map(
+            data ->
+                new EntityPairCommunicationDto(
+                    data.srcId,
+                    data.srcName,
+                    data.tgtId,
+                    data.tgtName,
+                    data.forward && data.backward,
+                    data.functions))
+        .toList();
+  }
 
-    return new FileCommunicationFunctionsDto(sourceFileName, targetFileName, functionDtos);
+  private static final class FilePairData {
+    Long srcId;
+    String srcName;
+    Long tgtId;
+    String tgtName;
+    boolean forward;
+    boolean backward;
+    final List<SimpleFunctionDto> functions = new ArrayList<>();
   }
 
   @GET
