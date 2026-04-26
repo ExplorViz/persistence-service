@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "net.explorviz.code.proto";
+option java_package = "net.explorviz.persistence.proto";
 option java_outer_classname = "ContributorProto";
 
 import "google/protobuf/empty.proto";
@@ -10,6 +10,7 @@ service ContributorService {
   rpc PersistContributor (ContributorData) returns (google.protobuf.Empty) {}
 }
 
+// Todo: add commit data here directly
 message ContributorData {
   // Git data
   string landscape_token = 1;

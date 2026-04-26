@@ -3,6 +3,7 @@ package net.explorviz.persistence.util;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import net.explorviz.persistence.proto.CommitData;
+import net.explorviz.persistence.proto.ContributorData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.StateDataRequest;
 
@@ -66,6 +67,15 @@ public final class GrpcExceptionMapper {
     final String contextInfo =
         "Regarding the call to persistCommit for the commit with hash '"
             + commitData.getCommitId()
+            + "'.";
+    return mapToGrpcException(e, contextInfo);
+  }
+
+  public static StatusRuntimeException mapToGrpcException(
+      final Exception e, final ContributorData contributorData) {
+    final String contextInfo =
+        "Regarding the call to persistContributor for the contributor with name '"
+            + contributorData.getName()
             + "'.";
     return mapToGrpcException(e, contextInfo);
   }
