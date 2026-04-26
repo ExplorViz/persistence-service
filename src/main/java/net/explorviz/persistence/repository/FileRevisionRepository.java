@@ -164,7 +164,7 @@ public class FileRevisionRepository {
                 session, fileIdentifier.getFileHash(), repoName, landscapeTokenId, pathSegments)
             .orElse(null);
     if (file == null) {
-      file = new FileRevision(fileIdentifier.getFileHash(), pathSegments[pathSegments.length - 1]);
+      file = new FileRevision(pathSegments[pathSegments.length - 1], fileIdentifier.getFileHash());
     }
 
     commit.addFileRevision(file);

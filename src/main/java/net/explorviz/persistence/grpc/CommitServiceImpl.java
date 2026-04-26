@@ -9,7 +9,6 @@ import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
 import net.explorviz.persistence.ogm.FileRevision;
@@ -120,13 +119,10 @@ public class CommitServiceImpl implements CommitService {
               commitData.getLandscapeToken());
 
       final List<String> modifiedPaths =
-          commitData.getModifiedFilesList().stream()
-              .map(FileIdentifier::getFilePath)
-              .collect(Collectors.toList());
+          commitData.getModifiedFilesList().stream().map(FileIdentifier::getFilePath).toList();
+
       final List<String> deletedPaths =
-          commitData.getDeletedFilesList().stream()
-              .map(FileIdentifier::getFilePath)
-              .collect(Collectors.toList());
+          commitData.getDeletedFilesList().stream().map(FileIdentifier::getFilePath).toList();
 
       parentFiles.forEach(
           (path, fileRevision) -> {
@@ -156,7 +152,7 @@ public class CommitServiceImpl implements CommitService {
       final Commit parentCommit =
           commitRepository.getOrCreateCommit(
               session, commitData.getParentCommitId(), commitData.getLandscapeToken());
-      commit.addParent(parentCommit);
+      commit.addParentCommit(parentCommit);
       session.save(List.of(repo, branch, commit, parentCommit));
     }
   }

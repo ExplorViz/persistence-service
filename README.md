@@ -150,35 +150,35 @@ The tests are also run as part of the git pre-commit hook.
 | Field  |   Type   |
 |--------|----------|
 | **id** | **Long** |
-| name   | string   |
+| name   | String   |
 
 ### Branch
 
 | Field  |   Type   |
 |--------|----------|
 | **id** | **Long** |
-| name   | string   |
+| name   | String   |
 
 ### Clazz
 
-|         Field         |        Type         |
-|-----------------------|---------------------|
-| **id**                | **Long**            |
-| name                  | string              |
-| type                  | ClassType           |
-| modifiers             | set[String]         |
-| implementedInterfaces | set[String]         |
-| annotations           | set[String]         |
-| enumValues            | set[String]         |
-| metrics               | map[String, Double] |
+|         Field         |           Type            |
+|-----------------------|---------------------------|
+| **id**                | **Long**                  |
+| name                  | String                    |
+| type                  | ClassType                 |
+| modifiers             | Set&lt;String&gt;         |
+| implementedInterfaces | Set&lt;String&gt;         |
+| annotations           | Set&lt;String&gt;         |
+| enumValues            | Set&lt;String&gt;         |
+| metrics               | Map&lt;String, Double&gt; |
 
 ### Commit
 
 |   Field    |   Type   |
 |------------|----------|
 | **id**     | **Long** |
-| hash       | string   |
-| author     | string   |
+| hash       | String   |
+| author     | String   |
 | authorDate | Instant  |
 | commitDate | Instant  |
 
@@ -187,95 +187,95 @@ The tests are also run as part of the git pre-commit hook.
 | Field  |   Type   |
 |--------|----------|
 | **id** | **Long** |
-| name   | string   |
+| name   | String   |
 
 ### Field
 
-|   Field   |     Type     |
-|-----------|--------------|
-| **id**    | **Long**     |
-| name      | string       |
-| type      | String       |
-| modifiers | list[String] |
+|   Field   |        Type        |
+|-----------|--------------------|
+| **id**    | **Long**           |
+| name      | String             |
+| type      | String             |
+| modifiers | List&lt;String&gt; |
 
 ### FileRevision
 
-|     Field     |        Type         |
-|---------------|---------------------|
-| **id**        | **Long**            |
-| hash          | string              |
-| name          | string              |
-| hasFileData   | boolean             |
-| language      | Language            |
-| packageName   | String              |
-| importNames   | set[String]         |
-| metrics       | map[String, Double] |
-| lastEditor    | String              |
-| addedLines    | int                 |
-| modifiedLines | int                 |
-| deletedLines  | int                 |
+|     Field     |           Type            |
+|---------------|---------------------------|
+| **id**        | **Long**                  |
+| name          | String                    |
+| hash          | String                    |
+| hasFileData   | boolean                   |
+| language      | Language                  |
+| packageName   | String                    |
+| importNames   | Set&lt;String&gt;         |
+| lastEditor    | String                    |
+| addedLines    | int                       |
+| modifiedLines | int                       |
+| deletedLines  | int                       |
+| metrics       | Map&lt;String, Double&gt; |
 
 ### Function
 
-|        Field        |        Type         |
-|---------------------|---------------------|
-| **id**              | **Long**            |
-| name                | string              |
-| returnType          | String              |
-| isConstructor       | boolean             |
-| annotations         | set[String]         |
-| modifiers           | set[String]         |
-| outgoingMethodCalls | set[String]         |
-| metrics             | map[String, Double] |
-| startLine           | int                 |
-| endLine             | int                 |
+|        Field        |           Type            |
+|---------------------|---------------------------|
+| **id**              | **Long**                  |
+| name                | String                    |
+| returnType          | String                    |
+| constructor         | boolean                   |
+| annotations         | Set&lt;String&gt;         |
+| modifiers           | Set&lt;String&gt;         |
+| outgoingMethodCalls | Set&lt;String&gt;         |
+| startLine           | int                       |
+| endLine             | int                       |
+| metrics             | Map&lt;String, Double&gt; |
 
 ### Landscape
 
 |    Field    |    Type    |
 |-------------|------------|
-| **tokenId** | **string** |
+| **tokenId** | **String** |
 
 ### Parameter
 
-|   Field   |     Type     |
-|-----------|--------------|
-| **id**    | **Long**     |
-| name      | string       |
-| type      | String       |
-| modifiers | list[String] |
+|   Field   |        Type        |
+|-----------|--------------------|
+| **id**    | **Long**           |
+| name      | String             |
+| type      | String             |
+| modifiers | List&lt;String&gt; |
 
 ### Repository
 
 | Field  |   Type   |
 |--------|----------|
 | **id** | **Long** |
-| name   | string   |
+| name   | String   |
 
 ### Span
 
-|   Field    |   Type   |
-|------------|----------|
-| **id**     | **Long** |
-| spanId     | string   |
-| start_time | long     |
-| end_time   | long     |
+|   Field   |   Type   |
+|-----------|----------|
+| **id**    | **Long** |
+| spanId    | String   |
+| startTime | long     |
+| endTime   | long     |
 
 ### Tag
 
 | Field  |   Type   |
 |--------|----------|
 | **id** | **Long** |
-| name   | string   |
+| name   | String   |
 
 ### Trace
 
-|   Field    |   Type   |
-|------------|----------|
-| **id**     | **Long** |
-| traceId    | string   |
-| start_time | long     |
-| end_time   | long     |
+|   Field   |   Type   |
+|-----------|----------|
+| **id**    | **Long** |
+| traceId   | String   |
+| startTime | Long     |
+| endTime   | Long     |
 
 ## Updating the Database Model
 
