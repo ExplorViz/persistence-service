@@ -5,8 +5,12 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import java.util.Optional;
 import net.explorviz.persistence.api.v3.model.CommitComparison;
+import net.explorviz.persistence.api.v3.model.FileDetailedDto;
 import net.explorviz.persistence.api.v3.model.landscape.FlatLandscapeDto;
+import net.explorviz.persistence.ogm.FileRevision;
+import net.explorviz.persistence.repository.FileDetailedMapper;
 import net.explorviz.persistence.repository.StructureRepository;
 import org.jboss.resteasy.reactive.RestPath;
 import org.neo4j.ogm.session.Session;
@@ -19,6 +23,7 @@ public class StructureResource {
   @Inject SessionFactory sessionFactory;
 
   @Inject StructureRepository structureRepository;
+  @Inject FileDetailedMapper fileDetailedMapper;
 
 
   /** Retrieve all structure data gathered from runtime analysis. */
@@ -80,5 +85,17 @@ public class StructureResource {
         new StructureRepository.CombinedStaticDataRequest(landscapeToken, repositoryName,
             firstCommitHash, secondCommitHash));
   }
-}
 
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("/evolution/file-revision/{id}")
+  public FileDetailedDto getFileDetailsById(
+      @RestPath final String landscapeToken,
+      @RestPath final Long id) {
+    final Session session = sessionFactory.openSession();
+  
+    return Optional.ofNullable(session.load(FileRevision.class, id))
+        .map(fileDetailedMapper::map)
+        .orElseThrow(() -> new jakarta.ws.rs.NotFoundException("File revision not found"));
+  }
+}

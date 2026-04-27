@@ -25,46 +25,18 @@ import org.neo4j.ogm.model.Result;
 public class StructureMapper {
 
   public FlatLandscapeDto buildFlatLandscape(
-      final String landscapeToken, final Result result, final TypeOfAnalysis origin) {
+      final String landscapeToken, final Result result, final TypeOfAnalysis origin,
+      final String repositoryName) {
     final Map<Long, NodeData> nodesById = new HashMap<>();
     final Set<Long> applicationIds = new HashSet<>();
 
-    result.forEach(
-        row -> {
-          final Long id = (Long) row.get("id");
-
-          final Object labelsObj = row.get("labels");
-          final Set<String> labels = new HashSet<>();
-          if (labelsObj instanceof String[] arr) {
-            labels.addAll(Arrays.asList(arr));
-          } else if (labelsObj instanceof Collection<?> coll) {
-            coll.forEach(l -> labels.add((String) l));
-          }
-
-          @SuppressWarnings("unchecked")
-          final Map<String, Object> properties = (Map<String, Object>) row.get("properties");
-          final Long cityId = (Long) row.get("cityId");
-
-          final Object childrenIdsObj = row.get("childrenIds");
-          final List<Long> childrenIds = new ArrayList<>();
-          if (childrenIdsObj instanceof long[] arr) {
-            for (final long l : arr) {
-              childrenIds.add(l);
-            }
-          } else if (childrenIdsObj instanceof Long[] arr) {
-            childrenIds.addAll(Arrays.asList(arr));
-          } else if (childrenIdsObj instanceof Collection<?> coll) {
-            coll.forEach(c -> childrenIds.add((Long) c));
-          }
-
-          final Long parentId = (Long) row.get("parentId");
-
-          nodesById.put(id, new NodeData(id, labels, properties, cityId, childrenIds, parentId));
-
-          if (labels.contains("Application")) {
-            applicationIds.add(id);
-          }
-        });
+    result.forEach(row -> {
+      final NodeData nodeData = parseNodeData(row);
+      nodesById.put(nodeData.id, nodeData);
+      if (nodeData.labels.contains("Application")) {
+        applicationIds.add(nodeData.id);
+      }
+    });
 
     final TraversalContext context = new TraversalContext(
         nodesById,
@@ -76,7 +48,7 @@ public class StructureMapper {
 
     for (final Long appId : applicationIds) {
       final NodeData appNode = nodesById.get(appId);
-      traverse(appNode, "", null, context);
+      traverse(appNode, repositoryName != null ? repositoryName : "", null, context);
     }
 
     return new FlatLandscapeDto(landscapeToken, context.cities(), context.districts(),
@@ -114,7 +86,7 @@ public class StructureMapper {
     } else if (node.labels.contains("FileRevision")) {
       handleFileRevision(node, id, parentCityId, base, context, containedBuildingIds);
     }
-    
+
     return new TraversalResult(containedDistrictIds, containedBuildingIds);
   }
 
@@ -137,7 +109,7 @@ public class StructureMapper {
         containedBuildingIds.addAll(res.buildingIds);
       }
     }
-    
+
     final CityDto city = new CityDto(
         new FlatBaseModel(id, name, "", context.origin(), null),
         directDistrictIds,
@@ -153,7 +125,7 @@ public class StructureMapper {
       final Set<String> containedDistrictIds, final Set<String> containedBuildingIds) {
     final List<String> childDistrictIds = new ArrayList<>();
     final List<String> childBuildingIds = new ArrayList<>();
-    
+
     containedDistrictIds.add(id);
 
     for (final Long childId : node.childrenIds) {
@@ -169,7 +141,7 @@ public class StructureMapper {
         containedBuildingIds.addAll(res.buildingIds);
       }
     }
-    
+
     final DistrictDto district = new DistrictDto(
         base,
         parentCityId,
@@ -193,6 +165,38 @@ public class StructureMapper {
         extractMetrics(node.properties)
     );
     context.buildings().put(id, building);
+  }
+
+  private NodeData parseNodeData(final Map<String, Object> row) {
+    final Long id = (Long) row.get("id");
+
+    final Object labelsObj = row.get("labels");
+    final Set<String> labels = new HashSet<>();
+    if (labelsObj instanceof String[] arr) {
+      labels.addAll(Arrays.asList(arr));
+    } else if (labelsObj instanceof Collection<?> coll) {
+      coll.forEach(l -> labels.add((String) l));
+    }
+
+    @SuppressWarnings("unchecked")
+    final Map<String, Object> properties = (Map<String, Object>) row.get("properties");
+    final Long cityId = (Long) row.get("cityId");
+
+    final Object childrenIdsObj = row.get("childrenIds");
+    final List<Long> childrenIds = new ArrayList<>();
+    if (childrenIdsObj instanceof long[] arr) {
+      for (final long l : arr) {
+        childrenIds.add(l);
+      }
+    } else if (childrenIdsObj instanceof Long[] arr) {
+      childrenIds.addAll(Arrays.asList(arr));
+    } else if (childrenIdsObj instanceof Collection<?> coll) {
+      coll.forEach(c -> childrenIds.add((Long) c));
+    }
+
+    final Long parentId = (Long) row.get("parentId");
+
+    return new NodeData(id, labels, properties, cityId, childrenIds, parentId);
   }
 
   private Map<String, MetricValue> extractMetrics(final Map<String, Object> properties) {
