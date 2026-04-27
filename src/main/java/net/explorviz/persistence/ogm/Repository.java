@@ -7,23 +7,25 @@ import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 
+/** Represents a git repository. */
 @NodeEntity
 public class Repository {
+
   @Id @GeneratedValue private Long id;
 
   private String name;
-
-  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Commit> commits = new HashSet<>();
-
-  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Branch> branches = new HashSet<>();
 
   @Relationship(type = "HAS_ROOT", direction = Relationship.Direction.OUTGOING)
   private Directory rootDirectory;
 
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
-  private Set<Tag> tags = new HashSet<>();
+  private final Set<Commit> commits = new HashSet<>();
+
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private final Set<Branch> branches = new HashSet<>();
+
+  @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
+  private final Set<Tag> tags = new HashSet<>();
 
   public Repository() {
     // Empty constructor required by Neo4j OGM
@@ -41,29 +43,35 @@ public class Repository {
     return name;
   }
 
+  public Directory getRootDirectory() {
+    return rootDirectory;
+  }
+
+  public void setRootDirectory(final Directory rootDirectory) {
+    this.rootDirectory = rootDirectory;
+  }
+
+  public Set<Commit> getCommits() {
+    return Set.copyOf(commits);
+  }
+
   public void addCommit(final Commit commit) {
-    final Set<Commit> newCommits = new HashSet<>(commits);
-    newCommits.add(commit);
-    commits = Set.copyOf(newCommits);
+    commits.add(commit);
+  }
+
+  public Set<Branch> getBranches() {
+    return Set.copyOf(branches);
   }
 
   public void addBranch(final Branch branch) {
-    final Set<Branch> newBranches = new HashSet<>(branches);
-    newBranches.add(branch);
-    branches = Set.copyOf(newBranches);
+    branches.add(branch);
   }
 
-  public void setRootDirectory(final Directory directory) {
-    this.rootDirectory = directory;
+  public Set<Tag> getTags() {
+    return Set.copyOf(tags);
   }
 
   public void addTag(final Tag tag) {
-    final Set<Tag> newTags = new HashSet<>(tags);
-    newTags.add(tag);
-    tags = Set.copyOf(newTags);
-  }
-
-  public Directory getRootDirectory() {
-    return this.rootDirectory;
+    tags.add(tag);
   }
 }
