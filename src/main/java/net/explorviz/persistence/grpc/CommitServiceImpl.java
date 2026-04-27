@@ -153,8 +153,9 @@ public class CommitServiceImpl implements CommitService {
         || NO_PARENT_ID.equals(commitData.getParentCommitId())) {
       session.save(List.of(repo, branch, commit));
     } else {
-      final Commit parentCommit = commitRepository.getOrCreateCommit(
-          session, commitData.getParentCommitId(), commitData.getLandscapeToken());
+      final Commit parentCommit =
+          commitRepository.getOrCreateCommit(
+              session, commitData.getParentCommitId(), commitData.getLandscapeToken());
       commit.addParentCommit(parentCommit);
       session.save(List.of(repo, branch, commit, parentCommit));
     }
