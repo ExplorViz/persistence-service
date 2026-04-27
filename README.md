@@ -389,13 +389,13 @@ Deletes all data gathered from runtime analysis associated with a landscape from
 
 ### Formatting
 
-We recommend using the [IntelliJ IDEA IDE](https://www.jetbrains.com/idea/). Your code should follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html). This is enforced using [Spotless](https://github.com/diffplug/spotless) as part of a pre-commit hook. Before committing, run `./gradlew spotlessApply` to automatically fix any formatting issues.
+We recommend using the [IntelliJ IDEA IDE](https://www.jetbrains.com/idea/). Your code should follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html). Before committing, ensure your code is properly formatted.
 
-To integrate this format with IntelliJ's formatter (`Ctrl + Alt + L` shortcut), we recommend the  official [google-java-format](https://plugins.jetbrains.com/plugin/8527-google-java-format) plugin. Carefully follow [these](https://github.com/google/google-java-format/blob/master/README.md#intellij-android-studio-and-other-jetbrains-ides) instructions to install it. Alternatively, you can use one of the plugins for the [Spotless IDE hook](https://github.com/diffplug/spotless/blob/main/plugin-gradle/IDE_HOOK.md). This hook also integrates with Visual Studio Code.
+To integrate this format with IntelliJ's formatter (`Ctrl + Alt + L` shortcut), we recommend the  official [google-java-format](https://plugins.jetbrains.com/plugin/8527-google-java-format) plugin. Carefully follow [these](https://github.com/google/google-java-format/blob/master/README.md#intellij-android-studio-and-other-jetbrains-ides) instructions to install it. This ensures compatibility with the project's style guide.
 
 ### Pre-commit hook
 
-As part of a git pre-commit hook, your code is checked using [Spotless](https://github.com/diffplug/spotless), [Checkstyle](https://checkstyle.sourceforge.io/) and [PMD](https://pmd.github.io/). If any of these checks fails, the commit is blocked until the issues are resolved. Additionally, all tests must pass for the commit to be successful. Please ensure that all issues are adequately resolved before commiting your changes. If absolutely required, you can skip the pre-commit hook validation using the `--no-verify` flag, but ensure the issues are addressed before creating a merge request.
+As part of a git pre-commit hook, your code is checked using [Checkstyle](https://checkstyle.sourceforge.io/) and [PMD](https://pmd.github.io/). If any of these checks fails, the commit is blocked until the issues are resolved. Additionally, all tests must pass for the commit to be successful. Please ensure that all issues are adequately resolved before commiting your changes. If absolutely required, you can skip the pre-commit hook validation using the `--no-verify` flag, but ensure the issues are addressed before creating a merge request.
 
 ## Running the application in dev mode
 

@@ -1,7 +1,6 @@
 plugins {
     java
     id("io.quarkus")
-    id("com.diffplug.spotless") version "8.4.0"
     checkstyle
     pmd
 }
@@ -106,30 +105,4 @@ checkstyle {
     sourceSets = listOf(java.sourceSets.main.get())
 }
 
-spotless {
-    java {
-        target("src/*/java/**/*.java")
-        googleJavaFormat().reflowLongStrings()
-        formatAnnotations()
-    }
 
-    flexmark {
-        target("**/*.md")
-        flexmark()
-    }
-
-    format("misc") {
-        target(
-            "*.gradle",
-            "*.gradle.kts",
-            ".gitattributes",
-            ".gitignore",
-            ".git-blame-ignore-revs",
-            "src/main/resources/application.properties",
-        )
-
-        trimTrailingWhitespace()
-        leadingTabsToSpaces()
-        endWithNewline()
-    }
-}
