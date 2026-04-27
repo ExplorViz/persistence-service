@@ -25,7 +25,6 @@ public class StructureResource {
   @Inject StructureRepository structureRepository;
   @Inject FileDetailedMapper fileDetailedMapper;
 
-
   /** Retrieve all structure data gathered from runtime analysis. */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -54,10 +53,10 @@ public class StructureResource {
       @RestPath final String commitHash) {
     final Session session = sessionFactory.openSession();
 
-    return structureRepository.fetchFlatLandscapeForStaticData(session,
+    return structureRepository.fetchFlatLandscapeForStaticData(
+        session,
         new StructureRepository.StaticDataRequest(landscapeToken, repositoryName, commitHash));
   }
-
 
   /**
    * Retrieve union of structure data for the two provided commits within the given repository. The
@@ -81,19 +80,19 @@ public class StructureResource {
       @RestPath final String secondCommitHash) {
     final Session session = sessionFactory.openSession();
 
-    return structureRepository.fetchCombinedFlatLandscape(session,
-        new StructureRepository.CombinedStaticDataRequest(landscapeToken, repositoryName,
-            firstCommitHash, secondCommitHash));
+    return structureRepository.fetchCombinedFlatLandscape(
+        session,
+        new StructureRepository.CombinedStaticDataRequest(
+            landscapeToken, repositoryName, firstCommitHash, secondCommitHash));
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @Path("/evolution/file-revision/{id}")
   public FileDetailedDto getFileDetailsById(
-      @RestPath final String landscapeToken,
-      @RestPath final Long id) {
+      @RestPath final String landscapeToken, @RestPath final Long id) {
     final Session session = sessionFactory.openSession();
-  
+
     return Optional.ofNullable(session.load(FileRevision.class, id))
         .map(fileDetailedMapper::map)
         .orElseThrow(() -> new jakarta.ws.rs.NotFoundException("File revision not found"));

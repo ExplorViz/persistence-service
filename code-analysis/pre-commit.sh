@@ -35,7 +35,7 @@ old_stash=$(git rev-parse --quiet --verify refs/stash)
 git stash --quiet --keep-index --include-untracked
 new_stash=$(git rev-parse --quiet --verify refs/stash)
 
-./gradlew checkstyleMain pmdMain test
+./gradlew spotlessCheck checkstyleMain pmdMain test
 
 if [ $? -ne 0 ]
 then

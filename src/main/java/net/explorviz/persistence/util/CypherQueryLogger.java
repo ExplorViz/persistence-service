@@ -26,11 +26,13 @@ public class CypherQueryLogger {
 
   public void logQuery(final String cypher, final long timeMillis) {
     final Path path = Paths.get(LOG_FILE);
-    try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8,
-        StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+    try (BufferedWriter writer =
+        Files.newBufferedWriter(
+            path, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
       final String timestamp = LocalDateTime.now().format(DATE_TIME_FORMATTER);
-      final String logEntry = String.format("[%s] [%dms] %s%n", timestamp, timeMillis,
-          cypher.trim().replaceAll("\\s+", " "));
+      final String logEntry =
+          String.format(
+              "[%s] [%dms] %s%n", timestamp, timeMillis, cypher.trim().replaceAll("\\s+", " "));
       writer.write(logEntry);
     } catch (final IOException e) {
       // Fallback to standard logging if file writing fails

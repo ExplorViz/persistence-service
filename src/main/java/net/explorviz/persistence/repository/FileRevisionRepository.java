@@ -45,14 +45,10 @@ public class FileRevisionRepository {
       """;
   private static final Logger LOGGER = Logger.getLogger(FileRevisionRepository.class);
 
-  @Inject
-  SessionFactory sessionFactory;
-  @Inject
-  ApplicationRepository applicationRepository;
-  @Inject
-  DirectoryRepository directoryRepository;
-  @Inject
-  LandscapeRepository landscapeRepository;
+  @Inject SessionFactory sessionFactory;
+  @Inject ApplicationRepository applicationRepository;
+  @Inject DirectoryRepository directoryRepository;
+  @Inject LandscapeRepository landscapeRepository;
 
   private FileRevision createRemainingFilePath(
       final Session session, final Directory startingDirectory, final String[] remainingPath) {
@@ -75,9 +71,10 @@ public class FileRevisionRepository {
       final String applicationName,
       final String landscapeToken) {
 
-    final Result result = session.query(
-        FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT,
-        Map.of("pathSegments", fileFqn, "appName", applicationName, "tokenId", landscapeToken));
+    final Result result =
+        session.query(
+            FIND_LONGEST_PATH_MATCH_FOR_FQN_WITHOUT_COMMIT,
+            Map.of("pathSegments", fileFqn, "appName", applicationName, "tokenId", landscapeToken));
 
     final Iterator<Map<String, Object>> resultIterator = result.queryResults().iterator();
     if (!resultIterator.hasNext()) {
@@ -88,19 +85,15 @@ public class FileRevisionRepository {
   }
 
   /**
-   * Create any missing Directory / FileRevision nodes according to the provided
-   * FQN for an existing
+   * Create any missing Directory / FileRevision nodes according to the provided FQN for an existing
    * Application object which is already connected to the Landscape graph.
    *
-   * @param session         OGM session object.
-   * @param applicationName Name of an existing application which is already
-   *                        connected to the
-   *                        Landscape with the given token.
-   * @param splitFileFqn    File FQN starting from application root (not
-   *                        inclusive), e.g. ["net",
-   *                        "explorviz", "persistence", "MyClass.java"]
-   * @return The existing or newly created FileRevision according to the provided
-   *         FQN
+   * @param session OGM session object.
+   * @param applicationName Name of an existing application which is already connected to the
+   *     Landscape with the given token.
+   * @param splitFileFqn File FQN starting from application root (not inclusive), e.g. ["net",
+   *     "explorviz", "persistence", "MyClass.java"]
+   * @return The existing or newly created FileRevision according to the provided FQN
    */
   public FileRevision createFileStructureForExistingApplicationFromFileFqn(
       final Session session,
@@ -110,8 +103,8 @@ public class FileRevisionRepository {
 
     validateFqn(splitFileFqn);
 
-    final Map<String, Object> resultMap = findLongestPathMatchForFqn(session, splitFileFqn,
-        applicationName, landscapeToken);
+    final Map<String, Object> resultMap =
+        findLongestPathMatchForFqn(session, splitFileFqn, applicationName, landscapeToken);
 
     final String[] remainingPath =
         resultMap.get("remainingPath") instanceof String[] p ? p : new String[0];
@@ -133,16 +126,13 @@ public class FileRevisionRepository {
   }
 
   /**
-   * Create Directory / FileRevision nodes according to the provided FQN for a
-   * newly created
+   * Create Directory / FileRevision nodes according to the provided FQN for a newly created
    * Application object which is not yet connected to the Landscape graph.
    *
-   * @param session      OGM session object.
-   * @param application  Newly created application object, assumed not to have a
-   *                     root directory.
-   * @param splitFileFqn File FQN starting from application root (not inclusive),
-   *                     e.g. ["net",
-   *                     "explorviz", "persistence", "MyClass.java"]
+   * @param session OGM session object.
+   * @param application Newly created application object, assumed not to have a root directory.
+   * @param splitFileFqn File FQN starting from application root (not inclusive), e.g. ["net",
+   *     "explorviz", "persistence", "MyClass.java"]
    * @return The newly created FileRevision according to the provided FQN
    */
   public FileRevision createFileStructureForNewApplicationFromFqn(
@@ -161,24 +151,26 @@ public class FileRevisionRepository {
       final String landscapeTokenId,
       final Commit commit) {
     final String[] pathSegments = fileIdentifier.getFilePath().split("/");
-    String[] directorySegments = { repoName };
+    String[] directorySegments = {repoName};
     if (pathSegments.length > 1) {
       directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 1);
-      directorySegments = Stream.concat(Stream.of(repoName), Arrays.stream(directorySegments))
-          .toArray(String[]::new);
+      directorySegments =
+          Stream.concat(Stream.of(repoName), Arrays.stream(directorySegments))
+              .toArray(String[]::new);
     }
 
-    FileRevision file = getFileRevisionFromHashAndPath(
-        session, fileIdentifier.getFileHash(), repoName, landscapeTokenId, pathSegments)
-        .orElse(null);
+    FileRevision file =
+        getFileRevisionFromHashAndPath(
+                session, fileIdentifier.getFileHash(), repoName, landscapeTokenId, pathSegments)
+            .orElse(null);
     if (file == null) {
       file = new FileRevision(pathSegments[pathSegments.length - 1], fileIdentifier.getFileHash());
     }
 
     commit.addFileRevision(file);
 
-    final Directory parentDir = directoryRepository
-        .createDirectoryStructureAndReturnLastDirStaticData(
+    final Directory parentDir =
+        directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(
             session, directorySegments, repoName, landscapeTokenId);
     parentDir.addFileRevision(file);
 
@@ -217,20 +209,16 @@ public class FileRevisionRepository {
   }
 
   /**
-   * Retrieve the FileRevision matching the specified path starting in the given
-   * application. The
-   * file must additionally be part of a commit with the given hash, otherwise
-   * nothing is matched.
+   * Retrieve the FileRevision matching the specified path starting in the given application. The
+   * file must additionally be part of a commit with the given hash, otherwise nothing is matched.
    *
-   * @param session         OGM session object
-   * @param repoName        Name of the repository in which to search
-   * @param commitHash      Hash of the git commit to which the file must belong
-   * @param pathSegments    List of directory names + the file name, beginning at
-   *                        the application's
-   *                        root directory
-   * @param landscapeToken  Token ID of the landscape in which to search
-   * @return An Optional describing the specified FileRevision. Empty if no
-   *         FileRevision is matched.
+   * @param session OGM session object
+   * @param repoName Name of the repository in which to search
+   * @param commitHash Hash of the git commit to which the file must belong
+   * @param pathSegments List of directory names + the file name, beginning at the application's
+   *     root directory
+   * @param landscapeToken Token ID of the landscape in which to search
+   * @return An Optional describing the specified FileRevision. Empty if no FileRevision is matched.
    */
   public Optional<FileRevision> findFileRevisionFromRepoNameAndCommitHashAndPath(
       final Session session,
@@ -328,12 +316,10 @@ public class FileRevisionRepository {
   }
 
   /**
-   * Retrieve all FileRevisions from static analysis along with their file paths
-   * for a given
+   * Retrieve all FileRevisions from static analysis along with their file paths for a given
    * application at a particular commit.
    *
-   * @return A map of each file's path to the corresponding FileRevision object,
-   *         separated by '/'.
+   * @return A map of each file's path to the corresponding FileRevision object, separated by '/'.
    */
   public Map<String, FileRevision> findStaticFilesWithFqnForApplicationAndCommitAndLandscapeToken(
       final Session session,
@@ -343,7 +329,8 @@ public class FileRevisionRepository {
 
     final Map<String, FileRevision> filePathToFileRevisionMap = new HashMap<>();
 
-    final Result result = session.query(
+    final Result result =
+        session.query(
             """
             MATCH (l:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Application {name: $appName})
@@ -359,14 +346,15 @@ public class FileRevisionRepository {
               f AS file,
               apoc.text.join(nodeNames, "/") AS filePath;
             """,
-        Map.of(
-            "tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
+            Map.of(
+                "tokenId", landscapeToken, "appName", applicationName, "commitHash", commitHash));
 
     result
         .queryResults()
         .forEach(
-            queryResult -> filePathToFileRevisionMap.put(
-                (String) queryResult.get("filePath"), (FileRevision) queryResult.get("file")));
+            queryResult ->
+                filePathToFileRevisionMap.put(
+                    (String) queryResult.get("filePath"), (FileRevision) queryResult.get("file")));
 
     return filePathToFileRevisionMap;
   }
@@ -379,7 +367,8 @@ public class FileRevisionRepository {
 
     final Map<String, FileRevision> filePathToFileRevisionMap = new HashMap<>();
 
-    final Result result = session.query(
+    final Result result =
+        session.query(
             """
             MATCH (l:Landscape {tokenId: $tokenId})
               -[:CONTAINS]->(:Repository {name: $repoName})
@@ -391,13 +380,14 @@ public class FileRevisionRepository {
               f AS file,
               apoc.text.join(nodeNames, "/") AS filePath;
             """,
-        Map.of("tokenId", landscapeToken, "repoName", repoName, "commitHash", commitHash));
+            Map.of("tokenId", landscapeToken, "repoName", repoName, "commitHash", commitHash));
 
     result
         .queryResults()
         .forEach(
-            queryResult -> filePathToFileRevisionMap.put(
-                (String) queryResult.get("filePath"), (FileRevision) queryResult.get("file")));
+            queryResult ->
+                filePathToFileRevisionMap.put(
+                    (String) queryResult.get("filePath"), (FileRevision) queryResult.get("file")));
 
     return filePathToFileRevisionMap;
   }

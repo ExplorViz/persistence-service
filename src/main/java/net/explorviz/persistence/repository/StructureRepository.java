@@ -24,21 +24,16 @@ import org.neo4j.ogm.session.Session;
 @SuppressWarnings({"PMD.TooManyMethods", "PMD.CouplingBetweenObjects"})
 public class StructureRepository {
 
-  @Inject
-  StructureMapper mapper;
+  @Inject StructureMapper mapper;
 
   public record StaticDataRequest(
-      String landscapeToken,
-      String repositoryName,
-      String commitHash) {
-  }
+      String landscapeToken, String repositoryName, String commitHash) {}
 
   public record CombinedStaticDataRequest(
       String landscapeToken,
       String repositoryName,
       String firstCommitHash,
-      String secondCommitHash) {
-  }
+      String secondCommitHash) {}
 
   public FlatLandscapeDto fetchFlatLandscapeForRuntimeData(
       final Session session, final String landscapeToken) {
@@ -69,8 +64,7 @@ public class StructureRepository {
   }
 
   public FlatLandscapeDto fetchFlatLandscapeForStaticData(
-      final Session session,
-      final StaticDataRequest request) {
+      final Session session, final StaticDataRequest request) {
     final String query =
         """
         MATCH (l:Landscape {tokenId: $tokenId})
@@ -94,24 +88,33 @@ public class StructureRepository {
           [(n)<-[:HAS_ROOT|CONTAINS]-(p) | id(p)][0] AS parentId
         """;
 
-    final Result result = session.query(
-        query,
-        Map.of("tokenId", request.landscapeToken(), "repoName", request.repositoryName(),
-            "commitHash", request.commitHash()));
-    return mapper.buildFlatLandscape(request.landscapeToken(), result, TypeOfAnalysis.STATIC,
-        request.repositoryName());
+    final Result result =
+        session.query(
+            query,
+            Map.of(
+                "tokenId",
+                request.landscapeToken(),
+                "repoName",
+                request.repositoryName(),
+                "commitHash",
+                request.commitHash()));
+    return mapper.buildFlatLandscape(
+        request.landscapeToken(), result, TypeOfAnalysis.STATIC, request.repositoryName());
   }
 
   public FlatLandscapeDto fetchCombinedFlatLandscape(
-      final Session session,
-      final CombinedStaticDataRequest request) {
+      final Session session, final CombinedStaticDataRequest request) {
 
-    final FlatLandscapeDto first = fetchFlatLandscapeForStaticData(session,
-        new StaticDataRequest(request.landscapeToken(), request.repositoryName(),
-            request.firstCommitHash()));
-    final FlatLandscapeDto second = fetchFlatLandscapeForStaticData(session,
-        new StaticDataRequest(request.landscapeToken(), request.repositoryName(),
-            request.secondCommitHash()));
+    final FlatLandscapeDto first =
+        fetchFlatLandscapeForStaticData(
+            session,
+            new StaticDataRequest(
+                request.landscapeToken(), request.repositoryName(), request.firstCommitHash()));
+    final FlatLandscapeDto second =
+        fetchFlatLandscapeForStaticData(
+            session,
+            new StaticDataRequest(
+                request.landscapeToken(), request.repositoryName(), request.secondCommitHash()));
 
     return merge(request.landscapeToken(), first, second);
   }
@@ -135,12 +138,16 @@ public class StructureRepository {
     return new FlatLandscapeDto(token, cities, districts, buildings);
   }
 
-  private <T> void populateIdMap(final Map<String, T> firstMap, final Map<String, T> secondMap,
+  private <T> void populateIdMap(
+      final Map<String, T> firstMap,
+      final Map<String, T> secondMap,
       final Map<String, String> idMap) {
-    final Map<String, T> firstByFqn = firstMap.values().stream()
-        .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
-    final Map<String, T> secondByFqn = secondMap.values().stream()
-        .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
+    final Map<String, T> firstByFqn =
+        firstMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
+    final Map<String, T> secondByFqn =
+        secondMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
 
     final Set<String> allFqns = new HashSet<>(firstByFqn.keySet());
     allFqns.addAll(secondByFqn.keySet());
@@ -165,10 +172,12 @@ public class StructureRepository {
       final Map<String, T> targetMap,
       final Map<String, String> idMap) {
 
-    final Map<String, T> firstByFqn = firstMap.values().stream()
-        .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
-    final Map<String, T> secondByFqn = secondMap.values().stream()
-        .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
+    final Map<String, T> firstByFqn =
+        firstMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
+    final Map<String, T> secondByFqn =
+        secondMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
 
     final Set<String> allFqns = new HashSet<>(firstByFqn.keySet());
     allFqns.addAll(secondByFqn.keySet());
@@ -178,16 +187,17 @@ public class StructureRepository {
       final T secondNode = secondByFqn.get(fqn);
 
       if (firstNode != null && secondNode != null) {
-        final CommitComparison comp = getId(firstNode).equals(getId(secondNode))
-            ? CommitComparison.UNCHANGED
-            : CommitComparison.MODIFIED;
+        final CommitComparison comp =
+            getId(firstNode).equals(getId(secondNode))
+                ? CommitComparison.UNCHANGED
+                : CommitComparison.MODIFIED;
         targetMap.put(getId(secondNode), withComparison(secondNode, firstNode, comp, idMap));
       } else if (firstNode != null) {
-        targetMap.put(getId(firstNode),
-            withComparison(firstNode, null, CommitComparison.REMOVED, idMap));
+        targetMap.put(
+            getId(firstNode), withComparison(firstNode, null, CommitComparison.REMOVED, idMap));
       } else {
-        targetMap.put(getId(secondNode),
-            withComparison(secondNode, null, CommitComparison.ADDED, idMap));
+        targetMap.put(
+            getId(secondNode), withComparison(secondNode, null, CommitComparison.ADDED, idMap));
       }
     }
   }
@@ -219,8 +229,8 @@ public class StructureRepository {
   }
 
   @SuppressWarnings("unchecked")
-  private <T> T withComparison(final T dto, final T otherDto, final CommitComparison comp,
-      final Map<String, String> idMap) {
+  private <T> T withComparison(
+      final T dto, final T otherDto, final CommitComparison comp, final Map<String, String> idMap) {
     if (dto instanceof CityDto d) {
       return (T) withComparisonCity(d, (CityDto) otherDto, comp, idMap);
     }
@@ -233,54 +243,80 @@ public class StructureRepository {
     return dto;
   }
 
-  private CityDto withComparisonCity(final CityDto d, final CityDto other,
-      final CommitComparison comp, final Map<String, String> idMap) {
-    final List<String> districtIds = mergeLists(safeGet(d, CityDto::districtIds),
-        safeGet(other, CityDto::districtIds), idMap);
-    final List<String> buildingIds = mergeLists(safeGet(d, CityDto::buildingIds),
-        safeGet(other, CityDto::buildingIds), idMap);
-    final List<String> allDistricts = mergeLists(safeGet(d, CityDto::allContainedDistrictIds),
-        safeGet(other, CityDto::allContainedDistrictIds), idMap);
-    final List<String> allBuildings = mergeLists(safeGet(d, CityDto::allContainedBuildingIds),
-        safeGet(other, CityDto::allContainedBuildingIds), idMap);
+  private CityDto withComparisonCity(
+      final CityDto d,
+      final CityDto other,
+      final CommitComparison comp,
+      final Map<String, String> idMap) {
+    final List<String> districtIds =
+        mergeLists(safeGet(d, CityDto::districtIds), safeGet(other, CityDto::districtIds), idMap);
+    final List<String> buildingIds =
+        mergeLists(safeGet(d, CityDto::buildingIds), safeGet(other, CityDto::buildingIds), idMap);
+    final List<String> allDistricts =
+        mergeLists(
+            safeGet(d, CityDto::allContainedDistrictIds),
+            safeGet(other, CityDto::allContainedDistrictIds),
+            idMap);
+    final List<String> allBuildings =
+        mergeLists(
+            safeGet(d, CityDto::allContainedBuildingIds),
+            safeGet(other, CityDto::allContainedBuildingIds),
+            idMap);
 
     final FlatBaseModel base = d != null ? d.flatBaseModel() : other.flatBaseModel();
-    return new CityDto(withBaseComparison(base, idMap.get(base.id()), comp), districtIds,
-        buildingIds, allDistricts, allBuildings);
+    return new CityDto(
+        withBaseComparison(base, idMap.get(base.id()), comp),
+        districtIds,
+        buildingIds,
+        allDistricts,
+        allBuildings);
   }
 
-  private DistrictDto withComparisonDistrict(final DistrictDto d, final DistrictDto other,
-      final CommitComparison comp, final Map<String, String> idMap) {
-    final List<String> districtIds = mergeLists(safeGet(d, DistrictDto::districtIds),
-        safeGet(other, DistrictDto::districtIds), idMap);
-    final List<String> buildingIds = mergeLists(safeGet(d, DistrictDto::buildingIds),
-        safeGet(other, DistrictDto::buildingIds), idMap);
+  private DistrictDto withComparisonDistrict(
+      final DistrictDto d,
+      final DistrictDto other,
+      final CommitComparison comp,
+      final Map<String, String> idMap) {
+    final List<String> districtIds =
+        mergeLists(
+            safeGet(d, DistrictDto::districtIds), safeGet(other, DistrictDto::districtIds), idMap);
+    final List<String> buildingIds =
+        mergeLists(
+            safeGet(d, DistrictDto::buildingIds), safeGet(other, DistrictDto::buildingIds), idMap);
 
     final FlatBaseModel base = d != null ? d.flatBaseModel() : other.flatBaseModel();
     final String parentCityId = d != null ? d.parentCityId() : other.parentCityId();
     final String parentDistrictId = d != null ? d.parentDistrictId() : other.parentDistrictId();
 
-    return new DistrictDto(withBaseComparison(base, idMap.get(base.id()), comp),
+    return new DistrictDto(
+        withBaseComparison(base, idMap.get(base.id()), comp),
         idMap.get(parentCityId),
-        parentDistrictId != null ? idMap.get(parentDistrictId) : null, districtIds, buildingIds);
+        parentDistrictId != null ? idMap.get(parentDistrictId) : null,
+        districtIds,
+        buildingIds);
   }
 
-  private BuildingDto withComparisonBuilding(final BuildingDto d, final BuildingDto other,
-      final CommitComparison comp, final Map<String, String> idMap) {
+  private BuildingDto withComparisonBuilding(
+      final BuildingDto d,
+      final BuildingDto other,
+      final CommitComparison comp,
+      final Map<String, String> idMap) {
     final FlatBaseModel base = d != null ? d.flatBaseModel() : other.flatBaseModel();
     final String parentCityId = d != null ? d.parentCityId() : other.parentCityId();
     final String parentDistrictId = d != null ? d.parentDistrictId() : other.parentDistrictId();
 
     final Map<String, MetricValue> metrics = mergeBuildingMetrics(d, other, comp);
 
-    return new BuildingDto(withBaseComparison(base, idMap.get(base.id()), comp),
+    return new BuildingDto(
+        withBaseComparison(base, idMap.get(base.id()), comp),
         idMap.get(parentCityId),
         parentDistrictId != null ? idMap.get(parentDistrictId) : null,
-        d != null ? d.language() : other.language(), metrics);
+        d != null ? d.language() : other.language(),
+        metrics);
   }
 
-  private Map<String, MetricValue> mergeBuildingMetrics(final BuildingDto d,
-      final BuildingDto other, final CommitComparison comp) {
+  private Map<String, MetricValue> mergeBuildingMetrics(
+      final BuildingDto d, final BuildingDto other, final CommitComparison comp) {
     if (d != null && other != null) {
       return mergeMetrics(d.metrics(), other.metrics());
     } else if (comp == CommitComparison.REMOVED && d != null) {
@@ -292,13 +328,13 @@ public class StructureRepository {
     }
   }
 
-  private FlatBaseModel withBaseComparison(final FlatBaseModel base, final String newId,
-      final CommitComparison comp) {
+  private FlatBaseModel withBaseComparison(
+      final FlatBaseModel base, final String newId, final CommitComparison comp) {
     return new FlatBaseModel(newId, base.name(), base.fqn(), base.originOfData(), comp);
   }
 
-  private List<String> mergeLists(final List<String> list1, final List<String> list2,
-      final Map<String, String> idMap) {
+  private List<String> mergeLists(
+      final List<String> list1, final List<String> list2, final Map<String, String> idMap) {
     final Set<String> merged = new HashSet<>();
     if (list1 != null) {
       for (final String id : list1) {
@@ -323,16 +359,18 @@ public class StructureRepository {
     return obj == null ? null : getter.apply(obj);
   }
 
-  private Map<String, MetricValue> mergeMetrics(final Map<String, MetricValue> current,
-      final Map<String, MetricValue> previous) {
+  private Map<String, MetricValue> mergeMetrics(
+      final Map<String, MetricValue> current, final Map<String, MetricValue> previous) {
     final Map<String, MetricValue> merged = new HashMap<>();
     final Set<String> allKeys = new HashSet<>(current.keySet());
     allKeys.addAll(previous.keySet());
     for (final String k : allKeys) {
       final MetricValue curr = current.get(k);
       final MetricValue prev = previous.get(k);
-      merged.put(k, new MetricValue(curr != null ? curr.current() : null,
-          prev != null ? prev.current() : null));
+      merged.put(
+          k,
+          new MetricValue(
+              curr != null ? curr.current() : null, prev != null ? prev.current() : null));
     }
     return merged;
   }

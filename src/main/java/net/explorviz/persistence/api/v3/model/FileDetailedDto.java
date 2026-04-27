@@ -14,8 +14,7 @@ public record FileDetailedDto(
     int deletedLines,
     Map<String, Double> metrics,
     List<ClazzDto> classes,
-    List<FunctionDto> functions
-) {
+    List<FunctionDto> functions) {
   @RegisterForReflection
   public record ClazzDto(
       String name,
@@ -23,19 +22,11 @@ public record FileDetailedDto(
       Map<String, Double> metrics,
       List<FunctionDto> functions,
       List<FieldDto> fields,
-      List<ClazzDto> innerClasses
-  ) {}
+      List<ClazzDto> innerClasses) {}
 
   @RegisterForReflection
-  public record FunctionDto(
-      String name,
-      String returnType,
-      Map<String, Double> metrics
-  ) {}
+  public record FunctionDto(String name, String returnType, Map<String, Double> metrics) {}
 
   @RegisterForReflection
-  public record FieldDto(
-      String name,
-      String type
-  ) {}
+  public record FieldDto(String name, String type) {}
 }

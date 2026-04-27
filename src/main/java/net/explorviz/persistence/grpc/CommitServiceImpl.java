@@ -9,7 +9,6 @@ import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
@@ -35,22 +34,14 @@ import org.neo4j.ogm.transaction.Transaction;
 public class CommitServiceImpl implements CommitService {
 
   private static final String NO_PARENT_ID = "NONE";
-  @Inject
-  ApplicationRepository applicationRepository;
-  @Inject
-  BranchRepository branchRepository;
-  @Inject
-  CommitRepository commitRepository;
-  @Inject
-  LandscapeRepository landscapeRepository;
-  @Inject
-  RepositoryRepository repositoryRepository;
-  @Inject
-  FileRevisionRepository fileRevisionRepository;
-  @Inject
-  TagRepository tagRepository;
-  @Inject
-  SessionFactory sessionFactory;
+  @Inject ApplicationRepository applicationRepository;
+  @Inject BranchRepository branchRepository;
+  @Inject CommitRepository commitRepository;
+  @Inject LandscapeRepository landscapeRepository;
+  @Inject RepositoryRepository repositoryRepository;
+  @Inject FileRevisionRepository fileRevisionRepository;
+  @Inject TagRepository tagRepository;
+  @Inject SessionFactory sessionFactory;
 
   @Blocking
   @Override
@@ -67,23 +58,27 @@ public class CommitServiceImpl implements CommitService {
   }
 
   public void saveCommitData(final Session session, final CommitData commitData) {
-    final Repository repo = repositoryRepository
-        .findRepositoryByNameAndLandscapeToken(
-            session, commitData.getRepositoryName(), commitData.getLandscapeToken())
-        .orElseThrow(
-            () -> Status.FAILED_PRECONDITION
-                .withDescription("No corresponding state data was sent before.")
-                .asRuntimeException());
+    final Repository repo =
+        repositoryRepository
+            .findRepositoryByNameAndLandscapeToken(
+                session, commitData.getRepositoryName(), commitData.getLandscapeToken())
+            .orElseThrow(
+                () ->
+                    Status.FAILED_PRECONDITION
+                        .withDescription("No corresponding state data was sent before.")
+                        .asRuntimeException());
 
-    final Branch branch = branchRepository.getOrCreateBranch(
-        session,
-        commitData.getBranchName(),
-        commitData.getRepositoryName(),
-        commitData.getLandscapeToken());
+    final Branch branch =
+        branchRepository.getOrCreateBranch(
+            session,
+            commitData.getBranchName(),
+            commitData.getRepositoryName(),
+            commitData.getLandscapeToken());
     repo.addBranch(branch);
 
-    final Commit commit = commitRepository.getOrCreateCommit(
-        session, commitData.getCommitId(), commitData.getLandscapeToken());
+    final Commit commit =
+        commitRepository.getOrCreateCommit(
+            session, commitData.getCommitId(), commitData.getLandscapeToken());
     commit.setBranch(branch);
     commit.setCommitDate(
         Instant.ofEpochSecond(
@@ -96,38 +91,42 @@ public class CommitServiceImpl implements CommitService {
     commitData
         .getAddedFilesList()
         .forEach(
-            f -> fileRevisionRepository.createFileStructureFromStaticData(
-                session,
-                f,
-                commitData.getRepositoryName(),
-                commitData.getLandscapeToken(),
-                commit));
+            f ->
+                fileRevisionRepository.createFileStructureFromStaticData(
+                    session,
+                    f,
+                    commitData.getRepositoryName(),
+                    commitData.getLandscapeToken(),
+                    commit));
 
     commitData
         .getModifiedFilesList()
         .forEach(
-            f -> fileRevisionRepository.createFileStructureFromStaticData(
-                session,
-                f,
-                commitData.getRepositoryName(),
-                commitData.getLandscapeToken(),
-                commit));
+            f ->
+                fileRevisionRepository.createFileStructureFromStaticData(
+                    session,
+                    f,
+                    commitData.getRepositoryName(),
+                    commitData.getLandscapeToken(),
+                    commit));
 
     if (!commitData.getParentCommitId().isEmpty()
         && !NO_PARENT_ID.equals(commitData.getParentCommitId())) {
-      final Map<String, FileRevision> parentFiles = fileRevisionRepository
-          .findStaticFilesWithFqnForRepositoryAndCommitAndLandscapeToken(
+      final Map<String, FileRevision> parentFiles =
+          fileRevisionRepository.findStaticFilesWithFqnForRepositoryAndCommitAndLandscapeToken(
               session,
               commitData.getRepositoryName(),
               commitData.getParentCommitId(),
               commitData.getLandscapeToken());
 
-      final Set<String> modifiedPaths = commitData.getModifiedFilesList().stream()
-          .map(FileIdentifier::getFilePath)
-          .collect(Collectors.toSet());
-      final Set<String> deletedPaths = commitData.getDeletedFilesList().stream()
-          .map(FileIdentifier::getFilePath)
-          .collect(Collectors.toSet());
+      final List<String> modifiedPaths =
+          commitData.getModifiedFilesList().stream()
+              .map(FileIdentifier::getFilePath)
+              .collect(Collectors.toList());
+      final List<String> deletedPaths =
+          commitData.getDeletedFilesList().stream()
+              .map(FileIdentifier::getFilePath)
+              .collect(Collectors.toList());
 
       parentFiles.forEach(
           (path, fileRevision) -> {
@@ -141,10 +140,11 @@ public class CommitServiceImpl implements CommitService {
         .getTagsList()
         .forEach(
             tagName -> {
-              final Tag tag = tagRepository
-                  .findTagByNameAndRepositoryNameAndLandscapeToken(
-                      session, tagName, repo.getName(), commitData.getLandscapeToken())
-                  .orElse(new Tag(tagName));
+              final Tag tag =
+                  tagRepository
+                      .findTagByNameAndRepositoryNameAndLandscapeToken(
+                          session, tagName, repo.getName(), commitData.getLandscapeToken())
+                      .orElse(new Tag(tagName));
               commit.addTag(tag);
               repo.addTag(tag);
             });

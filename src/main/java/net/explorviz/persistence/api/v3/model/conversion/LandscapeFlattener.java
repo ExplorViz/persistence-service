@@ -62,9 +62,7 @@ public final class LandscapeFlattener {
 
   /** Aggregates all landscape models across multiple cities to produce the final result lists. */
   private record FlatteningResult(
-      Set<CityDto> cities,
-      Set<DistrictDto> districts,
-      Set<BuildingDto> buildings) {}
+      Set<CityDto> cities, Set<DistrictDto> districts, Set<BuildingDto> buildings) {}
 
   /**
    * Produces a flat landscape with the given landscape token ID from a collection of

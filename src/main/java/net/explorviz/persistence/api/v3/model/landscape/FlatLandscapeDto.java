@@ -31,4 +31,3 @@ public record FlatLandscapeDto(
     Objects.requireNonNull(buildings);
   }
 }
-

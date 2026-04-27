@@ -29,8 +29,11 @@ public final class LoggingSessionProxy implements InvocationHandler {
    * @return a proxied session
    */
   public static Session wrap(final Session delegate, final CypherQueryLogger logger) {
-    return (Session) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
-        new Class<?>[] {Session.class}, new LoggingSessionProxy(delegate, logger));
+    return (Session)
+        Proxy.newProxyInstance(
+            Thread.currentThread().getContextClassLoader(),
+            new Class<?>[] {Session.class},
+            new LoggingSessionProxy(delegate, logger));
   }
 
   @Override
@@ -46,7 +49,8 @@ public final class LoggingSessionProxy implements InvocationHandler {
   }
 
   private boolean isQueryMethod(final String methodName) {
-    return "query".equals(methodName) || "queryForObject".equals(methodName)
+    return "query".equals(methodName)
+        || "queryForObject".equals(methodName)
         || "execute".equals(methodName);
   }
 
@@ -67,8 +71,7 @@ public final class LoggingSessionProxy implements InvocationHandler {
     return method.invoke(delegate, args);
   }
 
-  private record QueryInfo(String cypher, Map<String, Object> parameters) {
-  }
+  private record QueryInfo(String cypher, Map<String, Object> parameters) {}
 
   @SuppressWarnings("unchecked")
   private QueryInfo extractQueryInfo(final Object[] args) {

@@ -24,8 +24,7 @@ public class FileDetailedMapper {
         fileRevision.getDeletedLines(),
         fileRevision.getMetrics(),
         fileRevision.getClasses().stream().map(this::mapClazz).collect(Collectors.toList()),
-        fileRevision.getFunctions().stream().map(this::mapFunction).collect(Collectors.toList())
-    );
+        fileRevision.getFunctions().stream().map(this::mapFunction).collect(Collectors.toList()));
   }
 
   private ClazzDto mapClazz(final Clazz clazz) {
@@ -35,22 +34,14 @@ public class FileDetailedMapper {
         clazz.getMetrics(),
         clazz.getFunctions().stream().map(this::mapFunction).collect(Collectors.toList()),
         clazz.getFields().stream().map(this::mapField).collect(Collectors.toList()),
-        clazz.getInnerClasses().stream().map(this::mapClazz).collect(Collectors.toList())
-    );
+        clazz.getInnerClasses().stream().map(this::mapClazz).collect(Collectors.toList()));
   }
 
   private FunctionDto mapFunction(final Function function) {
-    return new FunctionDto(
-        function.getName(),
-        function.getReturnType(),
-        function.getMetrics()
-    );
+    return new FunctionDto(function.getName(), function.getReturnType(), function.getMetrics());
   }
 
   private FieldDto mapField(final Field field) {
-    return new FieldDto(
-        field.getName(),
-        field.getType()
-    );
+    return new FieldDto(field.getName(), field.getType());
   }
 }
