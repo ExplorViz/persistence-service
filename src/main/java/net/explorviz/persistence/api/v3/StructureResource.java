@@ -5,19 +5,9 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import net.explorviz.persistence.api.v3.model.CommitComparison;
-import net.explorviz.persistence.api.v3.model.TypeOfAnalysis;
-import net.explorviz.persistence.api.v3.model.conversion.CommitComparisonApplicationToCityConverter;
-import net.explorviz.persistence.api.v3.model.conversion.DefaultApplicationToCityConverter;
-import net.explorviz.persistence.api.v3.model.conversion.LandscapeFlattener;
-import net.explorviz.persistence.api.v3.model.landscape.CityDto.CityConvertible;
 import net.explorviz.persistence.api.v3.model.landscape.FlatLandscapeDto;
-import net.explorviz.persistence.ogm.Application;
-import net.explorviz.persistence.repository.ApplicationRepository;
-import net.explorviz.persistence.repository.CommitRepository;
+import net.explorviz.persistence.repository.StructureRepository;
 import org.jboss.resteasy.reactive.RestPath;
 import org.neo4j.ogm.session.Session;
 import org.neo4j.ogm.session.SessionFactory;
@@ -28,9 +18,8 @@ public class StructureResource {
 
   @Inject SessionFactory sessionFactory;
 
-  @Inject ApplicationRepository applicationRepository;
+  @Inject StructureRepository structureRepository;
 
-  @Inject CommitRepository commitRepository;
 
   /** Retrieve all structure data gathered from runtime analysis. */
   @GET
@@ -39,14 +28,7 @@ public class StructureResource {
   public FlatLandscapeDto getRuntimeStructureData(@RestPath final String landscapeToken) {
     final Session session = sessionFactory.openSession();
 
-    final List<Application> ogmApps =
-        applicationRepository.fetchAllApplicationsHydratedForRuntimeData(session, landscapeToken);
-
-    return LandscapeFlattener.flattenLandscape(
-        landscapeToken,
-        ogmApps.stream()
-            .map(a -> DefaultApplicationToCityConverter.convert(a, TypeOfAnalysis.RUNTIME))
-            .toList());
+    return structureRepository.fetchFlatLandscapeForRuntimeData(session, landscapeToken);
   }
 
   /**
@@ -67,16 +49,10 @@ public class StructureResource {
       @RestPath final String commitHash) {
     final Session session = sessionFactory.openSession();
 
-    final List<Application> ogmApps =
-        applicationRepository.fetchHydratedApplicationsInRepositoryForCommit(
-            session, landscapeToken, repositoryName, commitHash);
-
-    return LandscapeFlattener.flattenLandscape(
-        landscapeToken,
-        ogmApps.stream()
-            .map(a -> DefaultApplicationToCityConverter.convert(a, TypeOfAnalysis.STATIC))
-            .toList());
+    return structureRepository.fetchFlatLandscapeForStaticData(session,
+        new StructureRepository.StaticDataRequest(landscapeToken, repositoryName, commitHash));
   }
+
 
   /**
    * Retrieve union of structure data for the two provided commits within the given repository. The
@@ -100,32 +76,9 @@ public class StructureResource {
       @RestPath final String secondCommitHash) {
     final Session session = sessionFactory.openSession();
 
-    final List<Application> firstCommitApps =
-        applicationRepository.fetchHydratedApplicationsInRepositoryForCommit(
-            session, landscapeToken, repositoryName, firstCommitHash);
-
-    final List<Application> secondCommitApps =
-        applicationRepository.fetchHydratedApplicationsInRepositoryForCommit(
-            session, landscapeToken, repositoryName, secondCommitHash);
-
-    final List<CityConvertible> cityConvertibles = new ArrayList<>();
-
-    firstCommitApps.forEach(
-        firstCommitApp -> {
-          final Optional<Application> secondApp =
-              secondCommitApps.stream()
-                  .filter(a -> a.getName().equals(firstCommitApp.getName()))
-                  .findAny();
-
-          cityConvertibles.add(
-              secondApp
-                  .map(
-                      secondCommitApp ->
-                          CommitComparisonApplicationToCityConverter.convert(
-                              firstCommitApp, secondCommitApp))
-                  .orElseGet(() -> DefaultApplicationToCityConverter.convert(firstCommitApp)));
-        });
-
-    return LandscapeFlattener.flattenLandscape(landscapeToken, cityConvertibles);
+    return structureRepository.fetchCombinedFlatLandscape(session,
+        new StructureRepository.CombinedStaticDataRequest(landscapeToken, repositoryName,
+            firstCommitHash, secondCommitHash));
   }
 }
+
