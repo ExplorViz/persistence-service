@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import net.explorviz.persistence.ogm.Branch;
 import net.explorviz.persistence.ogm.Commit;
+import net.explorviz.persistence.ogm.Contributor;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Repository;
 import net.explorviz.persistence.ogm.Tag;
@@ -21,6 +22,7 @@ import net.explorviz.persistence.proto.FileIdentifier;
 import net.explorviz.persistence.repository.ApplicationRepository;
 import net.explorviz.persistence.repository.BranchRepository;
 import net.explorviz.persistence.repository.CommitRepository;
+import net.explorviz.persistence.repository.ContributorRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.LandscapeRepository;
 import net.explorviz.persistence.repository.RepositoryRepository;
@@ -41,6 +43,7 @@ public class CommitServiceImpl implements CommitService {
   @Inject RepositoryRepository repositoryRepository;
   @Inject FileRevisionRepository fileRevisionRepository;
   @Inject TagRepository tagRepository;
+  @Inject ContributorRepository contributorRepository;
   @Inject SessionFactory sessionFactory;
 
   @Blocking
@@ -79,6 +82,12 @@ public class CommitServiceImpl implements CommitService {
     final Commit commit =
         commitRepository.getOrCreateCommit(
             session, commitData.getCommitId(), commitData.getLandscapeToken());
+    if (commitData.hasAuthor()) {
+      final Contributor author =
+          contributorRepository.getOrCreateContributor(session, commitData.getAuthor());
+      commit.setAuthor(author);
+      author.addCommit(commit);
+    }
     commit.setBranch(branch);
     commit.setCommitDate(
         Instant.ofEpochSecond(
@@ -91,24 +100,30 @@ public class CommitServiceImpl implements CommitService {
     commitData
         .getAddedFilesList()
         .forEach(
-            f ->
-                fileRevisionRepository.createFileStructureFromStaticData(
-                    session,
-                    f,
-                    commitData.getRepositoryName(),
-                    commitData.getLandscapeToken(),
-                    commit));
+            f -> {
+              final FileRevision r =
+                  fileRevisionRepository.createFileStructureFromStaticData(
+                      session,
+                      f,
+                      commitData.getRepositoryName(),
+                      commitData.getLandscapeToken(),
+                      commit);
+              commit.addAddedFileRevision(r);
+            });
 
     commitData
         .getModifiedFilesList()
         .forEach(
-            f ->
-                fileRevisionRepository.createFileStructureFromStaticData(
-                    session,
-                    f,
-                    commitData.getRepositoryName(),
-                    commitData.getLandscapeToken(),
-                    commit));
+            f -> {
+              final FileRevision r =
+                  fileRevisionRepository.createFileStructureFromStaticData(
+                      session,
+                      f,
+                      commitData.getRepositoryName(),
+                      commitData.getLandscapeToken(),
+                      commit);
+              commit.addModifiedFileRevision(r);
+            });
 
     if (!commitData.getParentCommitId().isEmpty()
         && !NO_PARENT_ID.equals(commitData.getParentCommitId())) {

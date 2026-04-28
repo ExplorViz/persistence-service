@@ -17,8 +17,6 @@ public class Commit {
 
   private String hash;
 
-  private String author;
-
   @DateLong private Instant authorDate;
 
   @DateLong private Instant commitDate;
@@ -32,8 +30,20 @@ public class Commit {
   @Relationship(type = "CONTAINS", direction = Relationship.Direction.OUTGOING)
   private Set<FileRevision> fileRevisions = new HashSet<>();
 
+  @Relationship(type = "ADDED", direction = Relationship.Direction.OUTGOING)
+  private Set<FileRevision> addedFileRevisions = new HashSet<>();
+
+  @Relationship(type = "DELETED", direction = Relationship.Direction.OUTGOING)
+  private Set<FileRevision> deletedFileRevisions = new HashSet<>();
+
+  @Relationship(type = "MODIFIED", direction = Relationship.Direction.OUTGOING)
+  private Set<FileRevision> modifiedFileRevisions = new HashSet<>();
+
   @Relationship(type = "IS_TAGGED_WITH", direction = Relationship.Direction.OUTGOING)
   private Set<Tag> tags = new HashSet<>();
+
+  @Relationship(type = "AUTHORED", direction = Relationship.Direction.INCOMING)
+  private Contributor author;
 
   public Commit() {
     // Empty constructor required by Neo4j OGM
@@ -53,6 +63,24 @@ public class Commit {
     final Set<FileRevision> newFileRevisions = new HashSet<>(fileRevisions);
     newFileRevisions.add(fileRevision);
     fileRevisions = Set.copyOf(newFileRevisions);
+  }
+
+  public void addAddedFileRevision(final FileRevision fileRevision) {
+    final Set<FileRevision> newAddedFileRevisions = new HashSet<>(addedFileRevisions);
+    newAddedFileRevisions.add(fileRevision);
+    addedFileRevisions = Set.copyOf(newAddedFileRevisions);
+  }
+
+  public void addDeletedFileRevision(final FileRevision fileRevision) {
+    final Set<FileRevision> newDeletedFileRevisions = new HashSet<>(deletedFileRevisions);
+    newDeletedFileRevisions.add(fileRevision);
+    deletedFileRevisions = Set.copyOf(newDeletedFileRevisions);
+  }
+
+  public void addModifiedFileRevision(final FileRevision fileRevision) {
+    final Set<FileRevision> newModifiedFileRevisions = new HashSet<>(modifiedFileRevisions);
+    newModifiedFileRevisions.add(fileRevision);
+    modifiedFileRevisions = Set.copyOf(newModifiedFileRevisions);
   }
 
   public void addTag(final Tag tag) {
@@ -87,5 +115,17 @@ public class Commit {
 
   public Set<Commit> getParentCommits() {
     return parentCommits;
+  }
+
+  public Set<FileRevision> getFileRevisions() {
+    return fileRevisions;
+  }
+
+  public Contributor getAuthor() {
+    return author;
+  }
+
+  public void setAuthor(final Contributor author) {
+    this.author = author;
   }
 }

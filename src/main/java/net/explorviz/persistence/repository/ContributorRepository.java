@@ -60,4 +60,29 @@ public class ContributorRepository {
             Collectors.toMap(
                 row -> (String) row.get("name"), row -> (Long) row.get("commitCount")));
   }
+
+  public Contributor getOrCreateContributor(
+      final Session session, final net.explorviz.persistence.proto.ContributorData data) {
+    return findContributorByEmail(session, data.getEmail())
+        .orElseGet(
+            () ->
+                new Contributor(
+                    data.getName(), data.getEmail(), data.getUsername(), data.getAvatarUrl()));
+  }
+
+  public Optional<Contributor> findContributorByEmail(final Session session, final String email) {
+    if (email == null || email.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(
+        session.queryForObject(
+            Contributor.class,
+            """
+            MATCH (c:Contributor)
+            WHERE c.email = $email
+            RETURN c
+            LIMIT 1;
+            """,
+            Map.of("email", email)));
+  }
 }
