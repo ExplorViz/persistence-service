@@ -22,7 +22,10 @@ import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Tag;
 import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
+import net.explorviz.persistence.proto.FileData;
+import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.proto.FileIdentifier;
+import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.StateDataRequest;
 import net.explorviz.persistence.proto.StateDataService;
 import net.explorviz.persistence.util.ExpectedCounts;
@@ -39,6 +42,8 @@ class CommitServiceTest {
   @GrpcClient CommitService commitService;
 
   @GrpcClient StateDataService stateDataService;
+
+  @GrpcClient FileDataService fileDataService;
 
   @Inject SessionFactory sessionFactory;
 
@@ -89,20 +94,36 @@ class CommitServiceTest {
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
             .setCommitDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
             .addAllTags(List.of(tagName))
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashOne)
-                        .setFilePath(filePathOne)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashTwo)
-                        .setFilePath(filePathTwo)
-                        .build()))
             .build();
 
     commitService
         .persistCommit(commitDataOne)
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHash)
+                .setFileHash(fileHashOne)
+                .setFilePath(filePathOne)
+                .setLanguage(Language.JAVA)
+                .build())
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHash)
+                .setFileHash(fileHashTwo)
+                .setFilePath(filePathTwo)
+                .setLanguage(Language.JAVA)
+                .build())
         .await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
@@ -314,24 +335,49 @@ class CommitServiceTest {
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
             .setCommitDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
             .addAllTags(List.of(tagName))
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashOne)
-                        .setFilePath(filePathOne)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashTwo)
-                        .setFilePath(filePathTwo)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashDel)
-                        .setFilePath(filePathDel)
-                        .build()))
             .build();
 
     commitService
         .persistCommit(commitDataOne)
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHashOne)
+                .setFileHash(fileHashOne)
+                .setFilePath(filePathOne)
+                .setLanguage(Language.JAVA)
+                .build())
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHashOne)
+                .setFileHash(fileHashTwo)
+                .setFilePath(filePathTwo)
+                .setLanguage(Language.JAVA)
+                .build())
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHashOne)
+                .setFileHash(fileHashDel)
+                .setFilePath(filePathDel)
+                .setLanguage(Language.JAVA)
+                .build())
         .await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
@@ -345,28 +391,46 @@ class CommitServiceTest {
             .setAuthorDate(Timestamp.newBuilder().setSeconds(30).setNanos(100).build())
             .setCommitDate(Timestamp.newBuilder().setSeconds(30).setNanos(100).build())
             .addAllTags(List.of(tagName))
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashThree)
-                        .setFilePath(filePathThree)
-                        .build()))
-            .addAllModifiedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashOneMod)
-                        .setFilePath(filePathOne)
-                        .build()))
             .addAllDeletedFiles(
                 List.of(
                     FileIdentifier.newBuilder()
                         .setFileHash(fileHashDel)
                         .setFilePath(filePathDel)
+                        .build(),
+                    FileIdentifier.newBuilder()
+                        .setFileHash(fileHashOne)
+                        .setFilePath(filePathOne)
                         .build()))
             .build();
 
     commitService
         .persistCommit(commitDataTwo)
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHashTwo)
+                .setFileHash(fileHashThree)
+                .setFilePath(filePathThree)
+                .setLanguage(Language.JAVA)
+                .build())
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHashTwo)
+                .setFileHash(fileHashOneMod)
+                .setFilePath(filePathOne)
+                .setLanguage(Language.JAVA)
+                .build())
         .await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
@@ -394,24 +458,17 @@ class CommitServiceTest {
             RETURN EXISTS {
             MATCH (:Landscape {tokenId: $landscapeToken})
               -[:CONTAINS]->(r:Repository {name: $repoName})
-              -[:HAS_ROOT]->(:Directory {name: $repoName})
-              -[:CONTAINS]->(src:Directory {name: 'src'})
 
             MATCH (r)-[:CONTAINS]->(c1:Commit {hash: $commitHashOne})
             MATCH (c1)-[:CONTAINS]->(f1:FileRevision {name: $fileNameOne, hash: $fileHashOne})
-            MATCH (src)-[:CONTAINS]->(f1)
             MATCH (c1)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
-            MATCH (src)-[:CONTAINS]->(f2)
             MATCH (c1)-[:CONTAINS]->(f_del:FileRevision {name: $fileNameDel, hash: $fileHashDel})
-            MATCH (src)-[:CONTAINS]->(f_del)
             MATCH (c1)-[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
             MATCH (c1)-[:BELONGS_TO]->(branch:Branch {name: $branchName})
 
             MATCH (r)-[:CONTAINS]->(c2:Commit {hash: $commitHashTwo})
             MATCH (c2)-[:CONTAINS]->(f3:FileRevision {name: $fileNameThree, hash: $fileHashThree})
-            MATCH (src)-[:CONTAINS]->(f3)
             MATCH (c2)-[:CONTAINS]->(f1_mod:FileRevision {name: $fileNameOne, hash: $fileHashOneMod})
-            MATCH (src)-[:CONTAINS]->(f1_mod)
             MATCH (c2)-[:IS_TAGGED_WITH]->(t:Tag {name: $tagName})
             MATCH (c2)-[:CONTAINS]->(f2:FileRevision {name: $fileNameTwo, hash: $fileHashTwo})
             MATCH (c2)-[:BELONGS_TO]->(branch)
@@ -425,15 +482,6 @@ class CommitServiceTest {
             """,
             params);
 
-    Integer dbSize =
-        session.queryForObject(
-            Integer.class,
-            """
-            MATCH (n) RETURN count(n);
-            """,
-            Map.of());
-
-    assertEquals(13, dbSize);
     assertTrue(databaseIsCorrect);
     assertNodeCounts(
         session,

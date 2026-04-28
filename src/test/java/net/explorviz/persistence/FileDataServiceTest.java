@@ -2,7 +2,6 @@ package net.explorviz.persistence;
 
 import static net.explorviz.persistence.util.TestUtils.assertNodeCounts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,7 +24,6 @@ import net.explorviz.persistence.proto.CommitService;
 import net.explorviz.persistence.proto.FieldData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
-import net.explorviz.persistence.proto.FileIdentifier;
 import net.explorviz.persistence.proto.FunctionData;
 import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.ParameterData;
@@ -90,12 +88,6 @@ class FileDataServiceTest {
             .setBranchName(branchName)
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHash)
-                        .setFilePath(filePath)
-                        .build()))
             .build();
 
     commitService
@@ -109,6 +101,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHash)
             .setFilePath(filePath)
             .setLanguage(Language.JAVA)
@@ -152,16 +145,6 @@ class FileDataServiceTest {
             .setBranchName(branchName)
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHash)
-                        .setFilePath(filePathOne)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHash)
-                        .setFilePath(filePathTwo)
-                        .build()))
             .build();
 
     commitService
@@ -175,8 +158,9 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHash)
-            .setFilePath(filePathTwo)
+            .setFilePath(filePathOne)
             .setLanguage(Language.JAVA)
             .addAllImportNames(List.of("Test"))
             .addAllClasses(List.of())
@@ -192,6 +176,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHash)
             .setFilePath(filePathTwo)
             .setLanguage(Language.JAVA)
@@ -259,16 +244,6 @@ class FileDataServiceTest {
             .setBranchName(branchName)
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashSuper)
-                        .setFilePath(filePathSuper)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashClass)
-                        .setFilePath(filePathClass)
-                        .build()))
             .build();
 
     commitService
@@ -349,6 +324,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashSuper)
             .setFilePath(filePathSuper)
             .setLanguage(Language.JAVA)
@@ -365,6 +341,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashClass)
             .setFilePath(filePathClass)
             .setLanguage(Language.JAVA)
@@ -474,16 +451,6 @@ class FileDataServiceTest {
             .setBranchName(branchName)
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashSuper)
-                        .setFilePath(filePathSuper)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashClass)
-                        .setFilePath(filePathClass)
-                        .build()))
             .build();
 
     commitService
@@ -557,6 +524,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashSuper)
             .setFilePath(filePathSuper)
             .setLanguage(Language.JAVA)
@@ -573,6 +541,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashClass)
             .setFilePath(filePathClass)
             .setLanguage(Language.JAVA)
@@ -672,16 +641,6 @@ class FileDataServiceTest {
             .setBranchName(branchName)
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashOne)
-                        .setFilePath(filePathOne)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashTwo)
-                        .setFilePath(filePathTwo)
-                        .build()))
             .build();
 
     commitService
@@ -733,6 +692,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashOne)
             .setFilePath(filePathOne)
             .setLanguage(Language.JAVA)
@@ -749,6 +709,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashTwo)
             .setFilePath(filePathTwo)
             .setLanguage(Language.JAVA)
@@ -823,118 +784,6 @@ class FileDataServiceTest {
   }
 
   @Test
-  void testPersistFileThrowsForUnknownFile() {
-    String commitHash = "commit1";
-    String fileNameOne = "File1.java";
-    String filePathOne = "src/" + fileNameOne;
-    String filePathTwo = "src/File2.java";
-    String fileHashOne = "1";
-    String fileHashTwo = "2";
-
-    CommitData commitDataOne =
-        CommitData.newBuilder()
-            .setCommitId(commitHash)
-            .setRepositoryName(repoName)
-            .setBranchName(branchName)
-            .setLandscapeToken(landscapeToken)
-            .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashOne)
-                        .setFilePath(filePathOne)
-                        .build()))
-            .build();
-
-    commitService
-        .persistCommit(commitDataOne)
-        .await()
-        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
-
-    Map<String, Object> params = new HashMap<>();
-    params.put("landscapeToken", landscapeToken);
-    params.put("repoName", repoName);
-    params.put("branchName", branchName);
-    params.put("commitHash", commitHash);
-    params.put("fileName", fileNameOne);
-    params.put("fileHash", fileHashOne);
-    params.put("srcDir", "src");
-
-    String dbQuery =
-        """
-        RETURN EXISTS {
-        MATCH (:Landscape {tokenId: $landscapeToken})
-          -[:CONTAINS]->(r:Repository {name: $repoName})
-          -[:CONTAINS]->(c:Commit {hash: $commitHash})
-          -[:CONTAINS]->(:FileRevision {hash: $fileHash, name: $fileName})
-          <-[:CONTAINS]-(:Directory {name: $srcDir})
-          <-[:CONTAINS]-(:Directory {name: $repoName})
-
-        MATCH (r)
-          -[:CONTAINS]->(:Branch {name: $branchName})
-          <-[:BELONGS_TO]-(c)
-        } AS exists
-        """;
-
-    Boolean databaseCorrectBeforePersistFile =
-        session.queryForObject(Boolean.class, dbQuery, params);
-
-    FileData fileDataTwo =
-        FileData.newBuilder()
-            .setLandscapeToken(landscapeToken)
-            .setRepositoryName(repoName)
-            .setFileHash(fileHashTwo)
-            .setFilePath(filePathTwo)
-            .setLanguage(Language.JAVA)
-            .addAllImportNames(List.of("Test"))
-            .addAllClasses(List.of())
-            .addAllFunctions(List.of())
-            .setLastEditor("Testi")
-            .setAddedLines(1)
-            .setModifiedLines(1)
-            .setDeletedLines(0)
-            .build();
-
-    StatusRuntimeException ex =
-        assertThrows(
-            StatusRuntimeException.class,
-            () ->
-                fileDataService
-                    .persistFile(fileDataTwo)
-                    .await()
-                    .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS)));
-
-    Boolean databaseCorrectAfterPersistFile =
-        session.queryForObject(Boolean.class, dbQuery, params);
-
-    Boolean fileHasFileData =
-        session.queryForObject(
-            Boolean.class,
-            """
-              MATCH (f:FileRevision {hash: $fileHash, name: $fileName})
-              RETURN f.hasFileData;
-            """,
-            params);
-
-    assertTrue(databaseCorrectBeforePersistFile);
-    assertEquals(Status.FAILED_PRECONDITION.getCode(), ex.getStatus().getCode());
-    assertEquals(
-        "No corresponding file was sent before in CommitData.", ex.getStatus().getDescription());
-    assertTrue(databaseCorrectAfterPersistFile);
-    assertFalse(fileHasFileData);
-    assertNodeCounts(
-        session,
-        ExpectedCounts.builder()
-            .landscapes(1)
-            .repositories(1)
-            .branches(1)
-            .directories(2)
-            .commits(1)
-            .files(1)
-            .build());
-  }
-
-  @Test
   void testPersistFileThrowsWithInvalidSuperclassNameFormat() {
     String commitHash = "commit1";
     String superclassName = "Class1";
@@ -955,20 +804,37 @@ class FileDataServiceTest {
             .setBranchName(branchName)
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
-            .addAllAddedFiles(
-                List.of(
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashSuper)
-                        .setFilePath(filePathSuper)
-                        .build(),
-                    FileIdentifier.newBuilder()
-                        .setFileHash(fileHashClass)
-                        .setFilePath(filePathClass)
-                        .build()))
             .build();
 
     commitService
         .persistCommit(commitDataOne)
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    // Persist files without classes first to ensure they exist in the DB
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHash)
+                .setFileHash(fileHashSuper)
+                .setFilePath(filePathSuper)
+                .setLanguage(Language.JAVA)
+                .build())
+        .await()
+        .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
+
+    fileDataService
+        .persistFile(
+            FileData.newBuilder()
+                .setLandscapeToken(landscapeToken)
+                .setRepositoryName(repoName)
+                .setCommitId(commitHash)
+                .setFileHash(fileHashClass)
+                .setFilePath(filePathClass)
+                .setLanguage(Language.JAVA)
+                .build())
         .await()
         .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
@@ -1003,9 +869,6 @@ class FileDataServiceTest {
         } AS exists
         """;
 
-    Boolean databaseCorrectBeforePersistFile =
-        session.queryForObject(Boolean.class, dbQuery, params);
-
     ClassData classData =
         ClassData.newBuilder()
             .setName(className)
@@ -1034,10 +897,11 @@ class FileDataServiceTest {
             .addAllEnumValues(List.of())
             .build();
 
-    FileData fileDataClass =
+    FileData fileDataClassOne =
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashClass)
             .setFilePath(filePathClass)
             .setLanguage(Language.JAVA)
@@ -1054,6 +918,7 @@ class FileDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
+            .setCommitId(commitHash)
             .setFileHash(fileHashClass)
             .setFilePath(filePathClass)
             .setLanguage(Language.JAVA)
@@ -1071,21 +936,9 @@ class FileDataServiceTest {
             StatusRuntimeException.class,
             () ->
                 fileDataService
-                    .persistFile(fileDataClass)
+                    .persistFile(fileDataClassOne)
                     .await()
                     .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS)));
-
-    Boolean databaseCorrectAfterPersistFileOne =
-        session.queryForObject(Boolean.class, dbQuery, params);
-
-    Boolean fileOneHasFileData =
-        session.queryForObject(
-            Boolean.class,
-            """
-              MATCH (f:FileRevision {hash: $fileHashSuper, name: $fileNameSuper})
-              RETURN f.hasFileData;
-            """,
-            params);
 
     StatusRuntimeException exTwo =
         assertThrows(
@@ -1096,19 +949,6 @@ class FileDataServiceTest {
                     .await()
                     .atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS)));
 
-    Boolean databaseCorrectAfterPersistFileTwo =
-        session.queryForObject(Boolean.class, dbQuery, params);
-
-    Boolean fileTwoHasFileData =
-        session.queryForObject(
-            Boolean.class,
-            """
-              MATCH (f:FileRevision {hash: $fileHashClass, name: $fileNameClass})
-              RETURN f.hasFileData;
-            """,
-            params);
-
-    assertTrue(databaseCorrectBeforePersistFile);
     assertEquals(Status.INVALID_ARGUMENT.getCode(), ex.getStatus().getCode());
     assertEquals(
         "Format of super class invalid:\n"
@@ -1116,8 +956,6 @@ class FileDataServiceTest {
             + "   Actual value: "
             + superclassFqn,
         ex.getStatus().getDescription());
-    assertTrue(databaseCorrectAfterPersistFileOne);
-    assertFalse(fileOneHasFileData);
 
     assertEquals(Status.INVALID_ARGUMENT.getCode(), exTwo.getStatus().getCode());
     assertEquals(
@@ -1126,8 +964,6 @@ class FileDataServiceTest {
             + "   Actual value: "
             + superclassFqnTwo,
         exTwo.getStatus().getDescription());
-    assertTrue(databaseCorrectAfterPersistFileTwo);
-    assertFalse(fileTwoHasFileData);
 
     assertNodeCounts(
         session,
