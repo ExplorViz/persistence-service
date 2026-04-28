@@ -454,7 +454,7 @@ Retrieves the names of all repositories in a landscape.
 CommitTreeDto getCommitTreeForRepositoryAndLandscape(String landscapeToken, String repositoryName);
 ```
 
-Returns the tree of commits associated with a repository in a lanscape.
+Returns the tree of commits associated with a repository in a landscape.
 
 ### DELETE /v3/landscapes/{landscapeToken}/trace-data
 
