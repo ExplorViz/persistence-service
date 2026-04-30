@@ -5,6 +5,7 @@ import java.util.Set;
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Relationship;
 
 @NodeEntity
 @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
@@ -15,6 +16,9 @@ public abstract class TrackableResource {
   private String title;
   private String state;
   private Set<String> labels;
+
+  @Relationship(type = "HAS_EVENT", direction = Relationship.Direction.OUTGOING)
+  private Set<ResourceEvent> events = new HashSet<>();
 
   public TrackableResource() {
     // Empty constructor required by Neo4j OGM
@@ -69,5 +73,20 @@ public abstract class TrackableResource {
       this.labels = new HashSet<>();
     }
     this.labels.add(label);
+  }
+
+  public Set<ResourceEvent> getEvents() {
+    return events;
+  }
+
+  public void setEvents(final Set<ResourceEvent> events) {
+    this.events = events;
+  }
+
+  public void addEvent(final ResourceEvent event) {
+    if (this.events == null) {
+      this.events = new HashSet<>();
+    }
+    this.events.add(event);
   }
 }

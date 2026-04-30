@@ -5,6 +5,7 @@ import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
+import org.neo4j.ogm.annotation.typeconversion.DateLong;
 
 @NodeEntity
 @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
@@ -13,7 +14,7 @@ public abstract class ResourceEvent {
 
   private String externalId; // e.g., GitHub event ID
 
-  private Instant timestamp;
+  @DateLong private Instant timestamp;
 
   private String eventType; // e.g., "opened", "closed", "labeled", etc. (ENUM?)
 
