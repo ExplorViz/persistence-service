@@ -142,70 +142,28 @@ public class StructureRepository {
       final Map<String, T> firstMap,
       final Map<String, T> secondMap,
       final Map<String, String> idMap) {
-    final Map<String, T> firstByFqn = indexByFqn(firstMap);
-    final Map<String, T> secondByFqn = indexByFqn(secondMap);
+    final Map<String, T> firstByFqn =
+        firstMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
+    final Map<String, T> secondByFqn =
+        secondMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
 
     final Set<String> allFqns = new HashSet<>(firstByFqn.keySet());
     allFqns.addAll(secondByFqn.keySet());
 
-    for (final T node : firstMap.values()) {
-      final String fqn = getFqn(node);
-      final T matchingSecondNode = secondByFqn.get(fqn);
-      final String targetId =
-          matchingSecondNode != null ? getId(matchingSecondNode) : getId(firstByFqn.get(fqn));
-      idMap.put(getId(node), targetId);
+    for (final String fqn : allFqns) {
+      final T firstNode = firstByFqn.get(fqn);
+      final T secondNode = secondByFqn.get(fqn);
+
+      final String mergedId = secondNode != null ? getId(secondNode) : getId(firstNode);
+      if (firstNode != null) {
+        idMap.put(getId(firstNode), mergedId);
+      }
+      if (secondNode != null) {
+        idMap.put(getId(secondNode), mergedId);
+      }
     }
-
-    for (final T node : secondMap.values()) {
-      final String fqn = getFqn(node);
-      final T mergedSecondNode = secondByFqn.get(fqn);
-      idMap.put(getId(node), getId(mergedSecondNode));
-    }
-  }
-
-  private <T> Map<String, T> indexByFqn(final Map<String, T> map) {
-    return map.values().stream()
-        .collect(
-            Collectors.toMap(
-                this::getFqn, java.util.function.Function.identity(), this::mergeDtos));
-  }
-
-  @SuppressWarnings("unchecked")
-  private <T> T mergeDtos(final T d1, final T d2) {
-    if (d1 instanceof DistrictDto dist1 && d2 instanceof DistrictDto dist2) {
-      final Set<String> districtIds = new HashSet<>(dist1.districtIds());
-      districtIds.addAll(dist2.districtIds());
-      final Set<String> buildingIds = new HashSet<>(dist1.buildingIds());
-      buildingIds.addAll(dist2.buildingIds());
-      return (T)
-          new DistrictDto(
-              dist1.flatBaseModel(),
-              dist1.parentCityId(),
-              dist1.parentDistrictId(),
-              new ArrayList<>(districtIds),
-              new ArrayList<>(buildingIds));
-    }
-    if (d1 instanceof CityDto c1 && d2 instanceof CityDto c2) {
-      final Set<String> districtIds = new HashSet<>(c1.districtIds());
-      districtIds.addAll(c2.districtIds());
-      final Set<String> buildingIds = new HashSet<>(c1.buildingIds());
-      buildingIds.addAll(c2.buildingIds());
-
-      final Set<String> allDistricts = new HashSet<>(c1.allContainedDistrictIds());
-      allDistricts.addAll(c2.allContainedDistrictIds());
-
-      final Set<String> allBuildings = new HashSet<>(c1.allContainedBuildingIds());
-      allBuildings.addAll(c2.allContainedBuildingIds());
-
-      return (T)
-          new CityDto(
-              c1.flatBaseModel(),
-              new ArrayList<>(districtIds),
-              new ArrayList<>(buildingIds),
-              new ArrayList<>(allDistricts),
-              new ArrayList<>(allBuildings));
-    }
-    return d1;
   }
 
   private <T> void mergeNodes(
@@ -214,8 +172,12 @@ public class StructureRepository {
       final Map<String, T> targetMap,
       final Map<String, String> idMap) {
 
-    final Map<String, T> firstByFqn = indexByFqn(firstMap);
-    final Map<String, T> secondByFqn = indexByFqn(secondMap);
+    final Map<String, T> firstByFqn =
+        firstMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
+    final Map<String, T> secondByFqn =
+        secondMap.values().stream()
+            .collect(Collectors.toMap(this::getFqn, java.util.function.Function.identity()));
 
     final Set<String> allFqns = new HashSet<>(firstByFqn.keySet());
     allFqns.addAll(secondByFqn.keySet());

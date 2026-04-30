@@ -1,16 +1,12 @@
 package net.explorviz.persistence.grpc;
 
 import com.google.protobuf.Empty;
+import io.grpc.Status;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Stream;
 import net.explorviz.persistence.ogm.Clazz;
-import net.explorviz.persistence.ogm.Commit;
-import net.explorviz.persistence.ogm.Directory;
 import net.explorviz.persistence.ogm.Field;
 import net.explorviz.persistence.ogm.FileRevision;
 import net.explorviz.persistence.ogm.Function;
@@ -18,8 +14,6 @@ import net.explorviz.persistence.proto.ClassData;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
 import net.explorviz.persistence.repository.ClazzRepository;
-import net.explorviz.persistence.repository.CommitRepository;
-import net.explorviz.persistence.repository.DirectoryRepository;
 import net.explorviz.persistence.repository.FileRevisionRepository;
 import net.explorviz.persistence.repository.FunctionRepository;
 import net.explorviz.persistence.util.GrpcExceptionMapper;
@@ -34,8 +28,6 @@ public class FileDataServiceImpl implements FileDataService {
 
   @Inject FileRevisionRepository fileRevisionRepository;
 
-  @Inject CommitRepository commitRepository;
-  @Inject DirectoryRepository directoryRepository;
   @Inject FunctionRepository functionRepository;
 
   @Inject SessionFactory sessionFactory;
@@ -55,57 +47,36 @@ public class FileDataServiceImpl implements FileDataService {
   }
 
   private void saveFileData(final Session session, final FileData fileData) {
-    final Commit commit =
-        commitRepository.getOrCreateCommit(
-            session, fileData.getCommitId(), fileData.getLandscapeToken());
-
-    final String[] pathSegments = fileData.getFilePath().split("/");
-    String[] directorySegments = {fileData.getRepositoryName()};
-    if (pathSegments.length > 1) {
-      directorySegments = Arrays.copyOfRange(pathSegments, 0, pathSegments.length - 1);
-      directorySegments =
-          Stream.concat(Stream.of(fileData.getRepositoryName()), Arrays.stream(directorySegments))
-              .toArray(String[]::new);
-    }
-
-    FileRevision file =
+    final FileRevision file =
         fileRevisionRepository
             .getFileRevisionFromHashAndPath(
                 session,
                 fileData.getFileHash(),
                 fileData.getRepositoryName(),
                 fileData.getLandscapeToken(),
-                pathSegments)
-            .orElse(null);
+                fileData.getFilePath().split("/"))
+            .orElseThrow(
+                () ->
+                    Status.FAILED_PRECONDITION
+                        .withDescription("No corresponding file was sent before in CommitData.")
+                        .asRuntimeException());
 
-    if (file == null) {
-      file = new FileRevision(pathSegments[pathSegments.length - 1], fileData.getFileHash());
-    }
+    file.setLanguage(fileData.getLanguage().toString());
+    file.setPackageName(fileData.getPackageName());
+    file.setImportNames(fileData.getImportNamesList());
+    file.setMetrics(fileData.getMetricsMap());
+    file.setLastEditor(fileData.getLastEditor());
+    file.setAddedLines(fileData.getAddedLines());
+    file.setModifiedLines(fileData.getModifiedLines());
+    file.setDeletedLines(fileData.getDeletedLines());
 
-    commit.addFileRevision(file);
+    fileData.getClassesList().forEach(c -> file.addClass(createClazz(session, c, fileData)));
 
-    final Directory parentDir =
-        directoryRepository.createDirectoryStructureAndReturnLastDirStaticData(
-            session, directorySegments, fileData.getRepositoryName(), fileData.getLandscapeToken());
-    parentDir.addFileRevision(file);
+    fileData.getFunctionsList().forEach(f -> file.addFunction(new Function(f)));
 
-    final FileRevision finalFile = file;
-    finalFile.setLanguage(fileData.getLanguage().toString());
-    finalFile.setPackageName(fileData.getPackageName());
-    finalFile.setImportNames(fileData.getImportNamesList());
-    finalFile.setMetrics(fileData.getMetricsMap());
-    finalFile.setLastEditor(fileData.getLastEditor());
-    finalFile.setAddedLines(fileData.getAddedLines());
-    finalFile.setModifiedLines(fileData.getModifiedLines());
-    finalFile.setDeletedLines(fileData.getDeletedLines());
+    file.setHasFileData(true);
 
-    fileData.getClassesList().forEach(c -> finalFile.addClass(createClazz(session, c, fileData)));
-
-    fileData.getFunctionsList().forEach(f -> finalFile.addFunction(new Function(f)));
-
-    finalFile.setHasFileData(true);
-
-    session.save(List.of(parentDir, commit, finalFile));
+    session.save(file);
   }
 
   private Clazz createClazz(

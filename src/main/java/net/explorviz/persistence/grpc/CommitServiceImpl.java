@@ -88,6 +88,28 @@ public class CommitServiceImpl implements CommitService {
             commitData.getAuthorDate().getSeconds(), commitData.getAuthorDate().getNanos()));
     repo.addCommit(commit);
 
+    commitData
+        .getAddedFilesList()
+        .forEach(
+            f ->
+                fileRevisionRepository.createFileStructureFromStaticData(
+                    session,
+                    f,
+                    commitData.getRepositoryName(),
+                    commitData.getLandscapeToken(),
+                    commit));
+
+    commitData
+        .getModifiedFilesList()
+        .forEach(
+            f ->
+                fileRevisionRepository.createFileStructureFromStaticData(
+                    session,
+                    f,
+                    commitData.getRepositoryName(),
+                    commitData.getLandscapeToken(),
+                    commit));
+
     if (!commitData.getParentCommitId().isEmpty()
         && !NO_PARENT_ID.equals(commitData.getParentCommitId())) {
       final Map<String, FileRevision> parentFiles =
@@ -97,14 +119,10 @@ public class CommitServiceImpl implements CommitService {
               commitData.getParentCommitId(),
               commitData.getLandscapeToken());
 
-      final Map<String, FileRevision> currentFiles =
-          fileRevisionRepository.findStaticFilesWithFqnForRepositoryAndCommitAndLandscapeToken(
-              session,
-              commitData.getRepositoryName(),
-              commitData.getCommitId(),
-              commitData.getLandscapeToken());
-
-      final List<String> modifiedPaths = new java.util.ArrayList<>(currentFiles.keySet());
+      final List<String> modifiedPaths =
+          commitData.getModifiedFilesList().stream()
+              .map(FileIdentifier::getFilePath)
+              .collect(Collectors.toList());
       final List<String> deletedPaths =
           commitData.getDeletedFilesList().stream()
               .map(FileIdentifier::getFilePath)

@@ -22,6 +22,7 @@ import net.explorviz.persistence.proto.CommitData;
 import net.explorviz.persistence.proto.CommitService;
 import net.explorviz.persistence.proto.FileData;
 import net.explorviz.persistence.proto.FileDataService;
+import net.explorviz.persistence.proto.FileIdentifier;
 import net.explorviz.persistence.proto.Language;
 import net.explorviz.persistence.proto.StateData;
 import net.explorviz.persistence.proto.StateDataRequest;
@@ -242,6 +243,12 @@ class StateDataServiceTest {
             .setBranchName(branchName)
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).setNanos(100).build())
+            .addAllAddedFiles(
+                List.of(
+                    FileIdentifier.newBuilder()
+                        .setFileHash(fileHash)
+                        .setFilePath(filePath)
+                        .build()))
             .build();
 
     commitService
@@ -255,7 +262,6 @@ class StateDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
-            .setCommitId(commitHash)
             .setFileHash(fileHash)
             .setFilePath(filePath)
             .setLanguage(Language.JAVA)
