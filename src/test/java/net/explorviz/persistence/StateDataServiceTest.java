@@ -471,6 +471,8 @@ class StateDataServiceTest {
             .setLandscapeToken(landscapeToken)
             .setAuthorDate(Timestamp.newBuilder().setSeconds(1).build())
             .setCommitDate(Timestamp.newBuilder().setSeconds(1).build())
+            .addAddedFiles(
+                FileIdentifier.newBuilder().setFileHash("hash1").setFilePath("app1/File1.java"))
             .build();
     commitService.persistCommit(commitData).await().atMost(Duration.ofSeconds(GRPC_AWAIT_SECONDS));
 
@@ -478,7 +480,6 @@ class StateDataServiceTest {
         FileData.newBuilder()
             .setLandscapeToken(landscapeToken)
             .setRepositoryName(repoName)
-            .setCommitId(commitHash)
             .setFileHash("hash1")
             .setFilePath("app1/File1.java")
             .setLanguage(Language.JAVA)
