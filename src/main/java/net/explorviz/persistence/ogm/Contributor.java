@@ -19,10 +19,10 @@ public class Contributor {
   private String avatarUrl;
 
   @Relationship(type = "CREATED", direction = Relationship.Direction.OUTGOING)
-  private Issue issue;
+  private Set<Issue> issues = new HashSet<>();
 
   @Relationship(type = "OPENED", direction = Relationship.Direction.OUTGOING)
-  private PullRequest pullRequest;
+  private Set<PullRequest> pullRequests = new HashSet<>();
 
   @Relationship(type = "AUTHORED", direction = Relationship.Direction.OUTGOING)
   private Set<Commit> commits = new HashSet<>();
@@ -105,5 +105,35 @@ public class Contributor {
     if (this.commits != null) {
       this.commits.remove(commit);
     }
+  }
+
+  public Set<Issue> getIssues() {
+    return issues;
+  }
+
+  public void setIssues(final Set<Issue> issues) {
+    this.issues = issues;
+  }
+
+  public void addIssue(final Issue issue) {
+    if (this.issues == null) {
+      this.issues = new HashSet<>();
+    }
+    this.issues.add(issue);
+  }
+
+  public Set<PullRequest> getPullRequests() {
+    return pullRequests;
+  }
+
+  public void setPullRequests(final Set<PullRequest> pullRequests) {
+    this.pullRequests = pullRequests;
+  }
+
+  public void addPullRequest(final PullRequest pullRequest) {
+    if (this.pullRequests == null) {
+      this.pullRequests = new HashSet<>();
+    }
+    this.pullRequests.add(pullRequest);
   }
 }

@@ -17,8 +17,8 @@ public abstract class TrackableResource {
   private String state;
   private Set<String> labels;
 
-  @Relationship(type = "HAS_EVENT", direction = Relationship.Direction.OUTGOING)
-  private Set<ResourceEvent> events = new HashSet<>();
+  @Relationship(type = "HAS_VERSION", direction = Relationship.Direction.OUTGOING)
+  private Set<ResourceVersion> versions = new HashSet<>();
 
   public TrackableResource() {
     // Empty constructor required by Neo4j OGM
@@ -75,18 +75,29 @@ public abstract class TrackableResource {
     this.labels.add(label);
   }
 
-  public Set<ResourceEvent> getEvents() {
-    return events;
+  public Set<ResourceVersion> getVersions() {
+    return versions;
   }
 
-  public void setEvents(final Set<ResourceEvent> events) {
-    this.events = events;
+  public void setVersions(final Set<ResourceVersion> versions) {
+    this.versions = versions;
   }
 
-  public void addEvent(final ResourceEvent event) {
-    if (this.events == null) {
-      this.events = new HashSet<>();
+  public void addVersion(final ResourceVersion version) {
+    if (this.versions == null) {
+      this.versions = new HashSet<>();
     }
-    this.events.add(event);
+    this.versions.add(version);
+  }
+
+  // TODO: cleaner way or handle in repo?
+  public ResourceVersion getCurrentVersion() {
+    if (this.versions == null || this.versions.isEmpty()) {
+      return null;
+    } else {
+      return this.versions.stream()
+          .max((v1, v2) -> v1.getCreationDate().compareTo(v2.getCreationDate()))
+          .orElse(null);
+    }
   }
 }
