@@ -274,17 +274,17 @@ public class StructureRepository {
         MATCH (dir:Directory)-[:CONTAINS]->(clicked)
         MATCH (dir)-[:CONTAINS]->(rev:FileRevision) WHERE rev.name = clicked.name
         MATCH (c:Commit)-[r:ADDED|MODIFIED|DELETED]->(rev)
-        RETURN c.hash AS hash, coalesce(c.authorDate, 0) AS date, type(r) AS action
+        RETURN c.hash AS hash, coalesce(c.authorDate, 0) AS date, type(r) AS action, clicked.filePath AS clickedPath
         ORDER BY date ASC
         """;
-    final Result result = session.query(query, Map.of("id", fileRevisionId));
-
     final List<FileHistoryDto> entries = new ArrayList<>();
+    final String[] clickedPath = {null};
     session
         .query(query, Map.of("id", fileRevisionId))
         .forEach(
             row -> {
               final Object date = row.get("date");
+              clickedPath[0] = (String) row.get("clickedPath");
               entries.add(
                   new FileHistoryDto(
                       (String) row.get("hash"),
@@ -318,9 +318,61 @@ public class StructureRepository {
       }
       wasPresent = isPresent;
     }
-
+    if (clickedPath[0] != null) {
+      relabelMoves(session, landscapeToken, repositoryName, commits, entries, clickedPath[0]);
+    }
     entries.sort(Comparator.comparingLong(FileHistoryDto::date));
     return entries;
+  }
+
+  private void relabelMoves(
+      final Session session,
+      final String landscapeToken,
+      final String repositoryName,
+      final List<CommitMeta> commits,
+      final List<FileHistoryDto> entries,
+      final String clickedPath) {
+
+    final Map<String, String> predecessorOf = new HashMap<>();
+    for (int i = 1; i < commits.size(); i++) {
+      predecessorOf.put(commits.get(i).hash(), commits.get(i - 1).hash());
+    }
+
+    final Set<String> needed = new HashSet<>();
+    for (final FileHistoryDto e : entries) {
+      if (!CommitComparison.ADDED.toString().equals(e.action())) {
+        continue;
+      }
+      final String prev = predecessorOf.get(e.commitHash());
+      if (prev != null) {
+        needed.add(e.commitHash());
+        needed.add(prev);
+      }
+    }
+    if (needed.isEmpty()) {
+      return;
+    }
+
+    final Map<String, Map<String, String>> present =
+        fetchPresentSets(session, landscapeToken, repositoryName, needed, List.of());
+
+    for (int i = 0; i < entries.size(); i++) {
+      final FileHistoryDto e = entries.get(i);
+      final String prev = predecessorOf.get(e.commitHash());
+      if (!CommitComparison.ADDED.toString().equals(e.action()) || prev == null) {
+        continue;
+      }
+      for (final BuildingChangeDto ch :
+          diffPresentSets(
+              present.getOrDefault(prev, Map.of()),
+              present.getOrDefault(e.commitHash(), Map.of()))) {
+        if (clickedPath.equals(ch.fqn())
+            && !CommitComparison.ADDED.toString().equals(ch.action())) {
+          entries.set(i, new FileHistoryDto(e.commitHash(), e.date(), ch.action()));
+          break;
+        }
+      }
+    }
   }
 
   private List<CommitMeta> fetchOrderedCommits(
@@ -689,11 +741,14 @@ public class StructureRepository {
       final Map<String, String> prev, final Map<String, String> cur) {
 
     final List<BuildingChangeDto> changes = new ArrayList<>();
+    final List<String> added = new ArrayList<>();
+    final Map<String, String> removed = new HashMap<>();
+
     cur.forEach(
         (fqn, fileHash) -> {
           final String prevHash = prev.get(fqn);
           if (prevHash == null) {
-            changes.add(new BuildingChangeDto(fqn, CommitComparison.ADDED.toString()));
+            added.add(fqn);
           } else if (!prevHash.equals(fileHash)) {
             changes.add(new BuildingChangeDto(fqn, CommitComparison.MODIFIED.toString()));
           }
@@ -701,10 +756,53 @@ public class StructureRepository {
     prev.forEach(
         (fqn, fileHash) -> {
           if (!cur.containsKey(fqn)) {
-            changes.add(new BuildingChangeDto(fqn, CommitComparison.REMOVED.toString()));
+            removed.put(fqn, fileHash);
           }
         });
+    added.sort(null);
+    for (final String newPath : added) {
+      final String oldPath = findCounterpart(newPath, cur.get(newPath), removed);
+      if (oldPath == null) {
+        changes.add(new BuildingChangeDto(newPath, CommitComparison.ADDED.toString()));
+        continue;
+      }
+      removed.remove(oldPath);
+      final boolean sameName = baseName(oldPath).equals(baseName(newPath));
+      changes.add(
+          new BuildingChangeDto(
+              newPath, (sameName ? CommitComparison.MOVED : CommitComparison.RENAMED).toString()));
+      changes.add(new BuildingChangeDto(oldPath, CommitComparison.REMOVED.toString()));
+    }
+    removed
+        .keySet()
+        .forEach(
+            fqn -> changes.add(new BuildingChangeDto(fqn, CommitComparison.REMOVED.toString())));
     return changes;
+  }
+
+  private String findCounterpart(
+      final String newPath, final String newHash, final Map<String, String> removed) {
+    final String name = baseName(newPath);
+
+    final List<String> byName =
+        removed.keySet().stream().filter(old -> baseName(old).equals(name)).sorted().toList();
+    if (byName.size() == 1) {
+      return byName.get(0);
+    }
+    if (byName.size() > 1) {
+      final List<String> exact =
+          byName.stream().filter(old -> removed.get(old).equals(newHash)).toList();
+      return exact.size() == 1 ? exact.get(0) : null;
+    }
+
+    final List<String> byHash =
+        removed.keySet().stream().filter(old -> removed.get(old).equals(newHash)).sorted().toList();
+    return byHash.size() == 1 ? byHash.get(0) : null;
+  }
+
+  private static String baseName(final String path) {
+    final int slash = path.lastIndexOf('/');
+    return slash < 0 ? path : path.substring(slash + 1);
   }
 
   private List<BuildingStateDto> buildKeyframeState(

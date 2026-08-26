@@ -6,6 +6,8 @@ public enum CommitComparison {
   ADDED("ADDED"),
   MODIFIED("MODIFIED"),
   REMOVED("REMOVED"),
+  MOVED("MOVED"),
+  RENAMED("RENAMED"),
   UNCHANGED("UNCHANGED");
 
   private final String name;
